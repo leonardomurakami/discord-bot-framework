@@ -52,14 +52,26 @@ class UserArgumentParser(ArgumentParser):
             user_id = int(user_input)
             return await bot.hikari_bot.rest.fetch_user(user_id)
         except (ValueError, hikari.NotFoundError):
-            # Try to find by username
-            guild = bot.hikari_bot.cache.get_guild(guild_id)
-            if guild:
-                members = bot.hikari_bot.cache.get_members_view_for_guild(guild_id)
-                for member in members.values():
-                    if (member.username.lower() == arg.lower() or 
+            # Try to find by username using cache first, then fallback
+            try:
+                # Try cache first
+                guild = bot.hikari_bot.cache.get_guild(guild_id)
+                if guild:
+                    members_view = bot.hikari_bot.cache.get_members_view_for_guild(guild_id)
+                    if members_view:
+                        for member in members_view.values():
+                            if (member.username.lower() == arg.lower() or
+                                member.display_name.lower() == arg.lower()):
+                                return member.user
+
+                # Fallback to REST API if cache miss
+                async for member in bot.hikari_bot.rest.fetch_members(guild_id):
+                    if (member.username.lower() == arg.lower() or
                         member.display_name.lower() == arg.lower()):
-                        return member.user
+                        return member
+                    break  # Limit to avoid rate limits
+            except (hikari.ForbiddenError, hikari.NotFoundError, AttributeError):
+                pass
             return definition.default
 
 
@@ -71,19 +83,28 @@ class ChannelArgumentParser(ArgumentParser):
         channel_input = arg.strip('<#>')
         try:
             channel_id = int(channel_input)
+            # Try cache first, then REST API
             channel = bot.hikari_bot.cache.get_guild_channel(channel_id)
             if not channel:
-                # Try fetching from REST API
                 channel = await bot.hikari_bot.rest.fetch_channel(channel_id)
             return channel
         except (ValueError, hikari.NotFoundError):
             # Try to find by name
-            guild = bot.hikari_bot.cache.get_guild(guild_id)
-            if guild:
-                channels = bot.hikari_bot.cache.get_guild_channels_view_for_guild(guild_id)
+            try:
+                # Try cache first
+                channels_view = bot.hikari_bot.cache.get_guild_channels_view_for_guild(guild_id)
+                if channels_view:
+                    for channel in channels_view.values():
+                        if hasattr(channel, 'name') and channel.name.lower() == arg.lower():
+                            return channel
+
+                # Fallback to REST API
+                channels = await bot.hikari_bot.rest.fetch_guild_channels(guild_id)
                 for channel in channels.values():
                     if hasattr(channel, 'name') and channel.name.lower() == arg.lower():
                         return channel
+            except (hikari.ForbiddenError, hikari.NotFoundError, AttributeError):
+                pass
             return definition.default
 
 
@@ -95,24 +116,30 @@ class RoleArgumentParser(ArgumentParser):
         role_input = arg.strip('<@&>')
         try:
             role_id = int(role_input)
+            # Try cache first, then REST API
             role = bot.hikari_bot.cache.get_role(role_id)
             if not role:
-                # Try fetching from guild roles
-                guild = bot.hikari_bot.cache.get_guild(guild_id)
-                if guild:
-                    roles = await bot.hikari_bot.rest.fetch_roles(guild_id)
-                    for role in roles:
-                        if role.id == role_id:
-                            return role
+                roles = await bot.hikari_bot.rest.fetch_roles(guild_id)
+                for role in roles:
+                    if role.id == role_id:
+                        return role
             return role
         except (ValueError, hikari.NotFoundError):
             # Try to find by name
             try:
+                # Try cache first
+                roles_view = bot.hikari_bot.cache.get_roles_view_for_guild(guild_id)
+                if roles_view:
+                    for role in roles_view.values():
+                        if role.name.lower() == arg.lower():
+                            return role
+
+                # Fallback to REST API
                 roles = await bot.hikari_bot.rest.fetch_roles(guild_id)
                 for role in roles:
                     if role.name.lower() == arg.lower():
                         return role
-            except Exception:
+            except (Exception, AttributeError):
                 pass
             return definition.default
 
@@ -135,8 +162,15 @@ class MentionableArgumentParser(ArgumentParser):
             role_input = arg.strip('<@&>')
             try:
                 role_id = int(role_input)
-                return bot.hikari_bot.cache.get_role(role_id)
-            except (ValueError, hikari.NotFoundError):
+                # Try cache first, then REST API
+                role = bot.hikari_bot.cache.get_role(role_id)
+                if not role:
+                    roles = await bot.hikari_bot.rest.fetch_roles(guild_id)
+                    for role in roles:
+                        if role.id == role_id:
+                            return role
+                return role
+            except (ValueError, hikari.NotFoundError, AttributeError):
                 pass
         
         return definition.default

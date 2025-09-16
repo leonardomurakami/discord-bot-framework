@@ -8,6 +8,15 @@ import aiohttp
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import command, CommandArgument
 
+# Plugin metadata for the loader
+PLUGIN_METADATA = {
+    "name": "Fun",
+    "version": "1.0.0",
+    "author": "Bot Framework",
+    "description": "Fun commands and games for entertainment including dice rolling, jokes, quotes, and random generators",
+    "permissions": ["fun.games", "fun.images"],
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -15,16 +24,6 @@ class FunPlugin(BasePlugin):
     def __init__(self, bot) -> None:
         super().__init__(bot)
         self.session: aiohttp.ClientSession = None
-
-    @property
-    def metadata(self) -> Dict[str, Any]:
-        return {
-            "name": "Fun",
-            "version": "1.0.0",
-            "author": "Bot Framework",
-            "description": "Fun commands and games for entertainment",
-            "permissions": ["fun.games", "fun.images"],
-        }
 
     async def on_load(self) -> None:
         self.session = aiohttp.ClientSession()
@@ -306,3 +305,130 @@ class FunPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "choose", False, str(e))
+
+    @command(
+        name="random",
+        description="Generate random numbers within a range",
+        aliases=["rng", "rand"],
+        permission_node="fun.games",
+        arguments=[
+            CommandArgument("min_value", hikari.OptionType.INTEGER, "Minimum value (default: 1)", required=False, default=1),
+            CommandArgument("max_value", hikari.OptionType.INTEGER, "Maximum value (default: 100)", required=False, default=100)
+        ]
+    )
+    async def random_number(self, ctx: lightbulb.Context, min_value: int = 1, max_value: int = 100) -> None:
+        try:
+            # Validate input
+            if min_value > max_value:
+                embed = self.create_embed(
+                    title="❌ Invalid Range",
+                    description="Minimum value cannot be greater than maximum value.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Prevent extremely large ranges
+            if abs(max_value - min_value) > 10_000_000:
+                embed = self.create_embed(
+                    title="❌ Range Too Large",
+                    description="Range cannot exceed 10 million numbers.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Generate random number
+            result = random.randint(min_value, max_value)
+
+            embed = self.create_embed(
+                title="🎲 Random Number",
+                description=f"🎯 Generated: **{result}**",
+                color=hikari.Color(0x9932CC)
+            )
+
+            embed.add_field("Range", f"{min_value} - {max_value}", inline=True)
+            embed.add_field("Total Possibilities", str(max_value - min_value + 1), inline=True)
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "random", True)
+
+        except Exception as e:
+            logger.error(f"Error in random command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"An error occurred: {str(e)}",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "random", False, str(e))
+
+    @command(
+        name="quote",
+        description="Get a random inspirational quote",
+        aliases=["inspire", "wisdom"]
+    )
+    async def random_quote(self, ctx: lightbulb.Context) -> None:
+        try:
+            # Try to fetch from online API first
+            quote_text = None
+            quote_author = None
+
+            if self.session:
+                try:
+                    async with self.session.get("https://api.quotable.io/random?maxLength=150") as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            quote_text = data.get("content")
+                            quote_author = data.get("author")
+                except Exception:
+                    pass  # Fall back to local quotes
+
+            # Fallback to local quotes if API fails
+            if not quote_text:
+                local_quotes = [
+                    ("The only way to do great work is to love what you do.", "Steve Jobs"),
+                    ("Innovation distinguishes between a leader and a follower.", "Steve Jobs"),
+                    ("Life is what happens to you while you're busy making other plans.", "John Lennon"),
+                    ("The future belongs to those who believe in the beauty of their dreams.", "Eleanor Roosevelt"),
+                    ("It is during our darkest moments that we must focus to see the light.", "Aristotle"),
+                    ("Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"),
+                    ("The only impossible journey is the one you never begin.", "Tony Robbins"),
+                    ("In the middle of difficulty lies opportunity.", "Albert Einstein"),
+                    ("Believe you can and you're halfway there.", "Theodore Roosevelt"),
+                    ("The only limit to our realization of tomorrow will be our doubts of today.", "Franklin D. Roosevelt"),
+                    ("Do not go where the path may lead, go instead where there is no path and leave a trail.", "Ralph Waldo Emerson"),
+                    ("The way to get started is to quit talking and begin doing.", "Walt Disney"),
+                    ("Don't be afraid to give up the good to go for the great.", "John D. Rockefeller"),
+                    ("If you really look closely, most overnight successes took a long time.", "Steve Jobs"),
+                    ("The greatest glory in living lies not in never falling, but in rising every time we fall.", "Nelson Mandela")
+                ]
+
+                quote_text, quote_author = random.choice(local_quotes)
+
+            embed = self.create_embed(
+                title="💭 Inspirational Quote",
+                description=f'*"{quote_text}"*',
+                color=hikari.Color(0x8A2BE2)
+            )
+
+            if quote_author:
+                embed.add_field("Author", f"— {quote_author}", inline=False)
+
+            # Add a random motivational emoji
+            motivational_emojis = ["💪", "🌟", "✨", "🎯", "🚀", "💎", "🔥", "⭐"]
+            emoji = random.choice(motivational_emojis)
+            embed.set_footer(f"{emoji} Stay inspired!")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "quote", True)
+
+        except Exception as e:
+            logger.error(f"Error in quote command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to get a quote. Try again later!",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "quote", False, str(e))

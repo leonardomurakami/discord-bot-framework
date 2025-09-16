@@ -4,7 +4,14 @@
       "WebFetch(domain:arc.hypergonial.com)",
       "WebSearch",
       "Bash(docker-compose stop:*)",
-      "WebFetch(domain:hikari-lightbulb.readthedocs.io)"
+      "WebFetch(domain:hikari-lightbulb.readthedocs.io)",
+      "WebFetch(domain:miru.hypergonial.com)",
+      "Bash(python run_tests.py:*)",
+      "Bash(python -m pytest tests/unit/bot/ --cov=bot --cov-report=term-missing -v)",
+      "Bash(uv pip install:*)",
+      "Bash(uv run:*)",
+      "Bash(python -m pytest tests/unit/plugins/moderation/test_moderation_plugin.py::TestKickMemberExtended::test_kick_member_invalid_member_id -v)",
+      "Bash(python -m pytest tests/unit/plugins/moderation/test_moderation_plugin.py::TestKickMemberExtended::test_kick_member_invalid_member_id tests/unit/plugins/moderation/test_moderation_plugin.py::TestKickMemberExtended::test_kick_member_bot_target_error tests/unit/plugins/moderation/test_moderation_plugin.py::TestKickMemberExtended::test_kick_member_forbidden_error tests/unit/plugins/moderation/test_moderation_plugin.py::TestKickMemberExtended::test_kick_member_general_exception -v --tb=short)"
     ],
     "deny": [],
     "ask": []

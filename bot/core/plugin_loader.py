@@ -4,10 +4,11 @@ import importlib
 import importlib.util
 import inspect
 from pathlib import Path
-from typing import Dict, List, Type, Optional, Any
+from typing import Dict, List, Type, Optional, Any, TYPE_CHECKING
 import logging
 
-from ..plugins.base import BasePlugin
+if TYPE_CHECKING:
+    from ..plugins.base import BasePlugin
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +34,9 @@ class PluginMetadata:
 class PluginLoader:
     def __init__(self, bot: Any) -> None:
         self.bot = bot
-        self.plugins: Dict[str, BasePlugin] = {}
+        self.plugins: Dict[str, Any] = {}  # Changed from BasePlugin to Any to avoid circular import
         self.plugin_metadata: Dict[str, PluginMetadata] = {}
         self.plugin_directories: List[Path] = []
-        pass
 
     def add_plugin_directory(self, directory: str) -> None:
         path = Path(directory)
@@ -75,7 +75,10 @@ class PluginLoader:
 
         raise ImportError(f"Plugin {plugin_name} not found")
 
-    def _extract_plugin_class(self, module: Any) -> Type[BasePlugin]:
+    def _extract_plugin_class(self, module: Any) -> Type[Any]:
+        # Import BasePlugin here to avoid circular import
+        from ..plugins.base import BasePlugin
+
         for name, obj in inspect.getmembers(module, inspect.isclass):
             if (
                 issubclass(obj, BasePlugin) and
@@ -184,7 +187,7 @@ class PluginLoader:
         for plugin_name in enabled_plugins:
             await self.load_plugin(plugin_name)
 
-    def get_plugin(self, plugin_name: str) -> Optional[BasePlugin]:
+    def get_plugin(self, plugin_name: str) -> Optional[Any]:
         return self.plugins.get(plugin_name)
 
     def get_loaded_plugins(self) -> List[str]:

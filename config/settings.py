@@ -16,7 +16,7 @@ class BotSettings(BaseSettings):
 
     # Plugin configuration
     enabled_plugins: List[str] = Field(
-        default=['admin', 'fun', 'moderation', 'help'],
+        default=['admin', 'fun', 'moderation', 'help', "utility"],
         description="List of enabled plugins"
     )
     plugin_directories: List[str] = Field(

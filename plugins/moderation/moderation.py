@@ -7,27 +7,27 @@ import lightbulb
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import command, CommandArgument
 
+# Plugin metadata for the loader
+PLUGIN_METADATA = {
+    "name": "Moderation",
+    "version": "1.0.0",
+    "author": "Bot Framework",
+    "description": "Moderation commands for server management including kick, ban, timeout, slowmode, and message purging",
+    "permissions": [
+        "moderation.kick",
+        "moderation.ban",
+        "moderation.mute",
+        "moderation.warn",
+        "moderation.purge",
+        "moderation.timeout",
+        "moderation.slowmode"
+    ],
+}
+
 logger = logging.getLogger(__name__)
 
 
 class ModerationPlugin(BasePlugin):
-    @property
-    def metadata(self) -> Dict[str, Any]:
-        return {
-            "name": "Moderation",
-            "version": "1.0.0",
-            "author": "Bot Framework",
-            "description": "Moderation commands for server management",
-            "permissions": [
-                "moderation.kick",
-                "moderation.ban",
-                "moderation.mute",
-                "moderation.warn",
-                "moderation.purge",
-                "moderation.timeout"
-            ],
-        }
-
     @command(
         name="kick",
         description="Kick a member from the server",
@@ -419,3 +419,194 @@ class ModerationPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "purge", False, str(e))
+
+    @command(
+        name="unban",
+        description="Unban a user from the server",
+        permission_node="moderation.ban",
+        arguments=[
+            CommandArgument("user_id", hikari.OptionType.STRING, "User ID to unban"),
+            CommandArgument("reason", hikari.OptionType.STRING, "Reason for unbanning", required=False, default="No reason provided")
+        ]
+    )
+    async def unban_user(self, ctx: lightbulb.Context, user_id: str, reason: str = "No reason provided") -> None:
+        try:
+            # Try to convert user_id to int
+            try:
+                user_id_int = int(user_id.strip('<@!>'))
+            except ValueError:
+                embed = self.create_embed(
+                    title="❌ Invalid User ID",
+                    description="Please provide a valid user ID or mention.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Check if user is actually banned
+            try:
+                banned_users = []
+                async for ban in ctx.get_guild().fetch_bans():
+                    banned_users.append(ban.user.id)
+                    if ban.user.id == user_id_int:
+                        banned_user = ban.user
+                        break
+                else:
+                    embed = self.create_embed(
+                        title="❌ User Not Banned",
+                        description="This user is not currently banned from the server.",
+                        color=hikari.Color(0xFF0000)
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+            except hikari.ForbiddenError:
+                embed = self.create_embed(
+                    title="❌ Permission Error",
+                    description="I don't have permission to view the ban list.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Unban the user
+            await ctx.get_guild().unban(user_id_int, reason=f"{reason} (by {ctx.author})")
+
+            embed = self.create_embed(
+                title="✅ User Unbanned",
+                description=f"{banned_user.mention} ({banned_user.username}) has been unbanned.",
+                color=hikari.Color(0x00FF00)
+            )
+            embed.add_field("Reason", reason, inline=False)
+            embed.add_field("Moderator", ctx.author.mention, inline=True)
+            embed.add_field("User ID", str(user_id_int), inline=True)
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "unban", True)
+
+        except hikari.NotFoundError:
+            embed = self.create_embed(
+                title="❌ User Not Found",
+                description="User not found in the ban list or invalid user ID.",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "unban", False, "User not found")
+
+        except hikari.ForbiddenError:
+            embed = self.create_embed(
+                title="❌ Permission Error",
+                description="I don't have permission to unban users.",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "unban", False, "Permission denied")
+
+        except Exception as e:
+            logger.error(f"Error in unban command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to unban user: {str(e)}",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "unban", False, str(e))
+
+    @command(
+        name="slowmode",
+        description="Set channel slowmode (rate limit)",
+        aliases=["slow"],
+        permission_node="moderation.slowmode",
+        arguments=[
+            CommandArgument("seconds", hikari.OptionType.INTEGER, "Slowmode in seconds (0-21600, 0 to disable)", required=False, default=0),
+            CommandArgument("channel", hikari.OptionType.CHANNEL, "Channel to apply slowmode to (default: current channel)", required=False)
+        ]
+    )
+    async def slowmode(self, ctx: lightbulb.Context, seconds: int = 0, channel = None) -> None:
+        try:
+            # Validate seconds
+            if seconds < 0 or seconds > 21600:  # Discord's limit is 6 hours (21600 seconds)
+                embed = self.create_embed(
+                    title="❌ Invalid Duration",
+                    description="Slowmode must be between 0 and 21600 seconds (6 hours).",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Use current channel if none specified
+            target_channel = channel or ctx.get_channel()
+
+            # Check if it's a text channel
+            if target_channel.type not in [hikari.ChannelType.GUILD_TEXT, hikari.ChannelType.GUILD_NEWS]:
+                embed = self.create_embed(
+                    title="❌ Invalid Channel",
+                    description="Slowmode can only be applied to text channels.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Apply slowmode
+            await target_channel.edit(rate_limit_per_user=seconds)
+
+            # Format duration for display
+            if seconds == 0:
+                duration_text = "disabled"
+                title_emoji = "🚫"
+                title_text = "Slowmode Disabled"
+            else:
+                if seconds < 60:
+                    duration_text = f"{seconds} second(s)"
+                elif seconds < 3600:
+                    minutes = seconds // 60
+                    remaining_seconds = seconds % 60
+                    if remaining_seconds == 0:
+                        duration_text = f"{minutes} minute(s)"
+                    else:
+                        duration_text = f"{minutes} minute(s) and {remaining_seconds} second(s)"
+                else:
+                    hours = seconds // 3600
+                    remaining_minutes = (seconds % 3600) // 60
+                    if remaining_minutes == 0:
+                        duration_text = f"{hours} hour(s)"
+                    else:
+                        duration_text = f"{hours} hour(s) and {remaining_minutes} minute(s)"
+
+                title_emoji = "🐌"
+                title_text = "Slowmode Enabled"
+
+            embed = self.create_embed(
+                title=f"{title_emoji} {title_text}",
+                description=f"Slowmode has been set to **{duration_text}** in {target_channel.mention}.",
+                color=hikari.Color(0x00FF00) if seconds == 0 else hikari.Color(0xFFAA00)
+            )
+
+            embed.add_field("Channel", target_channel.mention, inline=True)
+            embed.add_field("Duration", duration_text, inline=True)
+            embed.add_field("Moderator", ctx.author.mention, inline=True)
+
+            if seconds > 0:
+                embed.set_footer("Users must wait between sending messages in this channel")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "slowmode", True)
+
+        except hikari.ForbiddenError:
+            embed = self.create_embed(
+                title="❌ Permission Error",
+                description="I don't have permission to manage this channel.",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "slowmode", False, "Permission denied")
+
+        except Exception as e:
+            logger.error(f"Error in slowmode command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to set slowmode: {str(e)}",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "slowmode", False, str(e))

@@ -1,10 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, TYPE_CHECKING
 import hikari
 import lightbulb
-from ..core.event_system import event_listener
-from .commands import CommandArgument, command, CommandRegistry
+
+if TYPE_CHECKING:
+    from ..core.event_system import event_listener
+    from .commands import CommandArgument, command, CommandRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +17,9 @@ class BasePlugin(ABC):
         self.name = self.__class__.__name__.lower().replace("plugin", "")
         self.logger = logging.getLogger(f"plugin.{self.name}")
         self._event_listeners: List[Any] = []
+        # Import CommandRegistry here to avoid circular import
+        from .commands import CommandRegistry
         self._command_registry: CommandRegistry = CommandRegistry(self)
-
-    @property
-    @abstractmethod
-    def metadata(self) -> Dict[str, Any]:
-        pass
 
     async def on_load(self) -> None:
         await self._command_registry.register_commands()

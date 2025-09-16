@@ -3,6 +3,7 @@ import asyncio
 from typing import Optional, Dict, Any
 import hikari
 import lightbulb
+import miru
 from pathlib import Path
 
 from config.settings import settings
@@ -28,6 +29,9 @@ class DiscordBot:
         self.hikari_bot = hikari.GatewayBot(token=settings.discord_token, intents=intents)
         # Create lightbulb client
         self.bot = lightbulb.client_from_app(self.hikari_bot)
+
+        # Initialize miru client and store it as an instance attribute
+        self.miru_client = miru.Client(self.hikari_bot)
 
         # Subscribe client to bot events
         self.hikari_bot.subscribe(hikari.StartingEvent, self.bot.start)

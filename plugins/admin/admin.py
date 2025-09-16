@@ -1,127 +1,23 @@
 import logging
-from typing import Dict, Any
 import hikari
 import lightbulb
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import command, CommandArgument
 
+# Plugin metadata for the loader
+PLUGIN_METADATA = {
+    "name": "Admin",
+    "version": "1.0.0",
+    "author": "Bot Framework",
+    "description": "Administrative commands for bot management including permissions, server info, and uptime monitoring",
+    "permissions": ["admin.config", "admin.plugins", "admin.permissions"],
+}
+
 logger = logging.getLogger(__name__)
 
 
 class AdminPlugin(BasePlugin):
-    @property
-    def metadata(self) -> Dict[str, Any]:
-        return {
-            "name": "Admin",
-            "version": "1.0.0",
-            "author": "Bot Framework",
-            "description": "Administrative commands for bot management",
-            "permissions": ["admin.config", "admin.plugins", "admin.permissions"],
-        }
-
-    @command(
-        name="reload",
-        description="Reload a plugin or all plugins",
-        aliases=["reload-plugin"],
-        permission_node="admin.plugins"
-    )
-    async def reload_plugin(self, ctx: lightbulb.Context) -> None:
-        # For prefix commands, get plugin from args; for slash commands, from options
-        if hasattr(ctx, 'options') and hasattr(ctx.options, 'plugin'):
-            plugin = ctx.options.plugin
-        elif hasattr(ctx, 'args') and ctx.args:
-            plugin = ctx.args[0] if ctx.args else None
-        else:
-            plugin = None
-        start_time = hikari.utcnow()
-
-        try:
-            if plugin == "all" or plugin is None:
-                await self.bot.plugin_loader.reload_all_plugins()
-                embed = self.create_embed(
-                    title="✅ Plugin Reload",
-                    description="All plugins have been reloaded successfully!",
-                    color=hikari.Color(0x00FF00)
-                )
-            else:
-                success = await self.bot.plugin_loader.reload_plugin(plugin)
-                if success:
-                    embed = self.create_embed(
-                        title="✅ Plugin Reload",
-                        description=f"Plugin `{plugin}` has been reloaded successfully!",
-                        color=hikari.Color(0x00FF00)
-                    )
-                else:
-                    embed = self.create_embed(
-                        title="❌ Plugin Reload Failed",
-                        description=f"Failed to reload plugin `{plugin}`. Check logs for details.",
-                        color=hikari.Color(0xFF0000)
-                    )
-
-            await ctx.respond(embed=embed)
-
-            # Log command usage
-            execution_time = (hikari.utcnow() - start_time).total_seconds()
-            await self.log_command_usage(ctx, "reload", True, execution_time=execution_time)
-
-        except Exception as e:
-            logger.error(f"Error in reload command: {e}")
-            embed = self.create_embed(
-                title="❌ Error",
-                description=f"An error occurred: {str(e)}",
-                color=hikari.Color(0xFF0000)
-            )
-            await self.smart_respond(ctx, embed=embed, ephemeral=True)
-
-            execution_time = (hikari.utcnow() - start_time).total_seconds()
-            await self.log_command_usage(ctx, "reload", False, str(e), execution_time)
-
-    @command(
-        name="plugins",
-        description="List all loaded plugins and their status",
-        aliases=["list-plugins"],
-        permission_node="admin.plugins"
-    )
-    async def list_plugins(self, ctx: lightbulb.Context) -> None:
-        try:
-            loaded_plugins = self.bot.plugin_loader.get_loaded_plugins()
-
-            if not loaded_plugins:
-                embed = self.create_embed(
-                    title="📦 Loaded Plugins",
-                    description="No plugins are currently loaded.",
-                    color=hikari.Color(0xFFAA00)
-                )
-            else:
-                description = ""
-                for plugin_name in loaded_plugins:
-                    info = self.bot.plugin_loader.get_plugin_info(plugin_name)
-                    if info:
-                        description += f"**{plugin_name}** v{info.version}\n"
-                        description += f"  └ {info.description}\n\n"
-                    else:
-                        description += f"**{plugin_name}**\n  └ No metadata available\n\n"
-
-                embed = self.create_embed(
-                    title="📦 Loaded Plugins",
-                    description=description.strip(),
-                    color=hikari.Color(0x7289DA)
-                )
-
-            await ctx.respond(embed=embed)
-            await self.log_command_usage(ctx, "plugins", True)
-
-        except Exception as e:
-            logger.error(f"Error in plugins command: {e}")
-            embed = self.create_embed(
-                title="❌ Error",
-                description=f"Failed to list plugins: {str(e)}",
-                color=hikari.Color(0xFF0000)
-            )
-            await self.smart_respond(ctx, embed=embed, ephemeral=True)
-            await self.log_command_usage(ctx, "plugins", False, str(e))
-
     @command(
         name="permission",
         description="Manage role permissions",
@@ -266,69 +162,212 @@ class AdminPlugin(BasePlugin):
             await self.log_command_usage(ctx, "bot-info", False, str(e))
 
     @command(
-        name="demo-parse",
-        description="Demo command showing advanced argument parsing",
-        arguments=[
-            CommandArgument("user", hikari.OptionType.USER, "A user to mention"),
-            CommandArgument("channel", hikari.OptionType.CHANNEL, "A channel to reference", required=False),
-            CommandArgument("role", hikari.OptionType.ROLE, "A role to check", required=False),
-            CommandArgument("number", hikari.OptionType.INTEGER, "A number", required=False, default=42),
-            CommandArgument("message", hikari.OptionType.STRING, "Additional message", required=False, default="Hello!")
-        ]
+        name="server-info",
+        description="Display server information and statistics",
+        aliases=["serverinfo", "guild-info"]
     )
-    async def demo_parse(self, ctx: lightbulb.Context, user, channel=None, role=None, number: int = 42, message: str = "Hello!") -> None:
-        """Demonstrates the powerful argument parsing system."""
+    async def server_info(self, ctx: lightbulb.Context) -> None:
         try:
-            embed = self.create_embed(
-                title="🚀 Argument Parsing Demo",
-                description="Here's what was parsed from your command:",
-                color=hikari.Color(0x00FF00)
-            )
-            
-            # User info
-            if user:
-                embed.add_field("👤 User", f"{user.mention} ({user.username})", inline=True)
-            
-            # Channel info  
-            if channel:
-                embed.add_field("📢 Channel", f"{channel.mention} ({channel.name})", inline=True)
-            else:
-                embed.add_field("📢 Channel", "None provided", inline=True)
-                
-            # Role info
-            if role:
-                embed.add_field("🎭 Role", f"{role.mention} ({role.name})", inline=True)
-            else:
-                embed.add_field("🎭 Role", "None provided", inline=True)
-                
-            # Number and message
-            embed.add_field("🔢 Number", str(number), inline=True)
-            embed.add_field("💬 Message", message, inline=True)
-            
-            # Usage examples
-            examples = """
-**Usage Examples:**
-Slash: `/demo-parse @user #channel @role 123 Custom message here`
-Prefix: `!demo-parse @user #channel @role 123 Custom message here`
+            guild = ctx.get_guild()
+            if not guild:
+                embed = self.create_embed(
+                    title="❌ Error",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000)
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
 
-**Also works with:**
-- User IDs: `123456789`
-- Channel names: `general`  
-- Role names: `Admin`
-- Usernames: `username`
-            """.strip()
-            
-            embed.add_field("📖 Examples", examples, inline=False)
-            
+            # Get server statistics
+            member_count = guild.member_count or 0
+            channel_count = len(guild.get_channels())
+            role_count = len(guild.get_roles())
+            emoji_count = len(guild.get_emojis())
+
+            # Count channel types
+            text_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_TEXT])
+            voice_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_VOICE])
+            category_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_CATEGORY])
+
+            embed = self.create_embed(
+                title=f"🏰 {guild.name}",
+                color=hikari.Color(0x7289DA)
+            )
+
+            # Basic info
+            embed.add_field("Server ID", str(guild.id), inline=True)
+            embed.add_field("Owner", f"<@{guild.owner_id}>", inline=True)
+            embed.add_field("Created", f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
+
+            # Statistics
+            embed.add_field("👥 Members", str(member_count), inline=True)
+            embed.add_field("📺 Channels", f"{channel_count} total", inline=True)
+            embed.add_field("🎭 Roles", str(role_count), inline=True)
+
+            # Channel breakdown
+            channel_breakdown = f"💬 Text: {text_channels}\n🔊 Voice: {voice_channels}\n📁 Categories: {category_channels}"
+            embed.add_field("Channel Breakdown", channel_breakdown, inline=True)
+
+            embed.add_field("😀 Emojis", str(emoji_count), inline=True)
+
+            # Features
+            features = guild.features
+            if features:
+                feature_names = []
+                feature_mapping = {
+                    "COMMUNITY": "Community Server",
+                    "VERIFIED": "Verified",
+                    "PARTNERED": "Partnered",
+                    "ANIMATED_ICON": "Animated Icon",
+                    "BANNER": "Server Banner",
+                    "VANITY_URL": "Custom Invite URL",
+                    "INVITE_SPLASH": "Invite Splash",
+                    "NEWS": "News Channels",
+                    "DISCOVERABLE": "Server Discovery"
+                }
+
+                for feature in features:
+                    if feature in feature_mapping:
+                        feature_names.append(feature_mapping[feature])
+                    elif len(feature_names) < 5:  # Limit features shown
+                        feature_names.append(feature.replace("_", " ").title())
+
+                if feature_names:
+                    embed.add_field("✨ Features", "\n".join([f"• {f}" for f in feature_names[:5]]), inline=False)
+
+            # Set server icon as thumbnail
+            icon_url = guild.make_icon_url()
+            if icon_url:
+                embed.set_thumbnail(icon_url)
+
+            # Set server banner if available
+            banner_url = guild.make_banner_url()
+            if banner_url:
+                embed.set_image(banner_url)
+
             await ctx.respond(embed=embed)
-            await self.log_command_usage(ctx, "demo-parse", True)
-            
+            await self.log_command_usage(ctx, "server-info", True)
+
         except Exception as e:
-            logger.error(f"Error in demo-parse command: {e}")
+            logger.error(f"Error in server-info command: {e}")
             embed = self.create_embed(
                 title="❌ Error",
-                description=f"Demo failed: {str(e)}",
+                description=f"Failed to get server information: {str(e)}",
                 color=hikari.Color(0xFF0000)
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
-            await self.log_command_usage(ctx, "demo-parse", False, str(e))
+            await self.log_command_usage(ctx, "server-info", False, str(e))
+
+    @command(
+        name="uptime",
+        description="Display bot uptime and system information",
+        aliases=["up", "status"]
+    )
+    async def uptime(self, ctx: lightbulb.Context) -> None:
+        try:
+            import psutil
+            import time
+            from datetime import datetime
+
+            # Get bot start time (approximation using process start time)
+            process = psutil.Process()
+            process_start_time = process.create_time()
+            bot_start_time = datetime.fromtimestamp(process_start_time)
+
+            # Calculate uptime
+            current_time = datetime.now()
+            uptime_delta = current_time - bot_start_time
+
+            # Format uptime
+            days = uptime_delta.days
+            hours, remainder = divmod(uptime_delta.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+
+            uptime_str = []
+            if days > 0:
+                uptime_str.append(f"{days} day{'s' if days != 1 else ''}")
+            if hours > 0:
+                uptime_str.append(f"{hours} hour{'s' if hours != 1 else ''}")
+            if minutes > 0:
+                uptime_str.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
+            if seconds > 0 or not uptime_str:
+                uptime_str.append(f"{seconds} second{'s' if seconds != 1 else ''}")
+
+            formatted_uptime = ", ".join(uptime_str)
+
+            embed = self.create_embed(
+                title="📊 Bot Status & Uptime",
+                color=hikari.Color(0x00FF7F)
+            )
+
+            embed.add_field("⏰ Uptime", formatted_uptime, inline=True)
+            embed.add_field("🚀 Started", f"<t:{int(process_start_time)}:R>", inline=True)
+            embed.add_field("📅 Current Time", f"<t:{int(current_time.timestamp())}:f>", inline=True)
+
+            # System information
+            try:
+                cpu_percent = process.cpu_percent()
+                memory_info = process.memory_info()
+                memory_mb = memory_info.rss / 1024 / 1024
+
+                embed.add_field("💾 Memory Usage", f"{memory_mb:.1f} MB", inline=True)
+                embed.add_field("⚡ CPU Usage", f"{cpu_percent:.1f}%", inline=True)
+
+                # System uptime
+                system_uptime = time.time() - psutil.boot_time()
+                system_days = int(system_uptime // 86400)
+                system_hours = int((system_uptime % 86400) // 3600)
+                system_uptime_str = f"{system_days}d {system_hours}h"
+                embed.add_field("🖥️ System Uptime", system_uptime_str, inline=True)
+
+            except Exception:
+                # If system info fails, just show basic uptime
+                pass
+
+            # Bot info
+            guild_count = len(self.bot.hikari_bot.cache.get_guilds_view())
+            embed.add_field("🏰 Servers", str(guild_count), inline=True)
+
+            # Ping/Latency
+            try:
+                latency = self.bot.hikari_bot.heartbeat_latency * 1000
+                embed.add_field("📡 Latency", f"{latency:.1f}ms", inline=True)
+            except Exception:
+                pass
+
+            embed.set_footer(f"Process ID: {process.pid}")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "uptime", True)
+
+        except ImportError:
+            # Fallback if psutil is not available
+            embed = self.create_embed(
+                title="📊 Bot Status",
+                description="Bot is online and responding!",
+                color=hikari.Color(0x00FF7F)
+            )
+
+            guild_count = len(self.bot.hikari_bot.cache.get_guilds_view())
+            embed.add_field("🏰 Servers", str(guild_count), inline=True)
+
+            try:
+                latency = self.bot.hikari_bot.heartbeat_latency * 1000
+                embed.add_field("📡 Latency", f"{latency:.1f}ms", inline=True)
+            except Exception:
+                pass
+
+            embed.set_footer("Install 'psutil' for detailed system information")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "uptime", True)
+
+        except Exception as e:
+            logger.error(f"Error in uptime command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to get uptime information: {str(e)}",
+                color=hikari.Color(0xFF0000)
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "uptime", False, str(e))

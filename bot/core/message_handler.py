@@ -14,13 +14,17 @@ class PrefixCommand:
         callback: Any,
         description: str = "",
         aliases: Optional[List[str]] = None,
-        permission_node: Optional[str] = None
+        permission_node: Optional[str] = None,
+        plugin_name: Optional[str] = None,
+        arguments: Optional[List[Any]] = None
     ):
         self.name = name
         self.callback = callback
         self.description = description
         self.aliases = aliases or []
         self.permission_node = permission_node
+        self.plugin_name = plugin_name
+        self.arguments = arguments or []
 
 
 class MessageCommandHandler:
@@ -117,15 +121,16 @@ class PrefixContext:
 
     def get_guild(self) -> Optional[hikari.Guild]:
         if self.guild_id:
-            return self.bot.bot.cache.get_guild(self.guild_id)
+            return self.bot.hikari_bot.cache.get_guild(self.guild_id)
         return None
 
     def get_channel(self) -> Optional[hikari.GuildChannel]:
         return self.event.get_channel()
 
-    async def respond(self, content: str = None, *, embed: hikari.Embed = None) -> None:
-        await self.bot.bot.rest.create_message(
+    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> None:
+        await self.bot.hikari_bot.rest.create_message(
             self.channel_id,
             content=content,
-            embed=embed
+            embed=embed,
+            components=components
         )

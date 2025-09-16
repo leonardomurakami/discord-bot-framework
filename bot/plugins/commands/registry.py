@@ -186,7 +186,9 @@ class CommandRegistry:
                     callback=prefix_wrapper,
                     description=prefix_meta.get('description', ''),
                     aliases=prefix_meta.get('aliases', []),
-                    permission_node=prefix_meta.get('permission_node')
+                    permission_node=prefix_meta.get('permission_node'),
+                    plugin_name=self.plugin.name,
+                    arguments=command_args
                 )
                 self.bot.message_handler.add_command(prefix_cmd)
                 if attr not in self._commands:  # Avoid duplicates

@@ -31,7 +31,6 @@ def main() -> None:
             # Force development mode
             import os
             os.environ["ENVIRONMENT"] = "development"
-            os.environ["HOT_RELOAD"] = "true"
 
         # Create and run the bot
         bot = DiscordBot()
