@@ -1,8 +1,8 @@
 """Tests for core bot functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
+
+import pytest
 
 from bot.core.bot import DiscordBot
 
@@ -10,12 +10,14 @@ from bot.core.bot import DiscordBot
 class TestDiscordBot:
     """Test DiscordBot core functionality."""
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
-    def test_bot_creation(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
+    def test_bot_creation(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test creating a DiscordBot instance."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -39,12 +41,14 @@ class TestDiscordBot:
         assert bot.permission_manager is not None
         assert bot.is_ready is False
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
-    def test_run_method(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
+    def test_run_method(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test bot run method."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -63,13 +67,15 @@ class TestDiscordBot:
 
         mock_hikari_bot.run.assert_called_once()
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
     @pytest.mark.asyncio
-    async def test_initialize_systems(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    async def test_initialize_systems(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test system initialization."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -88,13 +94,15 @@ class TestDiscordBot:
         mock_db.create_tables.assert_called_once()
         bot.permission_manager.initialize.assert_called_once()
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
     @pytest.mark.asyncio
-    async def test_cleanup(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    async def test_cleanup(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test cleanup method."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -113,12 +121,14 @@ class TestDiscordBot:
         mock_db.close.assert_called_once()
         bot.event_system.emit.assert_called()
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
-    def test_add_startup_task(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
+    def test_add_startup_task(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test adding startup tasks."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -133,13 +143,15 @@ class TestDiscordBot:
 
         assert task in bot._startup_tasks
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
     @pytest.mark.asyncio
-    async def test_get_guild_prefix(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    async def test_get_guild_prefix(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test getting guild prefix."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -153,13 +165,15 @@ class TestDiscordBot:
 
         assert prefix == "!"
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
     @pytest.mark.asyncio
-    async def test_load_plugins(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    async def test_load_plugins(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test plugin loading."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -175,12 +189,14 @@ class TestDiscordBot:
 
         bot.plugin_loader.load_all_plugins.assert_called_once_with(["test_plugin"])
 
-    @patch('bot.core.bot.settings')
-    @patch('bot.core.bot.hikari.GatewayBot')
-    @patch('bot.core.bot.lightbulb.client_from_app')
-    @patch('bot.core.bot.miru.Client')
-    @patch('bot.core.bot.db_manager')
-    def test_bot_properties(self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings):
+    @patch("bot.core.bot.settings")
+    @patch("bot.core.bot.hikari.GatewayBot")
+    @patch("bot.core.bot.lightbulb.client_from_app")
+    @patch("bot.core.bot.miru.Client")
+    @patch("bot.core.bot.db_manager")
+    def test_bot_properties(
+        self, mock_db, mock_miru, mock_lightbulb, mock_hikari, mock_settings
+    ):
         """Test bot properties and accessors."""
         # Mock settings
         mock_settings.discord_token = "test_token"
@@ -191,10 +207,10 @@ class TestDiscordBot:
         bot = DiscordBot()
 
         # Test that properties are accessible
-        assert hasattr(bot, 'hikari_bot')
-        assert hasattr(bot, 'bot')
-        assert hasattr(bot, 'plugin_loader')
-        assert hasattr(bot, 'permission_manager')
-        assert hasattr(bot, 'db')
-        assert hasattr(bot, 'event_system')
-        assert hasattr(bot, 'is_ready')
+        assert hasattr(bot, "hikari_bot")
+        assert hasattr(bot, "bot")
+        assert hasattr(bot, "plugin_loader")
+        assert hasattr(bot, "permission_manager")
+        assert hasattr(bot, "db")
+        assert hasattr(bot, "event_system")
+        assert hasattr(bot, "is_ready")

@@ -1,8 +1,9 @@
 """Tests for permission manager functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
 import hikari
+import pytest
 
 from bot.permissions.manager import PermissionManager
 
@@ -94,7 +95,7 @@ class TestPermissionManager:
             pass
 
         # If we get here, the API exists and is callable
-        assert hasattr(manager, 'initialize')
+        assert hasattr(manager, "initialize")
         assert callable(manager.initialize)
 
     def test_permission_validation_methods(self, mock_db_manager):
@@ -102,9 +103,9 @@ class TestPermissionManager:
         manager = PermissionManager(mock_db_manager)
 
         # Test that validation methods exist and are callable
-        assert hasattr(manager, 'has_permission')
+        assert hasattr(manager, "has_permission")
         assert callable(manager.has_permission)
-        assert hasattr(manager, 'grant_permission')
+        assert hasattr(manager, "grant_permission")
         assert callable(manager.grant_permission)
-        assert hasattr(manager, 'revoke_permission')
+        assert hasattr(manager, "revoke_permission")
         assert callable(manager.revoke_permission)

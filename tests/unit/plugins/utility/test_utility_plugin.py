@@ -1,9 +1,10 @@
 """Tests for Utility plugin."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-import hikari
 import base64
+from unittest.mock import patch
+
+import hikari
+import pytest
 
 from plugins.utility.utility import UtilityPlugin
 
@@ -23,7 +24,7 @@ class TestUtilityPlugin:
         """Test plugin loading."""
         plugin = UtilityPlugin(mock_bot)
 
-        with patch('aiohttp.ClientSession') as mock_session:
+        with patch("aiohttp.ClientSession") as mock_session:
             await plugin.on_load()
 
             assert plugin.session is not None
@@ -41,7 +42,9 @@ class TestUtilityPlugin:
         mock_context.respond.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_userinfo_command_with_member(self, mock_bot, mock_context, mock_user, mock_member, mock_guild):
+    async def test_userinfo_command_with_member(
+        self, mock_bot, mock_context, mock_user, mock_member, mock_guild
+    ):
         """Test userinfo command with guild member."""
         plugin = UtilityPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -53,11 +56,15 @@ class TestUtilityPlugin:
         mock_guild.fetch_member.assert_called_once_with(mock_user.id)
 
     @pytest.mark.asyncio
-    async def test_userinfo_command_member_not_found(self, mock_bot, mock_context, mock_user, mock_guild):
+    async def test_userinfo_command_member_not_found(
+        self, mock_bot, mock_context, mock_user, mock_guild
+    ):
         """Test userinfo command when member not found."""
         plugin = UtilityPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
-        mock_guild.fetch_member.side_effect = hikari.NotFoundError("Member not found", {}, b"", code=10007)
+        mock_guild.fetch_member.side_effect = hikari.NotFoundError(
+            "Member not found", {}, b"", code=10007
+        )
 
         await plugin.user_info(mock_context, mock_user)
 
@@ -72,7 +79,7 @@ class TestUtilityPlugin:
         await plugin.user_info(mock_context)
 
         # Should handle error gracefully
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_avatar_command_self(self, mock_bot, mock_context, mock_user):
@@ -98,7 +105,7 @@ class TestUtilityPlugin:
         """Test timestamp command with 'now'."""
         plugin = UtilityPlugin(mock_bot)
 
-        with patch('plugins.utility.utility.datetime') as mock_datetime:
+        with patch("plugins.utility.utility.datetime") as mock_datetime:
             mock_datetime.now.return_value.timestamp.return_value = 1640995200
 
             await plugin.timestamp(mock_context, "now")
@@ -131,7 +138,7 @@ class TestUtilityPlugin:
         await plugin.timestamp(mock_context, "invalid-date")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_color_command_hex(self, mock_bot, mock_context):
@@ -159,7 +166,7 @@ class TestUtilityPlugin:
         await plugin.color_info(mock_context, "invalid-color")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_color_command_invalid_hex(self, mock_bot, mock_context):
@@ -169,7 +176,7 @@ class TestUtilityPlugin:
         await plugin.color_info(mock_context, "#GGGGGG")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_base64_encode(self, mock_bot, mock_context):
@@ -186,7 +193,7 @@ class TestUtilityPlugin:
         plugin = UtilityPlugin(mock_bot)
 
         # Encode "hello world" to base64
-        encoded = base64.b64encode("hello world".encode('utf-8')).decode('utf-8')
+        encoded = base64.b64encode(b"hello world").decode("utf-8")
 
         await plugin.base64_convert(mock_context, "decode", encoded)
 
@@ -200,7 +207,7 @@ class TestUtilityPlugin:
         await plugin.base64_convert(mock_context, "invalid", "test")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_base64_invalid_decode(self, mock_bot, mock_context):
@@ -210,7 +217,7 @@ class TestUtilityPlugin:
         await plugin.base64_convert(mock_context, "decode", "invalid-base64!")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_hash_md5(self, mock_bot, mock_context):
@@ -247,7 +254,7 @@ class TestUtilityPlugin:
         await plugin.hash_text(mock_context, "invalid", "hello world")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     def test_rgb_to_hsl_conversion(self, mock_bot):
         """Test RGB to HSL color conversion."""

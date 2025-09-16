@@ -1,11 +1,11 @@
 """Tests for Moderation plugin."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-import hikari
-from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
-from plugins.moderation.moderation import ModerationPlugin, PLUGIN_METADATA
+import hikari
+import pytest
+
+from plugins.moderation.moderation import PLUGIN_METADATA, ModerationPlugin
 
 
 class TestModerationPlugin:
@@ -18,7 +18,9 @@ class TestModerationPlugin:
         assert plugin.bot == mock_bot
 
     @pytest.mark.asyncio
-    async def test_kick_member_success(self, mock_bot, mock_context, mock_member, mock_guild):
+    async def test_kick_member_success(
+        self, mock_bot, mock_context, mock_member, mock_guild
+    ):
         """Test successful member kick."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -48,7 +50,9 @@ class TestModerationPlugin:
         assert plugin.logger is not None
 
     @pytest.mark.asyncio
-    async def test_ban_member_success(self, mock_bot, mock_context, mock_user, mock_guild):
+    async def test_ban_member_success(
+        self, mock_bot, mock_context, mock_user, mock_guild
+    ):
         """Test successful member ban."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -60,7 +64,9 @@ class TestModerationPlugin:
         assert plugin.logger is not None
 
     @pytest.mark.asyncio
-    async def test_timeout_member_success(self, mock_bot, mock_context, mock_member, mock_guild):
+    async def test_timeout_member_success(
+        self, mock_bot, mock_context, mock_member, mock_guild
+    ):
         """Test successful member timeout."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -115,10 +121,12 @@ class TestModerationPlugin:
         await plugin.purge_messages(mock_context, 150)  # Too many
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
-    async def test_purge_with_user_filter(self, mock_bot, mock_context, mock_channel, mock_user):
+    async def test_purge_with_user_filter(
+        self, mock_bot, mock_context, mock_channel, mock_user
+    ):
         """Test purge with user filter."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel
@@ -174,7 +182,7 @@ class TestModerationPlugin:
         await plugin.unban_user(mock_context, "123456789")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_unban_invalid_user_id(self, mock_bot, mock_context):
@@ -184,7 +192,7 @@ class TestModerationPlugin:
         await plugin.unban_user(mock_context, "invalid-id")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_slowmode_enable(self, mock_bot, mock_context, mock_channel):
@@ -232,7 +240,7 @@ class TestModerationPlugin:
         await plugin.slowmode(mock_context, 25000)  # Too high
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_slowmode_invalid_channel(self, mock_bot, mock_context, mock_channel):
@@ -244,7 +252,7 @@ class TestModerationPlugin:
         await plugin.slowmode(mock_context, 30)
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
 
 class TestModerationPluginMetadata:
@@ -263,7 +271,9 @@ class TestKickMemberExtended:
     """Extended tests for kick_member functionality."""
 
     @pytest.mark.asyncio
-    async def test_kick_member_prefix_command_parsing(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_prefix_command_parsing(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick member with prefix command args parsing."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -271,7 +281,7 @@ class TestKickMemberExtended:
 
         # Mock prefix command args
         mock_context.args = ["<@123>", "Being", "too", "awesome"]
-        delattr(mock_context, 'options')  # Remove options to trigger args parsing
+        delattr(mock_context, "options")  # Remove options to trigger args parsing
 
         # Mock member
         mock_member = MagicMock()
@@ -290,7 +300,9 @@ class TestKickMemberExtended:
         assert expected_reason in call_args[1]["reason"]
 
     @pytest.mark.asyncio
-    async def test_kick_member_invalid_member_id(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_invalid_member_id(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick with invalid member ID in args."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -299,7 +311,7 @@ class TestKickMemberExtended:
 
         # Mock prefix command with invalid member ID
         mock_context.args = ["invalid_id"]
-        delattr(mock_context, 'options')
+        delattr(mock_context, "options")
         mock_guild.get_member.return_value = None
 
         await plugin.kick_member(mock_context)
@@ -308,7 +320,9 @@ class TestKickMemberExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_kick_member_bot_target_error(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_bot_target_error(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick when trying to kick the bot itself."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -329,7 +343,9 @@ class TestKickMemberExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_kick_member_dm_failure_continues(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_dm_failure_continues(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick continues even if DM fails."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -339,7 +355,9 @@ class TestKickMemberExtended:
         mock_member = MagicMock()
         mock_member.id = 123
         mock_member.mention = "<@123>"
-        mock_member.fetch_dm_channel = AsyncMock(side_effect=hikari.ForbiddenError("", {}, b""))
+        mock_member.fetch_dm_channel = AsyncMock(
+            side_effect=hikari.ForbiddenError("", {}, b"")
+        )
 
         mock_context.options = MagicMock()
         mock_context.options.member = mock_member
@@ -353,7 +371,9 @@ class TestKickMemberExtended:
         mock_guild.kick.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_kick_member_forbidden_error(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_forbidden_error(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick when bot lacks permissions."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -376,7 +396,9 @@ class TestKickMemberExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_kick_member_general_exception(self, mock_bot, mock_context, mock_guild):
+    async def test_kick_member_general_exception(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test kick with unexpected exception."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -403,7 +425,9 @@ class TestBanMemberExtended:
     """Extended tests for ban_member functionality."""
 
     @pytest.mark.asyncio
-    async def test_ban_member_prefix_command_with_delete_days(self, mock_bot, mock_context, mock_guild):
+    async def test_ban_member_prefix_command_with_delete_days(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test ban with prefix command including delete days."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -411,7 +435,7 @@ class TestBanMemberExtended:
 
         # Mock prefix command args
         mock_context.args = ["<@123>", "7", "Spamming", "channels"]
-        delattr(mock_context, 'options')
+        delattr(mock_context, "options")
 
         # Mock user fetch
         mock_user = MagicMock()
@@ -438,8 +462,10 @@ class TestBanMemberExtended:
 
         # Mock args with invalid user
         mock_context.args = ["invalid_user"]
-        delattr(mock_context, 'options')
-        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(side_effect=hikari.NotFoundError("", {}, b""))
+        delattr(mock_context, "options")
+        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(
+            side_effect=hikari.NotFoundError("", {}, b"")
+        )
 
         await plugin.ban_member(mock_context)
 
@@ -465,7 +491,9 @@ class TestBanMemberExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_ban_member_with_dm_to_member(self, mock_bot, mock_context, mock_guild):
+    async def test_ban_member_with_dm_to_member(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test ban sends DM to server member before banning."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -501,7 +529,9 @@ class TestTimeoutMemberExtended:
     """Extended tests for timeout_member functionality."""
 
     @pytest.mark.asyncio
-    async def test_timeout_member_prefix_command_parsing(self, mock_bot, mock_context, mock_guild):
+    async def test_timeout_member_prefix_command_parsing(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test timeout with prefix command parsing."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -509,7 +539,7 @@ class TestTimeoutMemberExtended:
 
         # Mock prefix command args
         mock_context.args = ["<@123>", "60", "Too", "chatty"]
-        delattr(mock_context, 'options')
+        delattr(mock_context, "options")
 
         # Mock member
         mock_member = MagicMock()
@@ -533,7 +563,7 @@ class TestTimeoutMemberExtended:
 
         # Mock invalid args
         mock_context.args = ["invalid"]
-        delattr(mock_context, 'options')
+        delattr(mock_context, "options")
 
         await plugin.timeout_member(mock_context)
 
@@ -541,7 +571,9 @@ class TestTimeoutMemberExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_timeout_member_complex_duration_formatting(self, mock_bot, mock_context, mock_guild):
+    async def test_timeout_member_complex_duration_formatting(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test timeout duration formatting for different time ranges."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -591,7 +623,9 @@ class TestUnbanUserExtended:
     """Extended tests for unban_user functionality."""
 
     @pytest.mark.asyncio
-    async def test_unban_user_forbidden_ban_list_access(self, mock_bot, mock_context, mock_guild):
+    async def test_unban_user_forbidden_ban_list_access(
+        self, mock_bot, mock_context, mock_guild
+    ):
         """Test unban when bot can't access ban list."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -661,7 +695,9 @@ class TestSlowmodeExtended:
     """Extended tests for slowmode functionality."""
 
     @pytest.mark.asyncio
-    async def test_slowmode_hour_duration_formatting(self, mock_bot, mock_context, mock_channel):
+    async def test_slowmode_hour_duration_formatting(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test slowmode with hour-long durations."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel
@@ -677,7 +713,9 @@ class TestSlowmodeExtended:
         mock_context.respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_slowmode_minutes_and_seconds_formatting(self, mock_bot, mock_context, mock_channel):
+    async def test_slowmode_minutes_and_seconds_formatting(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test slowmode with mixed minutes and seconds."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel
@@ -692,7 +730,9 @@ class TestSlowmodeExtended:
         mock_context.respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_slowmode_hours_and_minutes_formatting(self, mock_bot, mock_context, mock_channel):
+    async def test_slowmode_hours_and_minutes_formatting(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test slowmode with hours and minutes."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel
@@ -707,7 +747,9 @@ class TestSlowmodeExtended:
         mock_context.respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_slowmode_news_channel_allowed(self, mock_bot, mock_context, mock_channel):
+    async def test_slowmode_news_channel_allowed(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test slowmode works on news channels."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel
@@ -735,7 +777,9 @@ class TestSlowmodeExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_slowmode_general_exception(self, mock_bot, mock_context, mock_channel):
+    async def test_slowmode_general_exception(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test slowmode with unexpected exception."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -753,7 +797,9 @@ class TestPurgeMessagesExtended:
     """Extended tests for purge_messages functionality."""
 
     @pytest.mark.asyncio
-    async def test_purge_messages_forbidden_error(self, mock_bot, mock_context, mock_channel):
+    async def test_purge_messages_forbidden_error(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test purge with permission error."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -761,7 +807,9 @@ class TestPurgeMessagesExtended:
         mock_context.defer = AsyncMock()
 
         # Mock delete_messages to raise ForbiddenError
-        mock_channel.delete_messages = AsyncMock(side_effect=hikari.ForbiddenError("", {}, b""))
+        mock_channel.delete_messages = AsyncMock(
+            side_effect=hikari.ForbiddenError("", {}, b"")
+        )
 
         await plugin.purge_messages(mock_context, 5)
 
@@ -769,7 +817,9 @@ class TestPurgeMessagesExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_purge_messages_general_exception(self, mock_bot, mock_context, mock_channel):
+    async def test_purge_messages_general_exception(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test purge with unexpected exception."""
         plugin = ModerationPlugin(mock_bot)
         plugin.smart_respond = AsyncMock()
@@ -789,7 +839,9 @@ class TestPurgeMessagesExtended:
         plugin.smart_respond.assert_called()
 
     @pytest.mark.asyncio
-    async def test_purge_messages_no_messages_found(self, mock_bot, mock_context, mock_channel):
+    async def test_purge_messages_no_messages_found(
+        self, mock_bot, mock_context, mock_channel
+    ):
         """Test purge when no messages are found."""
         plugin = ModerationPlugin(mock_bot)
         mock_context.get_channel.return_value = mock_channel

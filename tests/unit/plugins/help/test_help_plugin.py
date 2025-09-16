@@ -1,14 +1,16 @@
 """Tests for Help plugin."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import hikari
-import lightbulb
 import miru
+import pytest
 
 from plugins.help.help import (
-    HelpPlugin, PLUGIN_METADATA, PersistentPluginSelectView,
-    PluginSelectView
+    PLUGIN_METADATA,
+    HelpPlugin,
+    PersistentPluginSelectView,
+    PluginSelectView,
 )
 
 
@@ -38,7 +40,11 @@ class TestHelpPlugin:
 
         # Mock plugin loader with proper methods
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.get_loaded_plugins.return_value = ['admin', 'moderation', 'fun']
+        mock_bot.plugin_loader.get_loaded_plugins.return_value = [
+            "admin",
+            "moderation",
+            "fun",
+        ]
 
         # Mock plugin info for each plugin
         mock_plugin_info = MagicMock()
@@ -58,7 +64,7 @@ class TestHelpPlugin:
         call_args = mock_context.respond.call_args
         assert "embed" in call_args[1]
         # Only check for components if miru_client is available and has children
-        if hasattr(mock_bot, 'miru_client') and mock_bot.miru_client:
+        if hasattr(mock_bot, "miru_client") and mock_bot.miru_client:
             assert "components" in call_args[1]
 
     @pytest.mark.asyncio
@@ -69,19 +75,19 @@ class TestHelpPlugin:
         # Mock plugin loader with detailed plugin
         mock_admin_plugin = MagicMock()
         mock_admin_plugin.plugin_info = {
-            'name': 'Admin',
-            'description': 'Admin commands',
-            'commands': [
+            "name": "Admin",
+            "description": "Admin commands",
+            "commands": [
                 {
-                    'name': 'reload',
-                    'description': 'Reload plugins',
-                    'permission_node': 'admin.reload'
+                    "name": "reload",
+                    "description": "Reload plugins",
+                    "permission_node": "admin.reload",
                 }
-            ]
+            ],
         }
 
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.plugins = {'admin': mock_admin_plugin}
+        mock_bot.plugin_loader.plugins = {"admin": mock_admin_plugin}
 
         await plugin.help_command(mock_context, "admin")
 
@@ -105,7 +111,7 @@ class TestHelpPlugin:
         await plugin.help_command(mock_context, "nonexistent")
 
         # Should respond with error (using smart_respond)
-        assert mock_context.respond.called or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.called or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_get_general_help(self, mock_bot):
@@ -115,8 +121,8 @@ class TestHelpPlugin:
         # Mock plugin loader
         mock_bot.plugin_loader = MagicMock()
         mock_bot.plugin_loader.plugins = {
-            'admin': MagicMock(),
-            'moderation': MagicMock()
+            "admin": MagicMock(),
+            "moderation": MagicMock(),
         }
 
         embed = await plugin._get_general_help()
@@ -132,24 +138,24 @@ class TestHelpPlugin:
         # Mock plugin with commands
         mock_plugin = MagicMock()
         mock_plugin.plugin_info = {
-            'name': 'Test Plugin',
-            'description': 'Test plugin description',
-            'version': '1.0.0',
-            'author': 'Test Author',
-            'commands': [
+            "name": "Test Plugin",
+            "description": "Test plugin description",
+            "version": "1.0.0",
+            "author": "Test Author",
+            "commands": [
                 {
-                    'name': 'test_command',
-                    'description': 'Test command description',
-                    'permission_node': 'test.command',
-                    'usage': '/test_command <arg>'
+                    "name": "test_command",
+                    "description": "Test command description",
+                    "permission_node": "test.command",
+                    "usage": "/test_command <arg>",
                 }
-            ]
+            ],
         }
 
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.plugins = {'test': mock_plugin}
+        mock_bot.plugin_loader.plugins = {"test": mock_plugin}
 
-        embed = await plugin._get_plugin_commands_embed('test')
+        embed = await plugin._get_plugin_commands_embed("test")
 
         assert embed is not None
         assert isinstance(embed, hikari.Embed)
@@ -162,7 +168,7 @@ class TestHelpPlugin:
         mock_bot.plugin_loader = MagicMock()
         mock_bot.plugin_loader.get_plugin_info.return_value = None
 
-        embed = await plugin._get_plugin_commands_embed('nonexistent')
+        embed = await plugin._get_plugin_commands_embed("nonexistent")
 
         assert embed is not None
         assert "not found" in embed.description.lower()
@@ -174,10 +180,10 @@ class TestHelpPlugin:
 
         # Mock plugin info without commands
         mock_plugin_info = MagicMock()
-        mock_plugin_info.name = 'Empty Plugin'
-        mock_plugin_info.description = 'Plugin with no commands'
-        mock_plugin_info.version = '1.0.0'
-        mock_plugin_info.author = 'Test Author'
+        mock_plugin_info.name = "Empty Plugin"
+        mock_plugin_info.description = "Plugin with no commands"
+        mock_plugin_info.version = "1.0.0"
+        mock_plugin_info.author = "Test Author"
 
         mock_bot.plugin_loader = MagicMock()
         mock_bot.plugin_loader.get_plugin_info.return_value = mock_plugin_info
@@ -186,7 +192,7 @@ class TestHelpPlugin:
         mock_bot.message_handler = MagicMock()
         mock_bot.message_handler.commands = {}
 
-        embed = await plugin._get_plugin_commands_embed('empty')
+        embed = await plugin._get_plugin_commands_embed("empty")
 
         assert embed is not None
         # Check the embed field content instead of description
@@ -207,20 +213,20 @@ class TestHelpPlugin:
 
         # Mock command object
         mock_cmd = MagicMock()
-        mock_cmd.name = 'test_cmd'
-        mock_cmd.description = 'Test command'
-        mock_cmd.permission_node = 'test.cmd'
-        mock_cmd.aliases = ['tc']
+        mock_cmd.name = "test_cmd"
+        mock_cmd.description = "Test command"
+        mock_cmd.permission_node = "test.cmd"
+        mock_cmd.aliases = ["tc"]
 
         # Mock message handler with the command
         mock_bot.message_handler = MagicMock()
-        mock_bot.message_handler.commands = {'test_cmd': mock_cmd}
-        mock_bot.message_handler.prefix = '!'
+        mock_bot.message_handler.commands = {"test_cmd": mock_cmd}
+        mock_bot.message_handler.prefix = "!"
 
-        cmd_info = await plugin._get_command_info('test_cmd')
+        cmd_info = await plugin._get_command_info("test_cmd")
 
         assert cmd_info is not None
-        assert cmd_info['name'] == 'test_cmd'
+        assert cmd_info["name"] == "test_cmd"
 
     @pytest.mark.asyncio
     async def test_get_command_info_not_found(self, mock_bot):
@@ -231,7 +237,7 @@ class TestHelpPlugin:
         mock_bot.message_handler = MagicMock()
         mock_bot.message_handler.commands = {}
 
-        cmd_info = await plugin._get_command_info('nonexistent')
+        cmd_info = await plugin._get_command_info("nonexistent")
 
         assert cmd_info is None
 
@@ -242,34 +248,34 @@ class TestHelpPlugin:
 
         # Mock command object with aliases
         mock_cmd = MagicMock()
-        mock_cmd.name = 'long_command'
-        mock_cmd.description = 'Long command name'
-        mock_cmd.aliases = ['lc', 'short']
+        mock_cmd.name = "long_command"
+        mock_cmd.description = "Long command name"
+        mock_cmd.aliases = ["lc", "short"]
 
         # Mock message handler with the command
         mock_bot.message_handler = MagicMock()
-        mock_bot.message_handler.commands = {'long_command': mock_cmd}
-        mock_bot.message_handler.prefix = '!'
+        mock_bot.message_handler.commands = {"long_command": mock_cmd}
+        mock_bot.message_handler.prefix = "!"
 
-        cmd_info = await plugin._get_command_info('lc')
+        cmd_info = await plugin._get_command_info("lc")
 
         assert cmd_info is not None
-        assert cmd_info['name'] == 'long_command'
+        assert cmd_info["name"] == "long_command"
 
     def test_format_command_list_small(self, mock_bot):
         """Test _format_command_list with small number of commands."""
         plugin = HelpPlugin(mock_bot)
 
         commands = [
-            {'name': 'cmd1', 'description': 'Command 1'},
-            {'name': 'cmd2', 'description': 'Command 2'}
+            {"name": "cmd1", "description": "Command 1"},
+            {"name": "cmd2", "description": "Command 2"},
         ]
 
         formatted = plugin._format_command_list(commands)
 
         assert len(formatted) == 1
-        assert 'cmd1' in formatted[0]
-        assert 'cmd2' in formatted[0]
+        assert "cmd1" in formatted[0]
+        assert "cmd2" in formatted[0]
 
     def test_format_command_list_large(self, mock_bot):
         """Test _format_command_list with many commands."""
@@ -278,10 +284,12 @@ class TestHelpPlugin:
         # Create many commands to test pagination with long descriptions
         commands = []
         for i in range(25):
-            commands.append({
-                'name': f'very_long_command_name_{i}',
-                'description': f'This is a very long command description for command {i} that should help trigger pagination when there are many commands like this one'
-            })
+            commands.append(
+                {
+                    "name": f"very_long_command_name_{i}",
+                    "description": f"This is a very long command description for command {i} that should help trigger pagination when there are many commands like this one",
+                }
+            )
 
         formatted = plugin._format_command_list(commands)
 
@@ -294,34 +302,31 @@ class TestHelpPlugin:
 
         plugin_obj = MagicMock()
         plugin_obj.plugin_info = {
-            'name': 'Test Plugin',
-            'description': 'A comprehensive test plugin',
-            'version': '2.1.0',
-            'author': 'Test Developer',
-            'commands': [{'name': 'cmd1'}, {'name': 'cmd2'}]
+            "name": "Test Plugin",
+            "description": "A comprehensive test plugin",
+            "version": "2.1.0",
+            "author": "Test Developer",
+            "commands": [{"name": "cmd1"}, {"name": "cmd2"}],
         }
 
-        overview = plugin._get_plugin_overview('test', plugin_obj)
+        overview = plugin._get_plugin_overview("test", plugin_obj)
 
-        assert 'Test Plugin' in overview
-        assert '2.1.0' in overview
-        assert 'Test Developer' in overview
-        assert '2 commands' in overview
+        assert "Test Plugin" in overview
+        assert "2.1.0" in overview
+        assert "Test Developer" in overview
+        assert "2 commands" in overview
 
     def test_get_plugin_overview_minimal_metadata(self, mock_bot):
         """Test _get_plugin_overview with minimal metadata."""
         plugin = HelpPlugin(mock_bot)
 
         plugin_obj = MagicMock()
-        plugin_obj.plugin_info = {
-            'name': 'Minimal Plugin',
-            'commands': []
-        }
+        plugin_obj.plugin_info = {"name": "Minimal Plugin", "commands": []}
 
-        overview = plugin._get_plugin_overview('minimal', plugin_obj)
+        overview = plugin._get_plugin_overview("minimal", plugin_obj)
 
-        assert 'Minimal Plugin' in overview
-        assert 'Unknown' in overview  # Should handle missing fields
+        assert "Minimal Plugin" in overview
+        assert "Unknown" in overview  # Should handle missing fields
 
     def test_get_plugin_overview_no_plugin_info(self, mock_bot):
         """Test _get_plugin_overview when plugin has no plugin_info."""
@@ -330,10 +335,10 @@ class TestHelpPlugin:
         plugin_obj = MagicMock()
         del plugin_obj.plugin_info  # Remove plugin_info attribute
 
-        overview = plugin._get_plugin_overview('broken', plugin_obj)
+        overview = plugin._get_plugin_overview("broken", plugin_obj)
 
-        assert 'broken' in overview.lower()
-        assert 'available' in overview.lower()
+        assert "broken" in overview.lower()
+        assert "available" in overview.lower()
 
 
 class TestPersistentPluginSelectView:
@@ -345,7 +350,6 @@ class TestPersistentPluginSelectView:
 
         assert view.timeout is None  # Should be persistent
         assert len(view.children) == 1  # Should have select menu
-
 
     @pytest.mark.asyncio
     async def test_on_plugin_select_no_select_values(self):
@@ -360,7 +364,9 @@ class TestPersistentPluginSelectView:
         mock_select.values = []
         mock_select.custom_id = "help_plugin_select"
 
-        with patch.object(type(view), 'children', new_callable=MagicMock, return_value=[mock_select]):
+        with patch.object(
+            type(view), "children", new_callable=MagicMock, return_value=[mock_select]
+        ):
             await view.on_plugin_select(mock_ctx)
 
         # Should return early without errors
@@ -378,7 +384,7 @@ class TestPluginSelectView:
 
         # Mock plugin loader with plugins
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.get_loaded_plugins.return_value = ['test_plugin']
+        mock_bot.plugin_loader.get_loaded_plugins.return_value = ["test_plugin"]
 
         # Mock plugin info
         mock_plugin_info = MagicMock()
@@ -452,10 +458,7 @@ class TestHelpPluginMethods:
         mock_cmd2.name = "ping"
 
         mock_bot.message_handler = MagicMock()
-        mock_bot.message_handler.commands = {
-            "help": mock_cmd1,
-            "ping": mock_cmd2
-        }
+        mock_bot.message_handler.commands = {"help": mock_cmd1, "ping": mock_cmd2}
 
         embed = await plugin._get_commands_list()
 
@@ -530,7 +533,9 @@ class TestHelpPluginMethods:
         """Test on_load calls _register_persistent_views."""
         plugin = HelpPlugin(mock_bot)
 
-        with patch.object(plugin, '_register_persistent_views', new_callable=AsyncMock) as mock_register:
+        with patch.object(
+            plugin, "_register_persistent_views", new_callable=AsyncMock
+        ) as mock_register:
             await plugin.on_load()
 
         mock_register.assert_called_once()
@@ -547,23 +552,20 @@ class TestHelpPluginIntegration:
         # Mock multiple plugins
         mock_admin = MagicMock()
         mock_admin.plugin_info = {
-            'name': 'Admin',
-            'description': 'Admin commands',
-            'commands': [{'name': 'reload', 'description': 'Reload plugins'}]
+            "name": "Admin",
+            "description": "Admin commands",
+            "commands": [{"name": "reload", "description": "Reload plugins"}],
         }
 
         mock_fun = MagicMock()
         mock_fun.plugin_info = {
-            'name': 'Fun',
-            'description': 'Fun commands',
-            'commands': [{'name': 'joke', 'description': 'Tell a joke'}]
+            "name": "Fun",
+            "description": "Fun commands",
+            "commands": [{"name": "joke", "description": "Tell a joke"}],
         }
 
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.plugins = {
-            'admin': mock_admin,
-            'fun': mock_fun
-        }
+        mock_bot.plugin_loader.plugins = {"admin": mock_admin, "fun": mock_fun}
 
         # Test general help
         await plugin.help_command(mock_context)
@@ -583,7 +585,7 @@ class TestHelpPluginIntegration:
 
         # Test plugin with minimal info
         minimal_plugin = MagicMock()
-        minimal_plugin.plugin_info = {'name': 'Minimal'}
+        minimal_plugin.plugin_info = {"name": "Minimal"}
 
         # Test plugin with no plugin_info
         broken_plugin = MagicMock()
@@ -591,8 +593,8 @@ class TestHelpPluginIntegration:
 
         mock_bot.plugin_loader = MagicMock()
         mock_bot.plugin_loader.plugins = {
-            'minimal': minimal_plugin,
-            'broken': broken_plugin
+            "minimal": minimal_plugin,
+            "broken": broken_plugin,
         }
 
         # Should handle both cases without errors
@@ -609,15 +611,14 @@ class TestHelpPluginIntegration:
         assert "No commands" in empty_formatted[0]
 
         # Test command without description
-        commands_no_desc = [{'name': 'cmd1'}]
+        commands_no_desc = [{"name": "cmd1"}]
         formatted = plugin._format_command_list(commands_no_desc)
-        assert 'cmd1' in formatted[0]
+        assert "cmd1" in formatted[0]
 
         # Test very long command descriptions
-        long_desc_commands = [{
-            'name': 'cmd1',
-            'description': 'A' * 200  # Very long description
-        }]
+        long_desc_commands = [
+            {"name": "cmd1", "description": "A" * 200}  # Very long description
+        ]
         formatted = plugin._format_command_list(long_desc_commands)
         assert len(formatted[0]) < 2000  # Should fit in embed field limit
 
@@ -634,7 +635,7 @@ class TestHelpPluginIntegration:
         embed = await plugin._get_general_help()
         assert embed is not None
 
-        cmd_info = await plugin._get_command_info('test')
+        cmd_info = await plugin._get_command_info("test")
         assert cmd_info is None
 
     @pytest.mark.asyncio
@@ -644,7 +645,7 @@ class TestHelpPluginIntegration:
 
         # Test that select view creates proper miru components
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.get_loaded_plugins.return_value = ['test']
+        mock_bot.plugin_loader.get_loaded_plugins.return_value = ["test"]
 
         # Mock plugin info
         mock_plugin_info = MagicMock()
@@ -666,7 +667,9 @@ class TestHelpPluginIntegration:
         assert view.timeout is None
 
         # Should have correct custom IDs for persistence
-        select_items = [child for child in view.children if isinstance(child, miru.TextSelect)]
+        select_items = [
+            child for child in view.children if isinstance(child, miru.TextSelect)
+        ]
         assert len(select_items) > 0
         assert any(item.custom_id == "help_plugin_select" for item in select_items)
 
@@ -706,7 +709,7 @@ class TestHelpPluginAdditionalCoverage:
 
         # Mock plugin loader
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.get_loaded_plugins.return_value = ['test']
+        mock_bot.plugin_loader.get_loaded_plugins.return_value = ["test"]
         mock_plugin_info = MagicMock()
         mock_plugin_info.name = "Test"
         mock_plugin_info.version = "1.0.0"
@@ -783,10 +786,10 @@ class TestHelpPluginAdditionalCoverage:
 
         # Mock plugin info with very long description
         mock_plugin_info = MagicMock()
-        mock_plugin_info.name = 'Test Plugin'
-        mock_plugin_info.description = 'A' * 200  # Very long description
-        mock_plugin_info.version = '1.0.0'
-        mock_plugin_info.author = 'Test Author'
+        mock_plugin_info.name = "Test Plugin"
+        mock_plugin_info.description = "A" * 200  # Very long description
+        mock_plugin_info.version = "1.0.0"
+        mock_plugin_info.author = "Test Author"
 
         mock_bot.plugin_loader = MagicMock()
         mock_bot.plugin_loader.get_plugin_info.return_value = mock_plugin_info
@@ -803,7 +806,7 @@ class TestHelpPluginAdditionalCoverage:
         mock_bot.message_handler.commands = {"test_cmd": mock_cmd}
         mock_bot.message_handler.prefix = "!"
 
-        embed = await plugin._get_plugin_commands_embed('test')
+        embed = await plugin._get_plugin_commands_embed("test")
         assert embed is not None
 
     def test_get_plugin_overview_with_long_commands_list(self, mock_bot):
@@ -813,24 +816,26 @@ class TestHelpPluginAdditionalCoverage:
         # Mock plugin with many commands
         mock_plugin = MagicMock()
         mock_plugin.plugin_info = {
-            'name': 'Big Plugin',
-            'version': '2.0.0',
-            'author': 'Big Developer',
-            'commands': [{'name': f'cmd{i}'} for i in range(50)]  # Many commands
+            "name": "Big Plugin",
+            "version": "2.0.0",
+            "author": "Big Developer",
+            "commands": [{"name": f"cmd{i}"} for i in range(50)],  # Many commands
         }
 
-        overview = plugin._get_plugin_overview('big', mock_plugin)
-        assert 'Big Plugin' in overview
-        assert '50 commands' in overview
+        overview = plugin._get_plugin_overview("big", mock_plugin)
+        assert "Big Plugin" in overview
+        assert "50 commands" in overview
 
     @pytest.mark.asyncio
-    async def test_help_command_with_miru_client_unavailable(self, mock_bot, mock_context):
+    async def test_help_command_with_miru_client_unavailable(
+        self, mock_bot, mock_context
+    ):
         """Test help command when miru client is not available."""
         plugin = HelpPlugin(mock_bot)
 
         # Mock plugin loader
         mock_bot.plugin_loader = MagicMock()
-        mock_bot.plugin_loader.get_loaded_plugins.return_value = ['test']
+        mock_bot.plugin_loader.get_loaded_plugins.return_value = ["test"]
         mock_plugin_info = MagicMock()
         mock_plugin_info.name = "Test Plugin"
         mock_plugin_info.description = "Test description"
@@ -853,7 +858,9 @@ class TestHelpPluginAdditionalCoverage:
         plugin = HelpPlugin(mock_bot)
 
         # Make _get_general_help raise an exception
-        with patch.object(plugin, '_get_general_help', side_effect=Exception("Test error")):
+        with patch.object(
+            plugin, "_get_general_help", side_effect=Exception("Test error")
+        ):
             await plugin.help_command(mock_context)
 
     @pytest.mark.asyncio

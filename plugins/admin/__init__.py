@@ -6,11 +6,7 @@ PLUGIN_METADATA = {
     "author": "Bot Framework",
     "description": "Administrative commands for bot management",
     "dependencies": [],
-    "permissions": [
-        "admin.config",
-        "admin.plugins",
-        "admin.permissions"
-    ],
+    "permissions": ["admin.config", "admin.plugins", "admin.permissions"],
 }
 
 

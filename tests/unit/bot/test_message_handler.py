@@ -1,8 +1,9 @@
 """Tests for message handler functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import hikari
+import pytest
 
 from bot.core.message_handler import MessageCommandHandler, PrefixCommand, PrefixContext
 
@@ -19,7 +20,7 @@ class TestPrefixCommand:
             description="Test command",
             aliases=["t"],
             permission_node="test.command",
-            plugin_name="test_plugin"
+            plugin_name="test_plugin",
         )
 
         assert cmd.name == "test"
@@ -58,11 +59,7 @@ class TestMessageCommandHandler:
         """Test adding a command."""
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
-        cmd = PrefixCommand(
-            name="test",
-            callback=callback,
-            aliases=["t", "testing"]
-        )
+        cmd = PrefixCommand(name="test", callback=callback, aliases=["t", "testing"])
 
         handler.add_command(cmd)
 
@@ -77,11 +74,7 @@ class TestMessageCommandHandler:
         """Test removing a command."""
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
-        cmd = PrefixCommand(
-            name="test",
-            callback=callback,
-            aliases=["t"]
-        )
+        cmd = PrefixCommand(name="test", callback=callback, aliases=["t"])
 
         handler.add_command(cmd)
         handler.remove_command("test")
@@ -154,9 +147,7 @@ class TestMessageCommandHandler:
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
         cmd = PrefixCommand(
-            name="test",
-            callback=callback,
-            permission_node="test.command"
+            name="test", callback=callback, permission_node="test.command"
         )
         handler.add_command(cmd)
         mock_message_event.content = "!test"
@@ -174,15 +165,13 @@ class TestMessageCommandHandler:
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
         cmd = PrefixCommand(
-            name="test",
-            callback=callback,
-            permission_node="test.command"
+            name="test", callback=callback, permission_node="test.command"
         )
         handler.add_command(cmd)
         mock_message_event.content = "!test"
         mock_bot.permission_manager.has_permission.return_value = False
 
-        with patch.object(PrefixContext, 'respond', new=AsyncMock()) as mock_respond:
+        with patch.object(PrefixContext, "respond", new=AsyncMock()) as mock_respond:
             result = await handler.handle_message(mock_message_event)
 
             assert result is True
@@ -198,7 +187,7 @@ class TestMessageCommandHandler:
         handler.add_command(cmd)
         mock_message_event.content = "!test"
 
-        with patch.object(PrefixContext, 'respond', new=AsyncMock()) as mock_respond:
+        with patch.object(PrefixContext, "respond", new=AsyncMock()) as mock_respond:
             result = await handler.handle_message(mock_message_event)
 
             assert result is True
@@ -229,7 +218,9 @@ class TestPrefixContext:
         result = ctx.get_guild()
 
         assert result == mock_guild
-        mock_bot.hikari_bot.cache.get_guild.assert_called_once_with(mock_message_event.guild_id)
+        mock_bot.hikari_bot.cache.get_guild.assert_called_once_with(
+            mock_message_event.guild_id
+        )
 
     def test_get_guild_no_guild_id(self, mock_message_event, mock_bot):
         """Test getting guild when no guild_id."""
@@ -261,7 +252,7 @@ class TestPrefixContext:
             mock_message_event.channel_id,
             content="Test message",
             embed=None,
-            components=None
+            components=None,
         )
 
     @pytest.mark.asyncio
@@ -274,8 +265,5 @@ class TestPrefixContext:
         await ctx.respond(embed=embed)
 
         mock_bot.hikari_bot.rest.create_message.assert_called_once_with(
-            mock_message_event.channel_id,
-            content=None,
-            embed=embed,
-            components=None
+            mock_message_event.channel_id, content=None, embed=embed, components=None
         )

@@ -1,7 +1,8 @@
 import logging
-import re
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 import hikari
+
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -13,10 +14,10 @@ class PrefixCommand:
         name: str,
         callback: Any,
         description: str = "",
-        aliases: Optional[List[str]] = None,
-        permission_node: Optional[str] = None,
-        plugin_name: Optional[str] = None,
-        arguments: Optional[List[Any]] = None
+        aliases: list[str] | None = None,
+        permission_node: str | None = None,
+        plugin_name: str | None = None,
+        arguments: list[Any] | None = None,
     ):
         self.name = name
         self.callback = callback
@@ -30,7 +31,7 @@ class PrefixCommand:
 class MessageCommandHandler:
     def __init__(self, bot: Any):
         self.bot = bot
-        self.commands: Dict[str, PrefixCommand] = {}
+        self.commands: dict[str, PrefixCommand] = {}
         self.prefix = settings.bot_prefix
 
     def add_command(self, command: PrefixCommand) -> None:
@@ -40,7 +41,9 @@ class MessageCommandHandler:
         for alias in command.aliases:
             self.commands[alias] = command
 
-        logger.debug(f"Added prefix command: {command.name} (aliases: {command.aliases})")
+        logger.debug(
+            f"Added prefix command: {command.name} (aliases: {command.aliases})"
+        )
 
     def remove_command(self, name: str) -> None:
         if name in self.commands:
@@ -63,7 +66,7 @@ class MessageCommandHandler:
             return False
 
         # Parse command and arguments
-        content = event.content[len(self.prefix):].strip()
+        content = event.content[len(self.prefix) :].strip()
         if not content:
             return False
 
@@ -77,21 +80,25 @@ class MessageCommandHandler:
 
         command = self.commands[command_name]
 
-        logger.info(f"Prefix command called: {self.prefix}{command_name} by {event.author.username}")
+        logger.info(
+            f"Prefix command called: {self.prefix}{command_name} by {event.author.username}"
+        )
 
         try:
             # Create a context-like object for prefix commands
             ctx = PrefixContext(event, self.bot, args)
 
             # Check permissions if required
-            if command.permission_node and hasattr(self.bot, 'permission_manager'):
+            if command.permission_node and hasattr(self.bot, "permission_manager"):
                 member = event.member
                 if member:
                     has_permission = await self.bot.permission_manager.has_permission(
                         event.guild_id, member, command.permission_node
                     )
                     if not has_permission:
-                        await ctx.respond(f"❌ You don't have permission to use `{command.permission_node}`")
+                        await ctx.respond(
+                            f"❌ You don't have permission to use `{command.permission_node}`"
+                        )
                         return True
 
             # Execute command
@@ -108,7 +115,9 @@ class MessageCommandHandler:
 
 
 class PrefixContext:
-    def __init__(self, event: hikari.GuildMessageCreateEvent, bot: Any, args: List[str]):
+    def __init__(
+        self, event: hikari.GuildMessageCreateEvent, bot: Any, args: list[str]
+    ):
         self.event = event
         self.bot = bot
         self.args = args
@@ -119,18 +128,17 @@ class PrefixContext:
         self.guild_id = event.guild_id
         self.channel_id = event.channel_id
 
-    def get_guild(self) -> Optional[hikari.Guild]:
+    def get_guild(self) -> hikari.Guild | None:
         if self.guild_id:
             return self.bot.hikari_bot.cache.get_guild(self.guild_id)
         return None
 
-    def get_channel(self) -> Optional[hikari.GuildChannel]:
+    def get_channel(self) -> hikari.GuildChannel | None:
         return self.event.get_channel()
 
-    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> None:
+    async def respond(
+        self, content: str = None, *, embed: hikari.Embed = None, components=None
+    ) -> None:
         await self.bot.hikari_bot.rest.create_message(
-            self.channel_id,
-            content=content,
-            embed=embed,
-            components=components
+            self.channel_id, content=content, embed=embed, components=components
         )

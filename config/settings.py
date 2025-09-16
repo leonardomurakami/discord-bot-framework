@@ -1,4 +1,4 @@
-from typing import Optional, List
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -6,8 +6,7 @@ from pydantic_settings import BaseSettings
 class BotSettings(BaseSettings):
     discord_token: str = Field(..., description="Discord bot token")
     database_url: str = Field(
-        default="sqlite:///data/bot.db",
-        description="Database connection URL"
+        default="sqlite:///data/bot.db", description="Database connection URL"
     )
 
     bot_prefix: str = Field(default="!", description="Command prefix")
@@ -15,13 +14,13 @@ class BotSettings(BaseSettings):
     log_level: str = Field(default="DEBUG", description="Logging level")
 
     # Plugin configuration
-    enabled_plugins: List[str] = Field(
-        default=['admin', 'fun', 'moderation', 'help', "utility"],
-        description="List of enabled plugins"
+    enabled_plugins: list[str] = Field(
+        default=["admin", "fun", "moderation", "help", "utility"],
+        description="List of enabled plugins",
     )
-    plugin_directories: List[str] = Field(
+    plugin_directories: list[str] = Field(
         default=["plugins", "bot/plugins"],
-        description="Directories to scan for plugins"
+        description="Directories to scan for plugins",
     )
 
     # Development settings
@@ -32,8 +31,8 @@ class BotSettings(BaseSettings):
     web_host: str = Field(default="0.0.0.0", description="Web interface host")
 
     # Music plugin settings
-    spotify_client_id: Optional[str] = None
-    spotify_client_secret: Optional[str] = None
+    spotify_client_id: str | None = None
+    spotify_client_secret: str | None = None
 
     class Config:
         env_file = ".env"

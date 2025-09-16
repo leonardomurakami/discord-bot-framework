@@ -1,8 +1,17 @@
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 from sqlalchemy import (
-    String, Integer, BigInteger, DateTime, Boolean, Text, JSON,
-    ForeignKey, UniqueConstraint, Index
+    JSON,
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -18,17 +27,21 @@ class Guild(Base):
     name: Mapped[str] = mapped_column(String(100))
     prefix: Mapped[str] = mapped_column(String(10), default="!")
     language: Mapped[str] = mapped_column(String(10), default="en")
-    settings: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     # Relationships
-    users: Mapped[List["GuildUser"]] = relationship(back_populates="guild")
-    role_permissions: Mapped[List["RolePermission"]] = relationship(back_populates="guild")
-    command_usage: Mapped[List["CommandUsage"]] = relationship(back_populates="guild")
-    plugin_settings: Mapped[List["PluginSetting"]] = relationship(back_populates="guild")
+    users: Mapped[list["GuildUser"]] = relationship(back_populates="guild")
+    role_permissions: Mapped[list["RolePermission"]] = relationship(
+        back_populates="guild"
+    )
+    command_usage: Mapped[list["CommandUsage"]] = relationship(back_populates="guild")
+    plugin_settings: Mapped[list["PluginSetting"]] = relationship(
+        back_populates="guild"
+    )
 
 
 class User(Base):
@@ -37,15 +50,15 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String(32))
     discriminator: Mapped[str] = mapped_column(String(4))
-    global_settings: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    global_settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     # Relationships
-    guild_data: Mapped[List["GuildUser"]] = relationship(back_populates="user")
-    command_usage: Mapped[List["CommandUsage"]] = relationship(back_populates="user")
+    guild_data: Mapped[list["GuildUser"]] = relationship(back_populates="user")
+    command_usage: Mapped[list["CommandUsage"]] = relationship(back_populates="user")
 
 
 class GuildUser(Base):
@@ -54,8 +67,8 @@ class GuildUser(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guilds.id"))
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"))
-    nickname: Mapped[Optional[str]] = mapped_column(String(32))
-    settings: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    nickname: Mapped[str | None] = mapped_column(String(32))
+    settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     experience: Mapped[int] = mapped_column(Integer, default=0)
     level: Mapped[int] = mapped_column(Integer, default=1)
     warnings: Mapped[int] = mapped_column(Integer, default=0)
@@ -82,7 +95,9 @@ class Permission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    role_permissions: Mapped[List["RolePermission"]] = relationship(back_populates="permission")
+    role_permissions: Mapped[list["RolePermission"]] = relationship(
+        back_populates="permission"
+    )
 
 
 class RolePermission(Base):
@@ -114,8 +129,8 @@ class CommandUsage(Base):
     command_name: Mapped[str] = mapped_column(String(100))
     plugin_name: Mapped[str] = mapped_column(String(50))
     success: Mapped[bool] = mapped_column(Boolean)
-    error_message: Mapped[Optional[str]] = mapped_column(Text)
-    execution_time: Mapped[Optional[float]] = mapped_column()
+    error_message: Mapped[str | None] = mapped_column(Text)
+    execution_time: Mapped[float | None] = mapped_column()
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -134,7 +149,7 @@ class PluginSetting(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guilds.id"))
     plugin_name: Mapped[str] = mapped_column(String(50))
-    settings: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

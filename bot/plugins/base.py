@@ -1,12 +1,12 @@
 import logging
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List, TYPE_CHECKING
+from abc import ABC
+from typing import TYPE_CHECKING, Any
+
 import hikari
 import lightbulb
 
 if TYPE_CHECKING:
-    from ..core.event_system import event_listener
-    from .commands import CommandArgument, command, CommandRegistry
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,10 @@ class BasePlugin(ABC):
         self.bot = bot
         self.name = self.__class__.__name__.lower().replace("plugin", "")
         self.logger = logging.getLogger(f"plugin.{self.name}")
-        self._event_listeners: List[Any] = []
+        self._event_listeners: list[Any] = []
         # Import CommandRegistry here to avoid circular import
         from .commands import CommandRegistry
+
         self._command_registry: CommandRegistry = CommandRegistry(self)
 
     async def on_load(self) -> None:
@@ -35,11 +36,13 @@ class BasePlugin(ABC):
         # Register event listeners
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
-            if hasattr(attr, '_event_listener'):
+            if hasattr(attr, "_event_listener"):
                 event_name = attr._event_listener
                 self.bot.event_system.add_listener(event_name, attr)
                 self._event_listeners.append((event_name, attr))
-                self.logger.debug(f"Registered event listener: {attr_name} -> {event_name}")
+                self.logger.debug(
+                    f"Registered event listener: {attr_name} -> {event_name}"
+                )
 
     async def _unregister_event_listeners(self) -> None:
         # Unregister event listeners
@@ -51,13 +54,14 @@ class BasePlugin(ABC):
     async def get_setting(self, guild_id: int, key: str, default: Any = None) -> Any:
         # Get plugin-specific setting for a guild
         async with self.bot.db.session() as session:
-            from ..database.models import PluginSetting
             from sqlalchemy import select
+
+            from ..database.models import PluginSetting
 
             result = await session.execute(
                 select(PluginSetting).where(
                     PluginSetting.guild_id == guild_id,
-                    PluginSetting.plugin_name == self.name
+                    PluginSetting.plugin_name == self.name,
                 )
             )
             plugin_setting = result.scalar_one_or_none()
@@ -71,13 +75,14 @@ class BasePlugin(ABC):
         # Set plugin-specific setting for a guild
         try:
             async with self.bot.db.session() as session:
-                from ..database.models import PluginSetting
                 from sqlalchemy import select
+
+                from ..database.models import PluginSetting
 
                 result = await session.execute(
                     select(PluginSetting).where(
                         PluginSetting.guild_id == guild_id,
-                        PluginSetting.plugin_name == self.name
+                        PluginSetting.plugin_name == self.name,
                     )
                 )
                 plugin_setting = result.scalar_one_or_none()
@@ -86,9 +91,7 @@ class BasePlugin(ABC):
                     plugin_setting.settings[key] = value
                 else:
                     plugin_setting = PluginSetting(
-                        guild_id=guild_id,
-                        plugin_name=self.name,
-                        settings={key: value}
+                        guild_id=guild_id, plugin_name=self.name, settings={key: value}
                     )
                     session.add(plugin_setting)
 
@@ -115,15 +118,11 @@ class BasePlugin(ABC):
     # Utility methods for plugins
     def create_embed(
         self,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        color: hikari.Color = hikari.Color(0x7289DA)
+        title: str | None = None,
+        description: str | None = None,
+        color: hikari.Color = hikari.Color(0x7289DA),
     ) -> hikari.Embed:
-        embed = hikari.Embed(
-            title=title,
-            description=description,
-            color=color
-        )
+        embed = hikari.Embed(title=title, description=description, color=color)
         return embed
 
     async def smart_respond(
@@ -133,28 +132,28 @@ class BasePlugin(ABC):
         *,
         embed: hikari.Embed = None,
         ephemeral: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         """Context-aware respond that handles flags properly for both slash and prefix commands."""
         try:
             # For slash commands (InteractionContext), we can use flags
-            if hasattr(ctx, 'interaction') and ephemeral:
-                kwargs['flags'] = hikari.MessageFlag.EPHEMERAL
+            if hasattr(ctx, "interaction") and ephemeral:
+                kwargs["flags"] = hikari.MessageFlag.EPHEMERAL
             # For prefix commands, we ignore the ephemeral flag since it's not supported
-            
+
             if content:
-                kwargs['content'] = content
+                kwargs["content"] = content
             if embed:
-                kwargs['embed'] = embed
-                
+                kwargs["embed"] = embed
+
             await ctx.respond(**kwargs)
-        except Exception as e:
+        except Exception:
             # Fallback: try without flags if the first attempt fails
-            kwargs.pop('flags', None)
+            kwargs.pop("flags", None)
             if content:
-                kwargs['content'] = content
+                kwargs["content"] = content
             if embed:
-                kwargs['embed'] = embed
+                kwargs["embed"] = embed
             await ctx.respond(**kwargs)
 
     async def log_command_usage(
@@ -162,8 +161,8 @@ class BasePlugin(ABC):
         ctx: lightbulb.Context,
         command_name: str,
         success: bool,
-        error_message: Optional[str] = None,
-        execution_time: Optional[float] = None
+        error_message: str | None = None,
+        execution_time: float | None = None,
     ) -> None:
         try:
             async with self.bot.db.session() as session:
@@ -176,7 +175,7 @@ class BasePlugin(ABC):
                     plugin_name=self.name,
                     success=success,
                     error_message=error_message,
-                    execution_time=execution_time
+                    execution_time=execution_time,
                 )
                 session.add(usage)
                 await session.commit()

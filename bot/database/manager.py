@@ -1,17 +1,19 @@
 import logging
-from typing import Optional, AsyncGenerator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+from config.settings import settings
 
 from .models import Base
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
-    def __init__(self, database_url: Optional[str] = None) -> None:
+    def __init__(self, database_url: str | None = None) -> None:
         self.database_url = database_url or settings.database_url
         self.engine = None
         self.session_factory = None
@@ -23,11 +25,13 @@ class DatabaseManager:
             async_url = self.database_url.replace("sqlite://", "sqlite+aiosqlite://")
             engine_kwargs = {
                 "echo": settings.debug,
-                "connect_args": {"check_same_thread": False}
+                "connect_args": {"check_same_thread": False},
             }
         elif self.database_url.startswith("postgresql"):
             # Convert postgresql:// to postgresql+asyncpg://
-            async_url = self.database_url.replace("postgresql://", "postgresql+asyncpg://")
+            async_url = self.database_url.replace(
+                "postgresql://", "postgresql+asyncpg://"
+            )
             engine_kwargs = {
                 "echo": settings.debug,
                 "pool_size": 20,
@@ -40,9 +44,7 @@ class DatabaseManager:
 
         self.engine = create_async_engine(async_url, **engine_kwargs)
         self.session_factory = async_sessionmaker(
-            bind=self.engine,
-            class_=AsyncSession,
-            expire_on_commit=False
+            bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
     async def create_tables(self) -> None:

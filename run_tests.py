@@ -6,12 +6,11 @@ This script provides a convenient way to run tests with various options
 and automatically generates coverage reports.
 """
 
-import sys
-import subprocess
 import argparse
 import re
+import subprocess
+import sys
 from pathlib import Path
-from typing import Tuple, Dict
 
 
 def run_command(cmd, capture_output=False, show_output=True):
@@ -33,33 +32,33 @@ def run_command(cmd, capture_output=False, show_output=True):
         return result.returncode, result.stdout, result.stderr
 
 
-def parse_coverage_output(output: str) -> Dict[str, str]:
+def parse_coverage_output(output: str) -> dict[str, str]:
     """Parse coverage output to extract coverage percentage."""
     coverage_info = {}
 
     # Look for TOTAL line in coverage output
-    total_match = re.search(r'TOTAL\s+\d+\s+\d+\s+(\d+)%', output)
+    total_match = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+)%", output)
     if total_match:
-        coverage_info['total'] = total_match.group(1)
+        coverage_info["total"] = total_match.group(1)
 
     # Look for individual files
-    file_matches = re.findall(r'(\S+\.py)\s+\d+\s+\d+\s+(\d+)%', output)
+    file_matches = re.findall(r"(\S+\.py)\s+\d+\s+\d+\s+(\d+)%", output)
     for file_path, percentage in file_matches:
         coverage_info[file_path] = percentage
 
     return coverage_info
 
 
-def parse_test_output(output: str) -> Tuple[int, int, int]:
+def parse_test_output(output: str) -> tuple[int, int, int]:
     """Parse test output to extract passed, failed, and total test counts."""
     # Look for patterns like "23 passed, 2 failed" or "46 passed"
     passed = failed = total = 0
 
-    passed_match = re.search(r'(\d+) passed', output)
+    passed_match = re.search(r"(\d+) passed", output)
     if passed_match:
         passed = int(passed_match.group(1))
 
-    failed_match = re.search(r'(\d+) failed', output)
+    failed_match = re.search(r"(\d+) failed", output)
     if failed_match:
         failed = int(failed_match.group(1))
 
@@ -76,22 +75,28 @@ def display_test_results(exit_code: int, stdout: str, stderr: str, component_nam
     print("=" * 50)
 
     if exit_code == 0:
-        print(f"✅ Status: PASSED")
+        print("✅ Status: PASSED")
     else:
-        print(f"❌ Status: FAILED")
+        print("❌ Status: FAILED")
 
     print(f"📈 Tests: {passed} passed, {failed} failed, {total} total")
 
-    if coverage_info.get('total'):
+    if coverage_info.get("total"):
         print(f"📊 Coverage: {coverage_info['total']}%")
 
     if failed > 0:
-        print(f"\n❌ Failure Details:")
+        print("\n❌ Failure Details:")
         # Look for FAILURES section
-        failures_start = stdout.find('FAILURES')
+        failures_start = stdout.find("FAILURES")
         if failures_start != -1:
-            failures_section = stdout[failures_start:failures_start + 1000]  # Show first 1000 chars
-            print(failures_section[:1000] + "..." if len(failures_section) > 1000 else failures_section)
+            failures_section = stdout[
+                failures_start : failures_start + 1000
+            ]  # Show first 1000 chars
+            print(
+                failures_section[:1000] + "..."
+                if len(failures_section) > 1000
+                else failures_section
+            )
         elif stderr:
             print(stderr[:500] + "..." if len(stderr) > 500 else stderr)
 
@@ -112,16 +117,20 @@ def run_separate_coverage():
     # Run bot core tests
     print("\n🏗️  Testing Bot Core...")
     bot_cmd = [
-        "python", "-m", "pytest",
+        "python",
+        "-m",
+        "pytest",
         "tests/unit/bot/",
         "--cov=bot",
         "--cov-report=term-missing",
         "--cov-report=html:htmlcov/bot_core",
         "--cov-fail-under=70",
-        "-v"
+        "-v",
     ]
 
-    bot_exit, bot_stdout, bot_stderr = run_command(bot_cmd, capture_output=True, show_output=False)
+    bot_exit, bot_stdout, bot_stderr = run_command(
+        bot_cmd, capture_output=True, show_output=False
+    )
     coverage_results["bot_core"] = bot_exit == 0
     detailed_results["bot_core"] = (bot_exit, bot_stdout, bot_stderr)
 
@@ -135,20 +144,30 @@ def run_separate_coverage():
         print(f"\n🔌 Testing {plugin.title()} Plugin...")
 
         plugin_cmd = [
-            "python", "-m", "pytest",
+            "python",
+            "-m",
+            "pytest",
             f"tests/unit/plugins/{plugin}/",
             f"--cov=plugins/{plugin}",
             "--cov-report=term-missing",
             f"--cov-report=html:htmlcov/plugin_{plugin}",
             "--cov-fail-under=70",
-            "-v"
+            "-v",
         ]
 
-        plugin_exit, plugin_stdout, plugin_stderr = run_command(plugin_cmd, capture_output=True, show_output=False)
+        plugin_exit, plugin_stdout, plugin_stderr = run_command(
+            plugin_cmd, capture_output=True, show_output=False
+        )
         coverage_results[f"plugin_{plugin}"] = plugin_exit == 0
-        detailed_results[f"plugin_{plugin}"] = (plugin_exit, plugin_stdout, plugin_stderr)
+        detailed_results[f"plugin_{plugin}"] = (
+            plugin_exit,
+            plugin_stdout,
+            plugin_stderr,
+        )
 
-        display_test_results(plugin_exit, plugin_stdout, plugin_stderr, f"{plugin.title()} Plugin")
+        display_test_results(
+            plugin_exit, plugin_stdout, plugin_stderr, f"{plugin.title()} Plugin"
+        )
 
         if plugin_exit != 0:
             all_passed = False
@@ -169,19 +188,23 @@ def run_separate_coverage():
         status = "✅ PASS" if coverage_results[component] else "❌ FAIL"
         coverage_str = f"{coverage_info.get('total', 'N/A')}%"
 
-        print(f"  {component.replace('_', ' ').title():<20} {status:<10} "
-              f"Tests: {passed}/{total:<8} Coverage: {coverage_str}")
+        print(
+            f"  {component.replace('_', ' ').title():<20} {status:<10} "
+            f"Tests: {passed}/{total:<8} Coverage: {coverage_str}"
+        )
 
         total_tests += total
         total_passed += passed
         total_failed += failed
 
     print("-" * 80)
-    print(f"  {'TOTAL':<20} {('✅ PASS' if all_passed else '❌ FAIL'):<10} "
-          f"Tests: {total_passed}/{total_tests:<8}")
+    print(
+        f"  {'TOTAL':<20} {('✅ PASS' if all_passed else '❌ FAIL'):<10} "
+        f"Tests: {total_passed}/{total_tests:<8}"
+    )
 
     print("\n📁 Coverage Reports Generated:")
-    print(f"  Bot Core:      htmlcov/bot_core/index.html")
+    print("  Bot Core:      htmlcov/bot_core/index.html")
     for plugin in plugins:
         print(f"  {plugin.title()} Plugin: htmlcov/plugin_{plugin}/index.html")
 
@@ -198,86 +221,74 @@ def main():
     parser = argparse.ArgumentParser(description="Run Discord bot tests")
 
     parser.add_argument(
-        "--coverage", "-c",
+        "--coverage",
+        "-c",
         action="store_true",
-        help="Run with coverage reporting (default: True)"
+        help="Run with coverage reporting (default: True)",
     )
 
     parser.add_argument(
-        "--no-coverage",
-        action="store_true",
-        help="Run without coverage reporting"
+        "--no-coverage", action="store_true", help="Run without coverage reporting"
     )
 
     parser.add_argument(
-        "--html-report",
-        action="store_true",
-        help="Generate HTML coverage report"
+        "--html-report", action="store_true", help="Generate HTML coverage report"
     )
 
     parser.add_argument(
-        "--unit-only", "-u",
-        action="store_true",
-        help="Run only unit tests"
+        "--unit-only", "-u", action="store_true", help="Run only unit tests"
     )
 
     parser.add_argument(
-        "--integration-only", "-i",
+        "--integration-only",
+        "-i",
         action="store_true",
-        help="Run only integration tests"
+        help="Run only integration tests",
     )
 
     parser.add_argument(
         "--plugin",
-        help="Run tests for specific plugin (admin, fun, moderation, utility, help)"
+        help="Run tests for specific plugin (admin, fun, moderation, utility, help)",
     )
 
     parser.add_argument(
         "--bot-core-only",
         action="store_true",
-        help="Run only bot core tests with coverage"
+        help="Run only bot core tests with coverage",
     )
 
     parser.add_argument(
         "--separate-coverage",
         action="store_true",
-        help="Generate separate coverage reports for bot core and each plugin"
+        help="Generate separate coverage reports for bot core and each plugin",
+    )
+
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+
+    parser.add_argument(
+        "--fail-fast", "-x", action="store_true", help="Stop on first failure"
     )
 
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
-
-    parser.add_argument(
-        "--fail-fast", "-x",
-        action="store_true",
-        help="Stop on first failure"
-    )
-
-    parser.add_argument(
-        "--parallel", "-n",
+        "--parallel",
+        "-n",
         type=int,
-        help="Run tests in parallel (requires pytest-xdist)"
+        help="Run tests in parallel (requires pytest-xdist)",
     )
 
     parser.add_argument(
-        "--markers", "-m",
-        help="Run tests with specific markers (e.g., 'not slow')"
+        "--markers", "-m", help="Run tests with specific markers (e.g., 'not slow')"
     )
 
-    parser.add_argument(
-        "test_path",
-        nargs="?",
-        help="Specific test path to run"
-    )
+    parser.add_argument("test_path", nargs="?", help="Specific test path to run")
 
     args = parser.parse_args()
 
     # Check if we're in the right directory
     if not Path("pytest.ini").exists():
-        print("Error: pytest.ini not found. Please run from the project root directory.")
+        print(
+            "Error: pytest.ini not found. Please run from the project root directory."
+        )
         sys.exit(1)
 
     # Handle separate coverage mode
@@ -355,33 +366,38 @@ def main():
     display_test_results(exit_code, stdout, stderr, component_name)
 
     if args.html_report and not args.no_coverage:
-        print(f"\n📊 HTML coverage report generated:")
+        print("\n📊 HTML coverage report generated:")
         if args.bot_core_only:
-            print(f"   📁 Open htmlcov/bot_core/index.html in your browser")
+            print("   📁 Open htmlcov/bot_core/index.html in your browser")
         elif args.plugin:
             print(f"   📁 Open htmlcov/plugin_{args.plugin}/index.html in your browser")
         else:
-            print(f"   📁 Open htmlcov/index.html in your browser")
+            print("   📁 Open htmlcov/index.html in your browser")
 
     # Check coverage threshold
     if not args.no_coverage and exit_code == 0:
-        print(f"\n📈 Checking coverage threshold...")
+        print("\n📈 Checking coverage threshold...")
         threshold_cmd = [
-            "python", "-m", "pytest",
-            "--cov=bot", "--cov=plugins",
+            "python",
+            "-m",
+            "pytest",
+            "--cov=bot",
+            "--cov=plugins",
             "--cov-fail-under=70",
             "--cov-report=term",
-            "-q"
+            "-q",
         ]
 
-        threshold_exit, threshold_stdout, threshold_stderr = run_command(threshold_cmd, capture_output=True, show_output=False)
+        threshold_exit, threshold_stdout, threshold_stderr = run_command(
+            threshold_cmd, capture_output=True, show_output=False
+        )
 
         if threshold_exit == 0:
             print("✅ Coverage threshold (70%) met!")
         else:
             print("⚠️  Coverage below 70% threshold")
             coverage_info = parse_coverage_output(threshold_stdout)
-            if coverage_info.get('total'):
+            if coverage_info.get("total"):
                 print(f"   Current coverage: {coverage_info['total']}%")
 
     print("\n" + "=" * 80)

@@ -12,7 +12,7 @@ PLUGIN_METADATA = {
         "moderation.mute",
         "moderation.warn",
         "moderation.purge",
-        "moderation.timeout"
+        "moderation.timeout",
     ],
 }
 

@@ -1,8 +1,8 @@
 """Tests for Fun plugin."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import aiohttp
+
+import pytest
 
 from plugins.fun.fun import FunPlugin
 from tests.conftest import AsyncContextManager
@@ -23,7 +23,7 @@ class TestFunPlugin:
         """Test plugin loading."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('aiohttp.ClientSession') as mock_session:
+        with patch("aiohttp.ClientSession") as mock_session:
             await plugin.on_load()
 
             assert plugin.session is not None
@@ -65,7 +65,7 @@ class TestFunPlugin:
         """Test roll dice with default parameters."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.randint', return_value=4):
+        with patch("random.randint", return_value=4):
             await plugin.roll_dice(mock_context)
 
             mock_context.respond.assert_called_once()
@@ -75,7 +75,7 @@ class TestFunPlugin:
         """Test roll dice with custom parameters."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.randint', side_effect=[3, 5]):
+        with patch("random.randint", side_effect=[3, 5]):
             await plugin.roll_dice(mock_context, "2d6")
 
             mock_context.respond.assert_called_once()
@@ -88,7 +88,7 @@ class TestFunPlugin:
         await plugin.roll_dice(mock_context, "invalid")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_roll_dice_too_many_dice(self, mock_bot, mock_context):
@@ -98,7 +98,7 @@ class TestFunPlugin:
         await plugin.roll_dice(mock_context, "25d6")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_roll_dice_too_many_sides(self, mock_bot, mock_context):
@@ -108,14 +108,14 @@ class TestFunPlugin:
         await plugin.roll_dice(mock_context, "1d2000")
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_coinflip_command(self, mock_bot, mock_context):
         """Test coinflip command."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', return_value="Heads"):
+        with patch("random.choice", return_value="Heads"):
             await plugin.flip_coin(mock_context)
 
             mock_context.respond.assert_called_once()
@@ -125,7 +125,7 @@ class TestFunPlugin:
         """Test coinflip command with error."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', side_effect=Exception("Test error")):
+        with patch("random.choice", side_effect=Exception("Test error")):
             await plugin.flip_coin(mock_context)
 
             # Should handle error gracefully
@@ -136,7 +136,7 @@ class TestFunPlugin:
         """Test 8ball command."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', return_value="Yes"):
+        with patch("random.choice", return_value="Yes"):
             await plugin.magic_8ball(mock_context, "Will this test pass?")
 
             mock_context.respond.assert_called_once()
@@ -146,7 +146,7 @@ class TestFunPlugin:
         """Test 8ball command with error."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', side_effect=Exception("Test error")):
+        with patch("random.choice", side_effect=Exception("Test error")):
             await plugin.magic_8ball(mock_context, "Test question?")
 
             # Should handle error gracefully
@@ -160,10 +160,7 @@ class TestFunPlugin:
         # Mock session
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.json.return_value = {
-            "type": "single",
-            "joke": "Test joke"
-        }
+        mock_response.json.return_value = {"type": "single", "joke": "Test joke"}
 
         mock_session = AsyncMock()
         mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
@@ -184,7 +181,7 @@ class TestFunPlugin:
         mock_response.json.return_value = {
             "type": "twopart",
             "setup": "Test setup",
-            "delivery": "Test punchline"
+            "delivery": "Test punchline",
         }
 
         mock_session = AsyncMock()
@@ -208,7 +205,7 @@ class TestFunPlugin:
         mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
         plugin.session = mock_session
 
-        with patch('random.choice', return_value="Fallback joke"):
+        with patch("random.choice", return_value="Fallback joke"):
             await plugin.random_joke(mock_context)
 
             mock_context.respond.assert_called_once()
@@ -222,14 +219,14 @@ class TestFunPlugin:
         await plugin.random_joke(mock_context)
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_choose_command(self, mock_bot, mock_context):
         """Test choose command."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', return_value="option1"):
+        with patch("random.choice", return_value="option1"):
             await plugin.choose_option(mock_context, "option1", "option2")
 
             mock_context.respond.assert_called_once()
@@ -239,18 +236,20 @@ class TestFunPlugin:
         """Test choose command with error."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.choice', side_effect=Exception("Test error")):
+        with patch("random.choice", side_effect=Exception("Test error")):
             await plugin.choose_option(mock_context, "option1", "option2")
 
             # Should handle error gracefully
-            assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+            assert mock_context.respond.call_count >= 1 or hasattr(
+                plugin, "smart_respond"
+            )
 
     @pytest.mark.asyncio
     async def test_random_number_command(self, mock_bot, mock_context):
         """Test random number command."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.randint', return_value=50):
+        with patch("random.randint", return_value=50):
             await plugin.random_number(mock_context)
 
             mock_context.respond.assert_called_once()
@@ -260,7 +259,7 @@ class TestFunPlugin:
         """Test random number command with custom range."""
         plugin = FunPlugin(mock_bot)
 
-        with patch('random.randint', return_value=15):
+        with patch("random.randint", return_value=15):
             await plugin.random_number(mock_context, 10, 20)
 
             mock_context.respond.assert_called_once()
@@ -273,7 +272,7 @@ class TestFunPlugin:
         await plugin.random_number(mock_context, 20, 10)
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_random_number_too_large_range(self, mock_bot, mock_context):
@@ -283,7 +282,7 @@ class TestFunPlugin:
         await plugin.random_number(mock_context, 1, 20_000_000)
 
         # Should respond with error
-        assert mock_context.respond.call_count >= 1 or hasattr(plugin, 'smart_respond')
+        assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_quote_command_api_success(self, mock_bot, mock_context):
@@ -295,7 +294,7 @@ class TestFunPlugin:
         mock_response.status = 200
         mock_response.json.return_value = {
             "content": "Test quote",
-            "author": "Test Author"
+            "author": "Test Author",
         }
 
         mock_session = AsyncMock()
@@ -316,7 +315,7 @@ class TestFunPlugin:
         mock_session.get = MagicMock(side_effect=Exception("API error"))
         plugin.session = mock_session
 
-        with patch('random.choice', return_value=("Test quote", "Test Author")):
+        with patch("random.choice", return_value=("Test quote", "Test Author")):
             await plugin.random_quote(mock_context)
 
             mock_context.respond.assert_called_once()

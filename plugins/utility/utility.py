@@ -1,14 +1,15 @@
+import base64
+import hashlib
 import logging
 import re
 from datetime import datetime
+
+import aiohttp
 import hikari
 import lightbulb
-import aiohttp
-import base64
-import hashlib
 
 from bot.plugins.base import BasePlugin
-from bot.plugins.commands import command, CommandArgument
+from bot.plugins.commands import CommandArgument, command
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,13 @@ class UtilityPlugin(BasePlugin):
         aliases=["user", "whois"],
         permission_node="utility.info",
         arguments=[
-            CommandArgument("user", hikari.OptionType.USER, "User to get information about", required=False)
-        ]
+            CommandArgument(
+                "user",
+                hikari.OptionType.USER,
+                "User to get information about",
+                required=False,
+            )
+        ],
     )
     async def user_info(self, ctx: lightbulb.Context, user: hikari.User = None) -> None:
         try:
@@ -42,17 +48,22 @@ class UtilityPlugin(BasePlugin):
             guild = ctx.get_guild()
 
             embed = self.create_embed(
-                title=f"👤 {target_user.username}",
-                color=hikari.Color(0x5865F2)
+                title=f"👤 {target_user.username}", color=hikari.Color(0x5865F2)
             )
 
             # Basic user info
             embed.add_field("User ID", str(target_user.id), inline=True)
             embed.add_field("Display Name", target_user.display_name, inline=True)
-            embed.add_field("Bot Account", "Yes" if target_user.is_bot else "No", inline=True)
+            embed.add_field(
+                "Bot Account", "Yes" if target_user.is_bot else "No", inline=True
+            )
 
             # Account creation
-            embed.add_field("Account Created", f"<t:{int(target_user.created_at.timestamp())}:R>", inline=True)
+            embed.add_field(
+                "Account Created",
+                f"<t:{int(target_user.created_at.timestamp())}:R>",
+                inline=True,
+            )
 
             # Avatar
             avatar_url = target_user.make_avatar_url()
@@ -65,19 +76,33 @@ class UtilityPlugin(BasePlugin):
                     # Try cache first, then fetch from API
                     member = None
                     try:
-                        member = self.bot.hikari_bot.cache.get_member(guild.id, target_user.id)
+                        member = self.bot.hikari_bot.cache.get_member(
+                            guild.id, target_user.id
+                        )
                         if not member:
                             member = await guild.fetch_member(target_user.id)
-                    except (hikari.NotFoundError, hikari.ForbiddenError, AttributeError):
+                    except (
+                        hikari.NotFoundError,
+                        hikari.ForbiddenError,
+                        AttributeError,
+                    ):
                         pass
 
                     if member:
                         # Join date
                         if member.joined_at:
-                            embed.add_field("Joined Server", f"<t:{int(member.joined_at.timestamp())}:R>", inline=True)
+                            embed.add_field(
+                                "Joined Server",
+                                f"<t:{int(member.joined_at.timestamp())}:R>",
+                                inline=True,
+                            )
 
                         # Roles
-                        roles = [f"<@&{role_id}>" for role_id in member.role_ids if role_id != guild.id]
+                        roles = [
+                            f"<@&{role_id}>"
+                            for role_id in member.role_ids
+                            if role_id != guild.id
+                        ]
                         if roles:
                             roles_text = " ".join(roles[:10])  # Limit to 10 roles
                             if len(roles) > 10:
@@ -97,7 +122,9 @@ class UtilityPlugin(BasePlugin):
                             admin_perms.append("Manage Messages")
 
                         if admin_perms:
-                            embed.add_field("Key Permissions", ", ".join(admin_perms), inline=True)
+                            embed.add_field(
+                                "Key Permissions", ", ".join(admin_perms), inline=True
+                            )
 
                 except Exception:
                     pass  # Not a member or can't get member info
@@ -110,7 +137,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to get user information: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "userinfo", False, str(e))
@@ -121,8 +148,10 @@ class UtilityPlugin(BasePlugin):
         aliases=["av", "pfp"],
         permission_node="utility.info",
         arguments=[
-            CommandArgument("user", hikari.OptionType.USER, "User to get avatar of", required=False)
-        ]
+            CommandArgument(
+                "user", hikari.OptionType.USER, "User to get avatar of", required=False
+            )
+        ],
     )
     async def avatar(self, ctx: lightbulb.Context, user: hikari.User = None) -> None:
         try:
@@ -130,7 +159,7 @@ class UtilityPlugin(BasePlugin):
 
             embed = self.create_embed(
                 title=f"🖼️ {target_user.display_name}'s Avatar",
-                color=hikari.Color(0x9932CC)
+                color=hikari.Color(0x9932CC),
             )
 
             # Get avatar URL
@@ -148,7 +177,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to get avatar: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "avatar", False, str(e))
@@ -159,8 +188,14 @@ class UtilityPlugin(BasePlugin):
         aliases=["time", "ts"],
         permission_node="utility.convert",
         arguments=[
-            CommandArgument("time_input", hikari.OptionType.STRING, "Time input (YYYY-MM-DD HH:MM, Unix timestamp, or 'now')", required=False, default="now")
-        ]
+            CommandArgument(
+                "time_input",
+                hikari.OptionType.STRING,
+                "Time input (YYYY-MM-DD HH:MM, Unix timestamp, or 'now')",
+                required=False,
+                default="now",
+            )
+        ],
     )
     async def timestamp(self, ctx: lightbulb.Context, time_input: str = "now") -> None:
         try:
@@ -182,7 +217,7 @@ class UtilityPlugin(BasePlugin):
                         "%Y-%m-%d %H:%M:%S",
                         "%Y-%m-%d",
                         "%m/%d/%Y %H:%M",
-                        "%m/%d/%Y"
+                        "%m/%d/%Y",
                     ]
 
                     parsed_time = None
@@ -201,7 +236,7 @@ class UtilityPlugin(BasePlugin):
                     embed = self.create_embed(
                         title="❌ Invalid Format",
                         description="Please use formats like:\n• `YYYY-MM-DD HH:MM`\n• `YYYY-MM-DD`\n• Unix timestamp\n• `now`",
-                        color=hikari.Color(0xFF0000)
+                        color=hikari.Color(0xFF0000),
                     )
                     await self.smart_respond(ctx, embed=embed, ephemeral=True)
                     return
@@ -210,7 +245,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="🕒 Discord Timestamps",
                 description=f"Timestamp: `{timestamp}`",
-                color=hikari.Color(0x00CED1)
+                color=hikari.Color(0x00CED1),
             )
 
             formats = {
@@ -221,11 +256,13 @@ class UtilityPlugin(BasePlugin):
                 "Long Date": f"<t:{timestamp}:D>",
                 "Short Date/Time": f"<t:{timestamp}:f>",
                 "Long Date/Time": f"<t:{timestamp}:F>",
-                "Relative": f"<t:{timestamp}:R>"
+                "Relative": f"<t:{timestamp}:R>",
             }
 
             for name, discord_format in formats.items():
-                embed.add_field(name, f"`{discord_format}`\n{discord_format}", inline=True)
+                embed.add_field(
+                    name, f"`{discord_format}`\n{discord_format}", inline=True
+                )
 
             embed.set_footer("Copy the format you want to use in your messages!")
 
@@ -237,7 +274,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to create timestamp: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "timestamp", False, str(e))
@@ -248,8 +285,12 @@ class UtilityPlugin(BasePlugin):
         aliases=["colour"],
         permission_node="utility.tools",
         arguments=[
-            CommandArgument("color_input", hikari.OptionType.STRING, "Hex code (#FF0000) or color name (red)")
-        ]
+            CommandArgument(
+                "color_input",
+                hikari.OptionType.STRING,
+                "Hex code (#FF0000) or color name (red)",
+            )
+        ],
     )
     async def color_info(self, ctx: lightbulb.Context, color_input: str) -> None:
         try:
@@ -258,17 +299,28 @@ class UtilityPlugin(BasePlugin):
 
             # Color name mappings
             color_names = {
-                "red": "#FF0000", "green": "#00FF00", "blue": "#0000FF",
-                "yellow": "#FFFF00", "cyan": "#00FFFF", "magenta": "#FF00FF",
-                "black": "#000000", "white": "#FFFFFF", "gray": "#808080",
-                "orange": "#FFA500", "purple": "#800080", "pink": "#FFC0CB",
-                "brown": "#A52A2A", "gold": "#FFD700", "silver": "#C0C0C0",
-                "discord": "#5865F2", "blurple": "#5865F2"
+                "red": "#FF0000",
+                "green": "#00FF00",
+                "blue": "#0000FF",
+                "yellow": "#FFFF00",
+                "cyan": "#00FFFF",
+                "magenta": "#FF00FF",
+                "black": "#000000",
+                "white": "#FFFFFF",
+                "gray": "#808080",
+                "orange": "#FFA500",
+                "purple": "#800080",
+                "pink": "#FFC0CB",
+                "brown": "#A52A2A",
+                "gold": "#FFD700",
+                "silver": "#C0C0C0",
+                "discord": "#5865F2",
+                "blurple": "#5865F2",
             }
 
             # Parse color
             hex_color = None
-            if color_input.startswith('#'):
+            if color_input.startswith("#"):
                 hex_color = color_input
             elif color_input in color_names:
                 hex_color = color_names[color_input]
@@ -276,24 +328,24 @@ class UtilityPlugin(BasePlugin):
                 embed = self.create_embed(
                     title="❌ Invalid Color",
                     description="Please provide a hex code (#FF0000) or color name (red, blue, etc.)",
-                    color=hikari.Color(0xFF0000)
+                    color=hikari.Color(0xFF0000),
                 )
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
             # Validate hex format
-            if not re.match(r'^#[0-9A-Fa-f]{6}$', hex_color):
+            if not re.match(r"^#[0-9A-Fa-f]{6}$", hex_color):
                 embed = self.create_embed(
                     title="❌ Invalid Hex Code",
                     description="Hex code must be in format #RRGGBB (e.g., #FF0000)",
-                    color=hikari.Color(0xFF0000)
+                    color=hikari.Color(0xFF0000),
                 )
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
             # Convert to RGB
-            hex_clean = hex_color.lstrip('#')
-            rgb = tuple(int(hex_clean[i:i+2], 16) for i in (0, 2, 4))
+            hex_clean = hex_color.lstrip("#")
+            rgb = tuple(int(hex_clean[i : i + 2], 16) for i in (0, 2, 4))
 
             # Convert to other formats
             rgb_str = f"rgb({rgb[0]}, {rgb[1]}, {rgb[2]})"
@@ -304,8 +356,7 @@ class UtilityPlugin(BasePlugin):
             color_int = int(hex_clean, 16)
 
             embed = self.create_embed(
-                title=f"🎨 Color: {hex_color.upper()}",
-                color=hikari.Color(color_int)
+                title=f"🎨 Color: {hex_color.upper()}", color=hikari.Color(color_int)
             )
 
             embed.add_field("Hex", hex_color.upper(), inline=True)
@@ -314,7 +365,9 @@ class UtilityPlugin(BasePlugin):
             embed.add_field("Decimal", str(color_int), inline=True)
 
             # Generate a color preview URL (using a simple color generator service)
-            preview_url = f"https://via.placeholder.com/300x100/{hex_clean}/{hex_clean}.png"
+            preview_url = (
+                f"https://via.placeholder.com/300x100/{hex_clean}/{hex_clean}.png"
+            )
             embed.set_image(preview_url)
 
             await ctx.respond(embed=embed)
@@ -325,7 +378,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to process color: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "color", False, str(e))
@@ -337,10 +390,12 @@ class UtilityPlugin(BasePlugin):
         permission_node="utility.convert",
         arguments=[
             CommandArgument("action", hikari.OptionType.STRING, "encode or decode"),
-            CommandArgument("text", hikari.OptionType.STRING, "Text to encode/decode")
-        ]
+            CommandArgument("text", hikari.OptionType.STRING, "Text to encode/decode"),
+        ],
     )
-    async def base64_convert(self, ctx: lightbulb.Context, action: str, text: str) -> None:
+    async def base64_convert(
+        self, ctx: lightbulb.Context, action: str, text: str
+    ) -> None:
         try:
             action = action.lower().strip()
 
@@ -348,27 +403,27 @@ class UtilityPlugin(BasePlugin):
                 embed = self.create_embed(
                     title="❌ Invalid Action",
                     description="Action must be 'encode' or 'decode'",
-                    color=hikari.Color(0xFF0000)
+                    color=hikari.Color(0xFF0000),
                 )
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
             if action in ["encode", "enc"]:
                 # Encode to base64
-                encoded = base64.b64encode(text.encode('utf-8')).decode('utf-8')
+                encoded = base64.b64encode(text.encode("utf-8")).decode("utf-8")
                 result = encoded
                 action_text = "Encoded"
             else:
                 # Decode from base64
                 try:
-                    decoded = base64.b64decode(text).decode('utf-8')
+                    decoded = base64.b64decode(text).decode("utf-8")
                     result = decoded
                     action_text = "Decoded"
                 except Exception:
                     embed = self.create_embed(
                         title="❌ Invalid Base64",
                         description="The provided text is not valid base64.",
-                        color=hikari.Color(0xFF0000)
+                        color=hikari.Color(0xFF0000),
                     )
                     await self.smart_respond(ctx, embed=embed, ephemeral=True)
                     return
@@ -380,11 +435,14 @@ class UtilityPlugin(BasePlugin):
                 display_result = result
 
             embed = self.create_embed(
-                title=f"🔢 Base64 {action_text}",
-                color=hikari.Color(0x9932CC)
+                title=f"🔢 Base64 {action_text}", color=hikari.Color(0x9932CC)
             )
 
-            embed.add_field("Input", f"```\n{text[:500]}{'...' if len(text) > 500 else ''}\n```", inline=False)
+            embed.add_field(
+                "Input",
+                f"```\n{text[:500]}{'...' if len(text) > 500 else ''}\n```",
+                inline=False,
+            )
             embed.add_field("Output", f"```\n{display_result}\n```", inline=False)
 
             await ctx.respond(embed=embed)
@@ -395,7 +453,7 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to process base64: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "base64", False, str(e))
@@ -405,11 +463,17 @@ class UtilityPlugin(BasePlugin):
         description="Generate hash of text (MD5, SHA1, SHA256)",
         permission_node="utility.tools",
         arguments=[
-            CommandArgument("algorithm", hikari.OptionType.STRING, "Hash algorithm (md5, sha1, sha256)"),
-            CommandArgument("text", hikari.OptionType.STRING, "Text to hash")
-        ]
+            CommandArgument(
+                "algorithm",
+                hikari.OptionType.STRING,
+                "Hash algorithm (md5, sha1, sha256)",
+            ),
+            CommandArgument("text", hikari.OptionType.STRING, "Text to hash"),
+        ],
     )
-    async def hash_text(self, ctx: lightbulb.Context, algorithm: str, text: str) -> None:
+    async def hash_text(
+        self, ctx: lightbulb.Context, algorithm: str, text: str
+    ) -> None:
         try:
             algorithm = algorithm.lower().strip()
 
@@ -417,24 +481,23 @@ class UtilityPlugin(BasePlugin):
                 embed = self.create_embed(
                     title="❌ Invalid Algorithm",
                     description="Algorithm must be 'md5', 'sha1', or 'sha256'",
-                    color=hikari.Color(0xFF0000)
+                    color=hikari.Color(0xFF0000),
                 )
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
             # Generate hash
             if algorithm == "md5":
-                hash_obj = hashlib.md5(text.encode('utf-8'))
+                hash_obj = hashlib.md5(text.encode("utf-8"))
             elif algorithm == "sha1":
-                hash_obj = hashlib.sha1(text.encode('utf-8'))
+                hash_obj = hashlib.sha1(text.encode("utf-8"))
             elif algorithm == "sha256":
-                hash_obj = hashlib.sha256(text.encode('utf-8'))
+                hash_obj = hashlib.sha256(text.encode("utf-8"))
 
             result = hash_obj.hexdigest()
 
             embed = self.create_embed(
-                title=f"🔐 {algorithm.upper()} Hash",
-                color=hikari.Color(0x8B4513)
+                title=f"🔐 {algorithm.upper()} Hash", color=hikari.Color(0x8B4513)
             )
 
             # Show input (truncated for security/display)
@@ -452,14 +515,14 @@ class UtilityPlugin(BasePlugin):
             embed = self.create_embed(
                 title="❌ Error",
                 description=f"Failed to generate hash: {str(e)}",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "hash", False, str(e))
 
     def _rgb_to_hsl(self, r: int, g: int, b: int) -> tuple:
         """Convert RGB to HSL color space."""
-        r, g, b = r/255.0, g/255.0, b/255.0
+        r, g, b = r / 255.0, g / 255.0, b / 255.0
         max_val = max(r, g, b)
         min_val = min(r, g, b)
         diff = max_val - min_val
@@ -471,7 +534,11 @@ class UtilityPlugin(BasePlugin):
             h = s = 0  # Achromatic
         else:
             # Saturation
-            s = diff / (2 - max_val - min_val) if l > 0.5 else diff / (max_val + min_val)
+            s = (
+                diff / (2 - max_val - min_val)
+                if l > 0.5
+                else diff / (max_val + min_val)
+            )
 
             # Hue
             if max_val == r:

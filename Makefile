@@ -18,8 +18,9 @@ RESET := \033[0m
 
 # Project settings
 PROJECT_NAME := discord-bot
-PYTHON := uv run python
+PYTHON := python
 UV := uv
+UV_RUN := uv run
 DOCKER := docker
 DOCKER_COMPOSE := docker-compose
 BOT_MODULE := bot
@@ -52,20 +53,22 @@ help: ## Display this help message
 
 install: ## Install production dependencies using uv
 	@echo "$(BOLD)$(BLUE)Installing production dependencies...$(RESET)"
-	$(UV) pip install --system -e .
+	$(UV) sync --no-dev
 	@echo "$(GREEN)✅ Production dependencies installed$(RESET)"
 
 install-dev: ## Install development dependencies including dev tools
 	@echo "$(BOLD)$(BLUE)Installing development dependencies...$(RESET)"
-	$(UV) pip install --system -e .[dev]
+	$(UV) sync --extra dev
 	@echo "$(GREEN)✅ Development dependencies installed$(RESET)"
 
 install-music: ## Install music plugin dependencies
 	@echo "$(BOLD)$(BLUE)Installing music dependencies...$(RESET)"
-	$(UV) pip install --system -e .[music]
+	$(UV) sync --extra music
 	@echo "$(GREEN)✅ Music dependencies installed$(RESET)"
 
-install-all: install-dev install-music ## Install all dependencies (dev + music)
+install-all: 
+	@echo "$(BOLD)$(BLUE)Installing all dependencies...$(RESET)"
+	$(UV) sync --all-extras
 	@echo "$(GREEN)✅ All dependencies installed$(RESET)"
 
 env-setup: ## Create .env file from .env.example if it doesn't exist
@@ -118,22 +121,22 @@ clean: ## Clean up temporary files and caches
 lint: ## Run all linting tools (ruff, black check, mypy)
 	@echo "$(BOLD)$(BLUE)Running linting tools...$(RESET)"
 	@echo "$(CYAN)Running ruff...$(RESET)"
-	$(UV) run ruff check .
+	$(UV_RUN) ruff check .
 	@echo "$(CYAN)Checking code formatting with black...$(RESET)"
-	$(UV) run black --check .
+	$(UV_RUN) black --check .
 	@echo "$(CYAN)Running type checker with mypy...$(RESET)"
-	$(UV) run mypy $(BOT_MODULE)
+	$(UV_RUN) mypy $(BOT_MODULE)
 	@echo "$(GREEN)✅ Linting complete$(RESET)"
 
 format: ## Format code using black and ruff
 	@echo "$(BOLD)$(BLUE)Formatting code...$(RESET)"
-	$(UV) run black .
-	$(UV) run ruff check --fix .
+	$(UV_RUN) black .
+	$(UV_RUN) ruff check --fix .
 	@echo "$(GREEN)✅ Code formatting complete$(RESET)"
 
 typecheck: ## Run type checking with mypy
 	@echo "$(BOLD)$(BLUE)Running type checker...$(RESET)"
-	$(UV) run mypy $(BOT_MODULE)
+	$(UV_RUN) mypy $(BOT_MODULE)
 	@echo "$(GREEN)✅ Type checking complete$(RESET)"
 
 security-check: ## Run security checks on dependencies
@@ -148,27 +151,27 @@ pre-commit: lint test-unit ## Run pre-commit checks (lint + unit tests)
 
 test: ## Run all tests with coverage
 	@echo "$(BOLD)$(BLUE)Running all tests...$(RESET)"
-	$(PYTHON) run_tests.py
+	$(UV_RUN) $(PYTHON) run_tests.py
 
 test-unit: ## Run unit tests only
 	@echo "$(BOLD)$(BLUE)Running unit tests...$(RESET)"
-	$(PYTHON) run_tests.py --unit-only
+	$(UV_RUN) $(PYTHON) run_tests.py --unit-only
 
 test-integration: ## Run integration tests only
 	@echo "$(BOLD)$(BLUE)Running integration tests...$(RESET)"
-	$(PYTHON) run_tests.py --integration-only
+	$(UV_RUN) $(PYTHON) run_tests.py --integration-only
 
 test-coverage: ## Run tests with detailed coverage report
 	@echo "$(BOLD)$(BLUE)Running tests with coverage...$(RESET)"
-	$(PYTHON) run_tests.py --html-report
+	$(UV_RUN) $(PYTHON) run_tests.py --html-report
 
 test-separate: ## Run separate coverage for bot core and each plugin
 	@echo "$(BOLD)$(BLUE)Running separate coverage reports...$(RESET)"
-	$(PYTHON) run_tests.py --separate-coverage
+	$(UV_RUN) $(PYTHON) run_tests.py --separate-coverage
 
 test-bot-core: ## Run bot core tests only
 	@echo "$(BOLD)$(BLUE)Running bot core tests...$(RESET)"
-	$(PYTHON) run_tests.py --bot-core-only --html-report
+	$(UV_RUN) $(PYTHON) run_tests.py --bot-core-only --html-report
 
 test-plugin: ## Run tests for specific plugin (usage: make test-plugin PLUGIN=admin)
 	@echo "$(BOLD)$(BLUE)Running tests for $(PLUGIN) plugin...$(RESET)"
@@ -177,15 +180,15 @@ test-plugin: ## Run tests for specific plugin (usage: make test-plugin PLUGIN=ad
 		echo "Available plugins: admin, fun, moderation, utility, help"; \
 		exit 1; \
 	fi
-	$(PYTHON) run_tests.py --plugin $(PLUGIN) --html-report
+	$(UV_RUN) $(PYTHON) run_tests.py --plugin $(PLUGIN) --html-report
 
 test-watch: ## Run tests in watch mode (re-run on file changes)
 	@echo "$(BOLD)$(BLUE)Running tests in watch mode...$(RESET)"
-	$(UV) run pytest-watch
+	$(UV_RUN) pytest-watch
 
 test-parallel: ## Run tests in parallel (requires pytest-xdist)
 	@echo "$(BOLD)$(BLUE)Running tests in parallel...$(RESET)"
-	$(PYTHON) run_tests.py --parallel 4
+	$(UV_RUN) $(PYTHON) run_tests.py --parallel 4
 
 coverage-html: test-coverage ## Generate HTML coverage report and open it
 	@echo "$(GREEN)✅ HTML coverage report generated$(RESET)"
@@ -200,13 +203,13 @@ coverage-open: ## Open HTML coverage report in browser
 
 benchmark: ## Run performance benchmarks
 	@echo "$(BOLD)$(BLUE)Running benchmarks...$(RESET)"
-	$(UV) run pytest tests/ -m "benchmark" --benchmark-only
+	$(UV_RUN) pytest tests/ -m "benchmark" --benchmark-only
 
 ##@ Database Management
 
 db-create: ## Create database tables
 	@echo "$(BOLD)$(BLUE)Creating database tables...$(RESET)"
-	$(PYTHON) -m $(BOT_MODULE).cli db create
+	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE).cli db create
 	@echo "$(GREEN)✅ Database tables created$(RESET)"
 
 db-reset: ## Reset database (WARNING: deletes all data)
@@ -215,7 +218,7 @@ db-reset: ## Reset database (WARNING: deletes all data)
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
 		echo "$(BOLD)$(BLUE)Resetting database...$(RESET)"; \
-		$(PYTHON) -m $(BOT_MODULE).cli db reset; \
+		$(UV_RUN) $(PYTHON) -m $(BOT_MODULE).cli db reset; \
 		echo "$(GREEN)✅ Database reset complete$(RESET)"; \
 	else \
 		echo "$(YELLOW)Database reset cancelled$(RESET)"; \
@@ -250,23 +253,23 @@ restore-db: ## Restore database from backup (usage: make restore-db BACKUP=filen
 
 bot-run: env-validate ## Run the bot in production mode
 	@echo "$(BOLD)$(BLUE)Starting bot in production mode...$(RESET)"
-	$(PYTHON) -m $(BOT_MODULE)
+	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE)
 
 bot-dev: env-validate ## Run the bot in development mode with hot reload
 	@echo "$(BOLD)$(BLUE)Starting bot in development mode...$(RESET)"
-	$(PYTHON) -m $(BOT_MODULE) --dev
+	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE) --dev
 
 bot-cli: ## Run bot CLI (usage: make bot-cli ARGS="db create")
 	@if [ -z "$(ARGS)" ]; then \
 		echo "$(BOLD)$(BLUE)Bot CLI Help:$(RESET)"; \
-		$(PYTHON) -m $(BOT_MODULE).cli --help; \
+		$(UV_RUN) $(PYTHON) -m $(BOT_MODULE).cli --help; \
 	else \
-		$(PYTHON) -m $(BOT_MODULE).cli $(ARGS); \
+		$(UV_RUN) $(PYTHON) -m $(BOT_MODULE).cli $(ARGS); \
 	fi
 
 plugins: ## List all available plugins
 	@echo "$(BOLD)$(BLUE)Available plugins:$(RESET)"
-	$(PYTHON) -m $(BOT_MODULE).cli plugins list
+	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE).cli plugins list
 
 plugins-list: plugins ## Alias for plugins
 
@@ -345,17 +348,11 @@ docs: ## Generate documentation (placeholder for future implementation)
 docs-serve: ## Serve documentation locally (placeholder)
 	@echo "$(BOLD)$(BLUE)Documentation server not yet implemented$(RESET)"
 
-##@ Profiling & Debugging
-
-profile: ## Profile the bot startup and plugin loading
-	@echo "$(BOLD)$(BLUE)Profiling bot startup...$(RESET)"
-	$(PYTHON) -m cProfile -o profile_output.prof -m $(BOT_MODULE) --help
-	@echo "$(GREEN)✅ Profile saved to profile_output.prof$(RESET)"
-	@echo "View with: python -m pstats profile_output.prof"
+##@ Debugging
 
 debug: ## Run bot with Python debugger
 	@echo "$(BOLD)$(BLUE)Starting bot with debugger...$(RESET)"
-	$(PYTHON) -m pdb -m $(BOT_MODULE) --dev
+	$(UV_RUN) $(PYTHON) -m pdb -m $(BOT_MODULE) --dev
 
 ##@ Release & Deployment
 

@@ -1,11 +1,11 @@
-import typer
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional, List
 
-from config.settings import settings
+import typer
+
 from bot.core import DiscordBot
+from config.settings import settings
 
 app = typer.Typer(
     name="discord-bot",
@@ -26,16 +26,18 @@ def setup_logging(level: str = "INFO") -> None:
 @app.command()
 def run(
     dev: bool = typer.Option(False, "--dev", help="Run in development mode"),
-    log_level: Optional[str] = typer.Option(None, "--log-level", help="Set log level"),
+    log_level: str | None = typer.Option(None, "--log-level", help="Set log level"),
 ) -> None:
     """Run the Discord bot."""
     if dev:
         import os
+
         os.environ["ENVIRONMENT"] = "development"
         os.environ["HOT_RELOAD"] = "true"
 
     if log_level:
         import os
+
         os.environ["LOG_LEVEL"] = log_level
 
     setup_logging(log_level or settings.log_level)
@@ -49,7 +51,7 @@ def run(
 
 @app.command()
 def init(
-    directory: Optional[str] = typer.Option(None, help="Directory to initialize")
+    directory: str | None = typer.Option(None, help="Directory to initialize")
 ) -> None:
     """Initialize a new bot project."""
     target_dir = Path(directory) if directory else Path.cwd()
@@ -79,7 +81,7 @@ LOG_LEVEL=INFO
 @app.command()
 def plugins(
     action: str = typer.Argument(help="Action: list, enable, disable"),
-    plugin_name: Optional[str] = typer.Option(None, help="Plugin name"),
+    plugin_name: str | None = typer.Option(None, help="Plugin name"),
 ) -> None:
     """Manage plugins."""
     if action == "list":
@@ -89,7 +91,11 @@ def plugins(
             if plugin_dir.exists():
                 for plugin_path in plugin_dir.iterdir():
                     if plugin_path.is_dir() and (plugin_path / "__init__.py").exists():
-                        enabled = "✅" if plugin_path.name in settings.enabled_plugins else "❌"
+                        enabled = (
+                            "✅"
+                            if plugin_path.name in settings.enabled_plugins
+                            else "❌"
+                        )
                         typer.echo(f"  {enabled} {plugin_path.name}")
     else:
         typer.echo("Plugin management from CLI is not yet implemented.")
@@ -101,6 +107,7 @@ def db(
     action: str = typer.Argument(help="Action: create, migrate, reset"),
 ) -> None:
     """Database management commands."""
+
     async def run_db_command():
         from bot.database import db_manager
 

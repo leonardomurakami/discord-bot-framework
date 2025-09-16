@@ -1,8 +1,9 @@
 """Tests for base plugin functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
 import hikari
+import pytest
 
 from bot.plugins.base import BasePlugin
 
@@ -50,7 +51,7 @@ class TestBasePlugin:
         embed = plugin.create_embed(
             title="Test Title",
             description="Test Description",
-            color=hikari.Color(0xFF0000)
+            color=hikari.Color(0xFF0000),
         )
 
         assert embed.title == "Test Title"
@@ -83,7 +84,9 @@ class TestBasePlugin:
 
         await plugin.smart_respond(mock_context, "Test message", ephemeral=True)
 
-        mock_context.respond.assert_called_once_with(flags=hikari.MessageFlag.EPHEMERAL, content="Test message")
+        mock_context.respond.assert_called_once_with(
+            flags=hikari.MessageFlag.EPHEMERAL, content="Test message"
+        )
 
     @pytest.mark.asyncio
     async def test_smart_respond_error_handling(self, mock_bot, mock_context):
@@ -91,7 +94,9 @@ class TestBasePlugin:
         plugin = BasePlugin(mock_bot)
 
         # Mock respond to fail first time, succeed second time
-        mock_context.respond = AsyncMock(side_effect=[Exception("Response failed"), None])
+        mock_context.respond = AsyncMock(
+            side_effect=[Exception("Response failed"), None]
+        )
 
         # Should handle the error and try again without flags
         await plugin.smart_respond(mock_context, "Test message")
@@ -113,7 +118,9 @@ class TestBasePlugin:
         plugin = BasePlugin(mock_bot)
 
         # Should not raise any exceptions
-        await plugin.log_command_usage(mock_context, "test_command", False, "Test error")
+        await plugin.log_command_usage(
+            mock_context, "test_command", False, "Test error"
+        )
 
     @pytest.mark.asyncio
     async def test_log_command_usage_with_analytics(self, mock_bot, mock_context):
@@ -122,7 +129,9 @@ class TestBasePlugin:
 
         # Mock database session
         mock_session = AsyncMock()
-        mock_bot.db.session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_bot.db.session.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_bot.db.session.return_value.__aexit__ = AsyncMock(return_value=None)
 
         await plugin.log_command_usage(mock_context, "test_command", True)

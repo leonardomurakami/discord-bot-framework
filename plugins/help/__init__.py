@@ -6,10 +6,7 @@ PLUGIN_METADATA = {
     "author": "Bot Framework",
     "description": "Comprehensive help system showing commands and usage information",
     "dependencies": [],
-    "permissions": [
-        "help.commands",
-        "help.plugins"
-    ],
+    "permissions": ["help.commands", "help.plugins"],
 }
 
 

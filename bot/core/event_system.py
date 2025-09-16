@@ -1,15 +1,16 @@
 import asyncio
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class EventSystem:
     def __init__(self) -> None:
-        self._listeners: Dict[str, List[Callable]] = {}
-        self._middleware: List[Callable] = []
+        self._listeners: dict[str, list[Callable]] = {}
+        self._middleware: list[Callable] = []
 
     def add_middleware(self, middleware: Callable) -> None:
         self._middleware.append(middleware)
@@ -24,6 +25,7 @@ class EventSystem:
         def decorator(func: Callable) -> Callable:
             self.add_listener(event_name, func)
             return func
+
         return decorator
 
     def add_listener(self, event_name: str, callback: Callable) -> None:
@@ -38,7 +40,9 @@ class EventSystem:
                 self._listeners[event_name].remove(callback)
                 logger.debug(f"Removed listener for {event_name}: {callback.__name__}")
             except ValueError:
-                logger.warning(f"Listener {callback.__name__} not found for {event_name}")
+                logger.warning(
+                    f"Listener {callback.__name__} not found for {event_name}"
+                )
 
     def remove_all_listeners(self, event_name: str) -> None:
         if event_name in self._listeners:
@@ -77,7 +81,9 @@ class EventSystem:
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     listener_name = self._listeners[event_name][i].__name__
-                    logger.error(f"Error in listener {listener_name} for {event_name}: {result}")
+                    logger.error(
+                        f"Error in listener {listener_name} for {event_name}: {result}"
+                    )
 
         # Run middleware (post-processing)
         for middleware in self._middleware:
@@ -86,7 +92,9 @@ class EventSystem:
             except Exception as e:
                 logger.error(f"Error in middleware {middleware.__name__} (post): {e}")
 
-    async def _execute_listener(self, listener: Callable, *args: Any, **kwargs: Any) -> None:
+    async def _execute_listener(
+        self, listener: Callable, *args: Any, **kwargs: Any
+    ) -> None:
         try:
             await self._call_maybe_async(listener, *args, **kwargs)
         except Exception as e:
@@ -99,10 +107,10 @@ class EventSystem:
         else:
             return func(*args, **kwargs)
 
-    def get_listeners(self, event_name: str) -> List[Callable]:
+    def get_listeners(self, event_name: str) -> list[Callable]:
         return self._listeners.get(event_name, []).copy()
 
-    def get_all_events(self) -> List[str]:
+    def get_all_events(self) -> list[str]:
         return list(self._listeners.keys())
 
 
@@ -111,13 +119,15 @@ def event_listener(event_name: str) -> Callable:
     def decorator(func: Callable) -> Callable:
         func._event_listener = event_name
         return func
+
     return decorator
 
 
 # Middleware decorator
 def middleware(func: Callable) -> Callable:
     @wraps(func)
-    async def wrapper(event_context: Dict[str, Any], phase: str) -> Any:
+    async def wrapper(event_context: dict[str, Any], phase: str) -> Any:
         return await func(event_context, phase)
+
     wrapper._is_middleware = True
     return wrapper

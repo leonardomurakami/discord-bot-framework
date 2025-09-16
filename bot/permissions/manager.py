@@ -1,11 +1,10 @@
 import logging
-from typing import List, Optional, Set, Dict, Any
+
 import hikari
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
-from ..database.models import Permission, RolePermission, Guild
 from ..database.manager import DatabaseManager
+from ..database.models import Permission, RolePermission
 
 logger = logging.getLogger(__name__)
 
@@ -13,13 +12,12 @@ logger = logging.getLogger(__name__)
 class PermissionManager:
     def __init__(self, db: DatabaseManager) -> None:
         self.db = db
-        self._permission_cache: Dict[int, Dict[int, Set[str]]] = {}
+        self._permission_cache: dict[int, dict[int, set[str]]] = {}
         self._default_permissions = {
             # Admin permissions
             "admin.config": "Configure bot settings",
             "admin.plugins": "Manage plugins",
             "admin.permissions": "Manage permissions",
-
             # Moderation permissions
             "moderation.kick": "Kick members",
             "moderation.ban": "Ban members",
@@ -27,15 +25,12 @@ class PermissionManager:
             "moderation.warn": "Warn members",
             "moderation.purge": "Delete messages",
             "moderation.timeout": "Timeout members",
-
             # Utility permissions
             "utility.info": "View info commands",
             "utility.stats": "View statistics",
-
             # Fun permissions
             "fun.games": "Use fun games",
             "fun.images": "Use image commands",
-
             # Music permissions
             "music.play": "Play music",
             "music.skip": "Skip songs",
@@ -55,12 +50,12 @@ class PermissionManager:
             new_permissions = []
             for node, description in self._default_permissions.items():
                 if node not in existing_nodes:
-                    category = node.split('.')[0]
-                    new_permissions.append(Permission(
-                        node=node,
-                        description=description,
-                        category=category
-                    ))
+                    category = node.split(".")[0]
+                    new_permissions.append(
+                        Permission(
+                            node=node, description=description, category=category
+                        )
+                    )
 
             if new_permissions:
                 session.add_all(new_permissions)
@@ -68,10 +63,7 @@ class PermissionManager:
                 logger.info(f"Created {len(new_permissions)} new permissions")
 
     async def grant_permission(
-        self,
-        guild_id: int,
-        role_id: int,
-        permission_node: str
+        self, guild_id: int, role_id: int, permission_node: str
     ) -> bool:
         try:
             async with self.db.session() as session:
@@ -90,7 +82,7 @@ class PermissionManager:
                     select(RolePermission).where(
                         RolePermission.guild_id == guild_id,
                         RolePermission.role_id == role_id,
-                        RolePermission.permission_id == permission.id
+                        RolePermission.permission_id == permission.id,
                     )
                 )
 
@@ -102,7 +94,7 @@ class PermissionManager:
                         guild_id=guild_id,
                         role_id=role_id,
                         permission_id=permission.id,
-                        granted=True
+                        granted=True,
                     )
                     session.add(role_perm)
 
@@ -111,7 +103,9 @@ class PermissionManager:
                 # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                logger.info(f"Granted {permission_node} to role {role_id} in guild {guild_id}")
+                logger.info(
+                    f"Granted {permission_node} to role {role_id} in guild {guild_id}"
+                )
                 return True
 
         except Exception as e:
@@ -119,10 +113,7 @@ class PermissionManager:
             return False
 
     async def revoke_permission(
-        self,
-        guild_id: int,
-        role_id: int,
-        permission_node: str
+        self, guild_id: int, role_id: int, permission_node: str
     ) -> bool:
         try:
             async with self.db.session() as session:
@@ -140,7 +131,7 @@ class PermissionManager:
                     select(RolePermission).where(
                         RolePermission.guild_id == guild_id,
                         RolePermission.role_id == role_id,
-                        RolePermission.permission_id == permission.id
+                        RolePermission.permission_id == permission.id,
                     )
                 )
 
@@ -152,7 +143,7 @@ class PermissionManager:
                         guild_id=guild_id,
                         role_id=role_id,
                         permission_id=permission.id,
-                        granted=False
+                        granted=False,
                     )
                     session.add(role_perm)
 
@@ -161,7 +152,9 @@ class PermissionManager:
                 # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                logger.info(f"Revoked {permission_node} from role {role_id} in guild {guild_id}")
+                logger.info(
+                    f"Revoked {permission_node} from role {role_id} in guild {guild_id}"
+                )
                 return True
 
         except Exception as e:
@@ -169,34 +162,41 @@ class PermissionManager:
             return False
 
     async def has_permission(
-        self,
-        guild_id: int,
-        user: hikari.Member,
-        permission_node: str
+        self, guild_id: int, user: hikari.Member, permission_node: str
     ) -> bool:
-        logger.debug(f"Checking permission '{permission_node}' for user {user.username} ({user.id}) in guild {guild_id}")
+        logger.debug(
+            f"Checking permission '{permission_node}' for user {user.username} ({user.id}) in guild {guild_id}"
+        )
 
         # Server owner always has all permissions
         guild = user.get_guild()
         if guild and user.id == guild.owner_id:
-            logger.debug(f"User {user.username} is server owner - granting all permissions")
+            logger.debug(
+                f"User {user.username} is server owner - granting all permissions"
+            )
             return True
 
         # Users with Administrator permission have all permissions
         if user.permissions & hikari.Permissions.ADMINISTRATOR:
-            logger.debug(f"User {user.username} has Administrator permission - granting all permissions")
+            logger.debug(
+                f"User {user.username} has Administrator permission - granting all permissions"
+            )
             return True
 
         # Check if this permission is granted by default to all users
         if self._has_default_permission(permission_node):
-            logger.debug(f"Permission '{permission_node}' is granted by default - allowing access")
+            logger.debug(
+                f"Permission '{permission_node}' is granted by default - allowing access"
+            )
             return True
 
         # Get user's roles
         user_role_ids = user.role_ids
 
         # Check for role-based permission hierarchy
-        if await self._has_hierarchical_permission(guild_id, user_role_ids, permission_node):
+        if await self._has_hierarchical_permission(
+            guild_id, user_role_ids, permission_node
+        ):
             return True
 
         # Check cached permissions
@@ -228,18 +228,21 @@ class PermissionManager:
         # Permissions that are available to everyone by default
         default_permissions = {
             # Fun commands - available to all
-            'fun.games', 'fun.images',
-
+            "fun.games",
+            "fun.images",
             # Basic utility commands - available to all
-            'utility.info', 'utility.stats',
-
+            "utility.info",
+            "utility.stats",
             # Music commands (basic usage) - available to all
-            'music.play', 'music.queue',
+            "music.play",
+            "music.queue",
         }
 
         return permission_node in default_permissions
 
-    async def _has_hierarchical_permission(self, guild_id: int, role_ids: List[int], permission_node: str) -> bool:
+    async def _has_hierarchical_permission(
+        self, guild_id: int, role_ids: list[int], permission_node: str
+    ) -> bool:
         """Check if user has permission through role hierarchy."""
         try:
             # Permission hierarchy rules:
@@ -259,16 +262,18 @@ class PermissionManager:
                 return True
 
             # Check hierarchy rules
-            permission_parts = permission_node.split('.')
+            permission_parts = permission_node.split(".")
             if len(permission_parts) >= 2:
                 category, action = permission_parts[0], permission_parts[1]
 
                 # Admin permissions grant everything
-                if any(perm.startswith('admin.') for perm in all_user_permissions):
+                if any(perm.startswith("admin.") for perm in all_user_permissions):
                     return True
 
                 # Moderation permissions grant utility and fun permissions
-                if category in ['utility', 'fun'] and any(perm.startswith('moderation.') for perm in all_user_permissions):
+                if category in ["utility", "fun"] and any(
+                    perm.startswith("moderation.") for perm in all_user_permissions
+                ):
                     return True
 
                 # Category-wide permissions (e.g., "admin.*" grants "admin.config")
@@ -282,18 +287,22 @@ class PermissionManager:
             logger.error(f"Error checking hierarchical permissions: {e}")
             return False
 
-    async def _get_role_permissions(self, guild_id: int, role_ids: List[int]) -> Dict[int, Set[str]]:
+    async def _get_role_permissions(
+        self, guild_id: int, role_ids: list[int]
+    ) -> dict[int, set[str]]:
         try:
             async with self.db.session() as session:
                 result = await session.execute(
-                    select(RolePermission, Permission.node).join(Permission).where(
+                    select(RolePermission, Permission.node)
+                    .join(Permission)
+                    .where(
                         RolePermission.guild_id == guild_id,
                         RolePermission.role_id.in_(role_ids),
-                        RolePermission.granted == True
+                        RolePermission.granted == True,
                     )
                 )
 
-                permissions_by_role: Dict[int, Set[str]] = {}
+                permissions_by_role: dict[int, set[str]] = {}
                 for role_permission, node in result:
                     role_id = role_permission.role_id
                     if role_id not in permissions_by_role:
@@ -306,7 +315,7 @@ class PermissionManager:
             logger.error(f"Error fetching role permissions: {e}")
             return {}
 
-    async def get_all_permissions(self) -> List[Permission]:
+    async def get_all_permissions(self) -> list[Permission]:
         try:
             async with self.db.session() as session:
                 result = await session.execute(select(Permission))
@@ -315,7 +324,7 @@ class PermissionManager:
             logger.error(f"Error fetching all permissions: {e}")
             return []
 
-    async def get_role_permissions(self, guild_id: int, role_id: int) -> List[str]:
+    async def get_role_permissions(self, guild_id: int, role_id: int) -> list[str]:
         try:
             permissions = await self._get_role_permissions(guild_id, [role_id])
             return list(permissions.get(role_id, set()))

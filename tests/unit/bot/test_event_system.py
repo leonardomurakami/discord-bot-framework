@@ -1,8 +1,9 @@
 """Tests for event system functionality."""
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 import asyncio
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from bot.core.event_system import EventSystem, event_listener
 
@@ -240,9 +241,7 @@ class TestEventSystem:
         # Emit multiple events concurrently
         tasks = []
         for i in range(5):
-            task = asyncio.create_task(
-                event_system.emit("test_event", {"index": i})
-            )
+            task = asyncio.create_task(event_system.emit("test_event", {"index": i}))
             tasks.append(task)
 
         await asyncio.gather(*tasks)
@@ -256,32 +255,35 @@ class TestEventListenerDecorator:
 
     def test_event_listener_decorator_function(self):
         """Test the event_listener decorator on a function."""
+
         @event_listener("test_event")
         def test_handler(event_data):
             pass
 
-        assert hasattr(test_handler, '_event_listener')
+        assert hasattr(test_handler, "_event_listener")
         assert test_handler._event_listener == "test_event"
 
     def test_event_listener_decorator_method(self):
         """Test the event_listener decorator on a method."""
+
         class TestClass:
             @event_listener("test_event")
             def test_handler(self, event_data):
                 pass
 
         instance = TestClass()
-        assert hasattr(instance.test_handler, '_event_listener')
+        assert hasattr(instance.test_handler, "_event_listener")
         assert instance.test_handler._event_listener == "test_event"
 
     @pytest.mark.asyncio
     async def test_event_listener_decorator_async(self):
         """Test the event_listener decorator on an async function."""
+
         @event_listener("test_event")
         async def test_handler(event_data):
             return "handled"
 
-        assert hasattr(test_handler, '_event_listener')
+        assert hasattr(test_handler, "_event_listener")
         assert test_handler._event_listener == "test_event"
 
         # Test that the function still works

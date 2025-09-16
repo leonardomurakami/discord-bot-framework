@@ -1,14 +1,13 @@
-import os
-import sys
 import importlib
 import importlib.util
 import inspect
-from pathlib import Path
-from typing import Dict, List, Type, Optional, Any, TYPE_CHECKING
 import logging
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..plugins.base import BasePlugin
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,8 @@ class PluginMetadata:
         version: str = "1.0.0",
         author: str = "Unknown",
         description: str = "",
-        dependencies: Optional[List[str]] = None,
-        permissions: Optional[List[str]] = None,
+        dependencies: list[str] | None = None,
+        permissions: list[str] | None = None,
     ) -> None:
         self.name = name
         self.version = version
@@ -34,9 +33,11 @@ class PluginMetadata:
 class PluginLoader:
     def __init__(self, bot: Any) -> None:
         self.bot = bot
-        self.plugins: Dict[str, Any] = {}  # Changed from BasePlugin to Any to avoid circular import
-        self.plugin_metadata: Dict[str, PluginMetadata] = {}
-        self.plugin_directories: List[Path] = []
+        self.plugins: dict[str, Any] = (
+            {}
+        )  # Changed from BasePlugin to Any to avoid circular import
+        self.plugin_metadata: dict[str, PluginMetadata] = {}
+        self.plugin_directories: list[Path] = []
 
     def add_plugin_directory(self, directory: str) -> None:
         path = Path(directory)
@@ -46,7 +47,7 @@ class PluginLoader:
         else:
             logger.warning(f"Plugin directory does not exist: {path}")
 
-    def discover_plugins(self) -> List[str]:
+    def discover_plugins(self) -> list[str]:
         discovered = []
 
         for directory in self.plugin_directories:
@@ -64,8 +65,7 @@ class PluginLoader:
             plugin_path = directory / plugin_name
             if plugin_path.exists():
                 spec = importlib.util.spec_from_file_location(
-                    f"plugins.{plugin_name}",
-                    plugin_path / "__init__.py"
+                    f"plugins.{plugin_name}", plugin_path / "__init__.py"
                 )
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
@@ -75,21 +75,21 @@ class PluginLoader:
 
         raise ImportError(f"Plugin {plugin_name} not found")
 
-    def _extract_plugin_class(self, module: Any) -> Type[Any]:
+    def _extract_plugin_class(self, module: Any) -> type[Any]:
         # Import BasePlugin here to avoid circular import
         from ..plugins.base import BasePlugin
 
         for name, obj in inspect.getmembers(module, inspect.isclass):
             if (
-                issubclass(obj, BasePlugin) and
-                obj is not BasePlugin and
-                hasattr(obj, "__module__") and
-                module.__name__ in obj.__module__
+                issubclass(obj, BasePlugin)
+                and obj is not BasePlugin
+                and hasattr(obj, "__module__")
+                and module.__name__ in obj.__module__
             ):
                 return obj
 
         # If we can't find a plugin class, look for setup function
-        if hasattr(module, 'setup'):
+        if hasattr(module, "setup"):
             return module.setup
 
         raise ValueError(f"No plugin class found in module {module.__name__}")
@@ -124,14 +124,16 @@ class PluginLoader:
             # Check dependencies
             for dep in metadata.dependencies:
                 if dep not in self.plugins:
-                    logger.error(f"Plugin {plugin_name} requires {dep} which is not loaded")
+                    logger.error(
+                        f"Plugin {plugin_name} requires {dep} which is not loaded"
+                    )
                     return False
 
             # Extract and instantiate plugin class
             plugin_class_or_setup = self._extract_plugin_class(module)
 
             # If it's a setup function, call it to get the plugin instance
-            if callable(plugin_class_or_setup) and hasattr(module, 'setup'):
+            if callable(plugin_class_or_setup) and hasattr(module, "setup"):
                 plugin_instance = plugin_class_or_setup(self.bot)
             else:
                 # Otherwise, instantiate the class
@@ -144,7 +146,9 @@ class PluginLoader:
             self.plugins[plugin_name] = plugin_instance
             self.plugin_metadata[plugin_name] = metadata
 
-            logger.info(f"Successfully loaded plugin: {plugin_name} v{metadata.version}")
+            logger.info(
+                f"Successfully loaded plugin: {plugin_name} v{metadata.version}"
+            )
             return True
 
         except Exception as e:
@@ -183,15 +187,15 @@ class PluginLoader:
             return await self.load_plugin(plugin_name)
         return False
 
-    async def load_all_plugins(self, enabled_plugins: List[str]) -> None:
+    async def load_all_plugins(self, enabled_plugins: list[str]) -> None:
         for plugin_name in enabled_plugins:
             await self.load_plugin(plugin_name)
 
-    def get_plugin(self, plugin_name: str) -> Optional[Any]:
+    def get_plugin(self, plugin_name: str) -> Any | None:
         return self.plugins.get(plugin_name)
 
-    def get_loaded_plugins(self) -> List[str]:
+    def get_loaded_plugins(self) -> list[str]:
         return list(self.plugins.keys())
 
-    def get_plugin_info(self, plugin_name: str) -> Optional[PluginMetadata]:
+    def get_plugin_info(self, plugin_name: str) -> PluginMetadata | None:
         return self.plugin_metadata.get(plugin_name)

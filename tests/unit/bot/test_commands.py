@@ -1,14 +1,18 @@
 """Tests for command system."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
 import hikari
+import pytest
 
 from bot.plugins.commands.argument_types import CommandArgument
 from bot.plugins.commands.parsers import (
-    ArgumentParser, StringArgumentParser, IntegerArgumentParser,
-    UserArgumentParser, ChannelArgumentParser, RoleArgumentParser,
-    MentionableArgumentParser
+    ChannelArgumentParser,
+    IntegerArgumentParser,
+    MentionableArgumentParser,
+    RoleArgumentParser,
+    StringArgumentParser,
+    UserArgumentParser,
 )
 
 
@@ -22,7 +26,7 @@ class TestCommandArgument:
             arg_type=hikari.OptionType.STRING,
             description="Test argument",
             required=True,
-            default="default_value"
+            default="default_value",
         )
 
         assert arg.name == "test_arg"
@@ -36,7 +40,7 @@ class TestCommandArgument:
         arg = CommandArgument(
             name="test_arg",
             arg_type=hikari.OptionType.STRING,
-            description="Test argument"
+            description="Test argument",
         )
 
         assert arg.name == "test_arg"
@@ -124,7 +128,9 @@ class TestUserArgumentParser:
         arg_def = CommandArgument("test", hikari.OptionType.USER, "Test", default=None)
 
         mock_bot = MagicMock()
-        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(side_effect=hikari.NotFoundError("test_url", {}, b"", "User not found"))
+        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(
+            side_effect=hikari.NotFoundError("test_url", {}, b"", "User not found")
+        )
         mock_bot.hikari_bot.cache.get_guild.return_value = None
 
         result = await parser.parse("123456789", arg_def, mock_bot, 123)
@@ -295,7 +301,9 @@ class TestMentionableArgumentParser:
     async def test_parse_invalid_mention(self):
         """Test parsing invalid mention."""
         parser = MentionableArgumentParser()
-        arg_def = CommandArgument("test", hikari.OptionType.MENTIONABLE, "Test", default=None)
+        arg_def = CommandArgument(
+            "test", hikari.OptionType.MENTIONABLE, "Test", default=None
+        )
 
         mock_bot = MagicMock()
 

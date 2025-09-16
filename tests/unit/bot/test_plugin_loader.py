@@ -1,8 +1,8 @@
 """Tests for plugin loader functionality."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from pathlib import Path
 
 from bot.core.plugin_loader import PluginLoader, PluginMetadata
 from bot.plugins.base import BasePlugin
@@ -19,7 +19,7 @@ class TestPluginMetadata:
             author="Test Author",
             description="Test description",
             dependencies=["dep1", "dep2"],
-            permissions=["perm1", "perm2"]
+            permissions=["perm1", "perm2"],
         )
 
         assert metadata.name == "Test Plugin"
@@ -105,7 +105,7 @@ class TestPluginLoader:
             "author": "Test Author",
             "description": "Test description",
             "dependencies": ["dep1"],
-            "permissions": ["perm1"]
+            "permissions": ["perm1"],
         }
 
         metadata = loader._extract_metadata(mock_module)
@@ -141,10 +141,10 @@ class TestPluginLoader:
         mock_module = MagicMock()
         mock_module.__name__ = "test_plugin"
 
-        with patch('inspect.getmembers') as mock_getmembers:
+        with patch("inspect.getmembers") as mock_getmembers:
             mock_getmembers.return_value = [
-                ('TestPlugin', TestPlugin),
-                ('SomeOtherClass', str)
+                ("TestPlugin", TestPlugin),
+                ("SomeOtherClass", str),
             ]
 
             result = loader._extract_plugin_class(mock_module)
@@ -159,7 +159,7 @@ class TestPluginLoader:
         mock_module.__name__ = "test_plugin"
         mock_module.setup = MagicMock()
 
-        with patch('inspect.getmembers') as mock_getmembers:
+        with patch("inspect.getmembers") as mock_getmembers:
             mock_getmembers.return_value = []
 
             result = loader._extract_plugin_class(mock_module)
@@ -174,7 +174,7 @@ class TestPluginLoader:
         mock_module.__name__ = "test_plugin"
         del mock_module.setup  # Ensure setup doesn't exist
 
-        with patch('inspect.getmembers') as mock_getmembers:
+        with patch("inspect.getmembers") as mock_getmembers:
             mock_getmembers.return_value = []
 
             with pytest.raises(ValueError):
@@ -197,11 +197,13 @@ class TestPluginLoader:
             "name": "Test Plugin",
             "version": "1.0.0",
             "author": "Test Author",
-            "description": "Test description"
+            "description": "Test description",
         }
 
-        with patch.object(loader, '_load_plugin_module', return_value=mock_module), \
-             patch.object(loader, '_extract_plugin_class', return_value=TestPlugin):
+        with (
+            patch.object(loader, "_load_plugin_module", return_value=mock_module),
+            patch.object(loader, "_extract_plugin_class", return_value=TestPlugin),
+        ):
 
             result = await loader.load_plugin("test_plugin")
 
@@ -231,10 +233,10 @@ class TestPluginLoader:
         mock_module = MagicMock()
         mock_module.PLUGIN_METADATA = {
             "name": "Test Plugin",
-            "dependencies": ["missing_plugin"]
+            "dependencies": ["missing_plugin"],
         }
 
-        with patch.object(loader, '_load_plugin_module', return_value=mock_module):
+        with patch.object(loader, "_load_plugin_module", return_value=mock_module):
             result = await loader.load_plugin("test_plugin")
 
             assert result is False
@@ -244,7 +246,9 @@ class TestPluginLoader:
         """Test loading a plugin with error."""
         loader = PluginLoader(mock_bot)
 
-        with patch.object(loader, '_load_plugin_module', side_effect=Exception("Test error")):
+        with patch.object(
+            loader, "_load_plugin_module", side_effect=Exception("Test error")
+        ):
             result = await loader.load_plugin("test_plugin")
 
             assert result is False
@@ -292,8 +296,10 @@ class TestPluginLoader:
         """Test successful plugin reloading."""
         loader = PluginLoader(mock_bot)
 
-        with patch.object(loader, 'unload_plugin', return_value=True) as mock_unload, \
-             patch.object(loader, 'load_plugin', return_value=True) as mock_load:
+        with (
+            patch.object(loader, "unload_plugin", return_value=True) as mock_unload,
+            patch.object(loader, "load_plugin", return_value=True) as mock_load,
+        ):
 
             result = await loader.reload_plugin("test_plugin")
 
@@ -306,7 +312,7 @@ class TestPluginLoader:
         """Test reloading a plugin when unload fails."""
         loader = PluginLoader(mock_bot)
 
-        with patch.object(loader, 'unload_plugin', return_value=False):
+        with patch.object(loader, "unload_plugin", return_value=False):
             result = await loader.reload_plugin("test_plugin")
 
             assert result is False
@@ -316,8 +322,10 @@ class TestPluginLoader:
         """Test reloading a plugin when load fails."""
         loader = PluginLoader(mock_bot)
 
-        with patch.object(loader, 'unload_plugin', return_value=True), \
-             patch.object(loader, 'load_plugin', return_value=False):
+        with (
+            patch.object(loader, "unload_plugin", return_value=True),
+            patch.object(loader, "load_plugin", return_value=False),
+        ):
 
             result = await loader.reload_plugin("test_plugin")
 

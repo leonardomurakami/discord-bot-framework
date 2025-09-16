@@ -1,6 +1,6 @@
 import logging
 import traceback
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -9,7 +9,7 @@ class ErrorHandlerMiddleware:
     def __init__(self) -> None:
         pass
 
-    async def __call__(self, event_context: Dict[str, Any], phase: str) -> None:
+    async def __call__(self, event_context: dict[str, Any], phase: str) -> None:
         if phase == "post":
             # Check if any errors occurred during event processing
             if event_context.get("error"):
@@ -18,7 +18,9 @@ class ErrorHandlerMiddleware:
 
                 # Log the error
                 logger.error(f"Error in event {event_name}: {error}")
-                logger.error(f"Traceback: {traceback.format_exception(type(error), error, error.__traceback__)}")
+                logger.error(
+                    f"Traceback: {traceback.format_exception(type(error), error, error.__traceback__)}"
+                )
 
                 # Here you could implement additional error handling:
                 # - Send to error tracking service

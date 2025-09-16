@@ -1,13 +1,16 @@
 """Tests for bot/middleware/ modules"""
 
-import pytest
-import logging
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from bot.middleware.logging import LoggingMiddleware, logging_middleware
-from bot.middleware.error_handler import ErrorHandlerMiddleware, error_handler_middleware
+import pytest
+
 from bot.middleware.analytics import AnalyticsMiddleware, analytics_middleware
+from bot.middleware.error_handler import (
+    ErrorHandlerMiddleware,
+    error_handler_middleware,
+)
+from bot.middleware.logging import LoggingMiddleware, logging_middleware
 
 
 class TestLoggingMiddleware:
@@ -22,7 +25,7 @@ class TestLoggingMiddleware:
         """Test that pre phase logs event start and tracks time."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.logging.logger') as mock_logger:
+        with patch("bot.middleware.logging.logger") as mock_logger:
             await self.middleware(event_context, "pre")
 
             mock_logger.debug.assert_called_once_with("Event started: test_event")
@@ -37,7 +40,7 @@ class TestLoggingMiddleware:
         start_time = time.time() - 0.5  # 500ms ago
         self.middleware.start_times["test_event"] = start_time
 
-        with patch('bot.middleware.logging.logger') as mock_logger:
+        with patch("bot.middleware.logging.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             # Should log completion with duration
@@ -56,7 +59,7 @@ class TestLoggingMiddleware:
         """Test post phase when no start time exists."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.logging.logger') as mock_logger:
+        with patch("bot.middleware.logging.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             mock_logger.debug.assert_called_once_with("Event completed: test_event")
@@ -75,7 +78,7 @@ class TestLoggingMiddleware:
         """Test that other phases are ignored."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.logging.logger') as mock_logger:
+        with patch("bot.middleware.logging.logger") as mock_logger:
             await self.middleware(event_context, "unknown_phase")
 
             mock_logger.debug.assert_not_called()
@@ -97,12 +100,9 @@ class TestErrorHandlerMiddleware:
     async def test_post_phase_logs_error(self):
         """Test that post phase logs errors when present."""
         test_error = ValueError("Test error message")
-        event_context = {
-            "event_name": "test_event",
-            "error": test_error
-        }
+        event_context = {"event_name": "test_event", "error": test_error}
 
-        with patch('bot.middleware.error_handler.logger') as mock_logger:
+        with patch("bot.middleware.error_handler.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             # Check error was logged
@@ -110,7 +110,9 @@ class TestErrorHandlerMiddleware:
             assert len(error_calls) == 2  # One for error, one for traceback
 
             # Check error message
-            assert "Error in event test_event: Test error message" in str(error_calls[0])
+            assert "Error in event test_event: Test error message" in str(
+                error_calls[0]
+            )
 
             # Check traceback
             assert "Traceback:" in str(error_calls[1])
@@ -120,7 +122,7 @@ class TestErrorHandlerMiddleware:
         """Test post phase when no error exists."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.error_handler.logger') as mock_logger:
+        with patch("bot.middleware.error_handler.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             mock_logger.error.assert_not_called()
@@ -131,7 +133,7 @@ class TestErrorHandlerMiddleware:
         test_error = ValueError("Test error")
         event_context = {"error": test_error}
 
-        with patch('bot.middleware.error_handler.logger') as mock_logger:
+        with patch("bot.middleware.error_handler.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             # Should log with "unknown" event name
@@ -142,12 +144,9 @@ class TestErrorHandlerMiddleware:
     @pytest.mark.asyncio
     async def test_pre_phase_ignored(self):
         """Test that pre phase is ignored."""
-        event_context = {
-            "event_name": "test_event",
-            "error": ValueError("Test error")
-        }
+        event_context = {"event_name": "test_event", "error": ValueError("Test error")}
 
-        with patch('bot.middleware.error_handler.logger') as mock_logger:
+        with patch("bot.middleware.error_handler.logger") as mock_logger:
             await self.middleware(event_context, "pre")
 
             mock_logger.error.assert_not_called()
@@ -155,12 +154,9 @@ class TestErrorHandlerMiddleware:
     @pytest.mark.asyncio
     async def test_other_phases_ignored(self):
         """Test that other phases are ignored."""
-        event_context = {
-            "event_name": "test_event",
-            "error": ValueError("Test error")
-        }
+        event_context = {"event_name": "test_event", "error": ValueError("Test error")}
 
-        with patch('bot.middleware.error_handler.logger') as mock_logger:
+        with patch("bot.middleware.error_handler.logger") as mock_logger:
             await self.middleware(event_context, "unknown_phase")
 
             mock_logger.error.assert_not_called()
@@ -183,7 +179,7 @@ class TestAnalyticsMiddleware:
         """Test that pre phase tracks event counts."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.analytics.logger') as mock_logger:
+        with patch("bot.middleware.analytics.logger") as mock_logger:
             await self.middleware(event_context, "pre")
 
             # Check event was counted
@@ -202,7 +198,7 @@ class TestAnalyticsMiddleware:
         # Set initial count
         self.middleware.event_counts["test_event"] = 5
 
-        with patch('bot.middleware.analytics.logger') as mock_logger:
+        with patch("bot.middleware.analytics.logger") as mock_logger:
             await self.middleware(event_context, "pre")
 
             # Check count was incremented
@@ -218,7 +214,7 @@ class TestAnalyticsMiddleware:
         """Test pre phase handles missing event name gracefully."""
         event_context = {}
 
-        with patch('bot.middleware.analytics.logger') as mock_logger:
+        with patch("bot.middleware.analytics.logger") as mock_logger:
             await self.middleware(event_context, "pre")
 
             # Should not crash and should not log
@@ -230,7 +226,7 @@ class TestAnalyticsMiddleware:
         """Test that post phase is ignored."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.analytics.logger') as mock_logger:
+        with patch("bot.middleware.analytics.logger") as mock_logger:
             await self.middleware(event_context, "post")
 
             mock_logger.info.assert_not_called()
@@ -241,7 +237,7 @@ class TestAnalyticsMiddleware:
         """Test that other phases are ignored."""
         event_context = {"event_name": "test_event"}
 
-        with patch('bot.middleware.analytics.logger') as mock_logger:
+        with patch("bot.middleware.analytics.logger") as mock_logger:
             await self.middleware(event_context, "unknown_phase")
 
             mock_logger.info.assert_not_called()
@@ -315,8 +311,10 @@ class TestMiddlewareIntegration:
         event_context["error"] = test_error
 
         # Process post phase
-        with patch('bot.middleware.logging.logger'), \
-             patch('bot.middleware.error_handler.logger') as error_logger:
+        with (
+            patch("bot.middleware.logging.logger"),
+            patch("bot.middleware.error_handler.logger") as error_logger,
+        ):
 
             await logging_mid(event_context, "post")
             await error_mid(event_context, "post")
@@ -326,7 +324,11 @@ class TestMiddlewareIntegration:
 
     def test_all_middleware_imports_correctly(self):
         """Test that all middleware can be imported from the package."""
-        from bot.middleware import LoggingMiddleware, ErrorHandlerMiddleware, AnalyticsMiddleware
+        from bot.middleware import (
+            AnalyticsMiddleware,
+            ErrorHandlerMiddleware,
+            LoggingMiddleware,
+        )
 
         # Should be able to create instances
         logging_mid = LoggingMiddleware()

@@ -1,17 +1,16 @@
 import logging
-import asyncio
-from typing import Optional, Dict, Any
+
 import hikari
 import lightbulb
 import miru
-from pathlib import Path
 
 from config.settings import settings
-from ..database import DatabaseManager, db_manager
-from .plugin_loader import PluginLoader
+
+from ..database import db_manager
+from ..permissions import PermissionManager
 from .event_system import EventSystem
 from .message_handler import MessageCommandHandler
-from ..permissions import PermissionManager
+from .plugin_loader import PluginLoader
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +19,15 @@ class DiscordBot:
     def __init__(self) -> None:
         # Initialize bot components with required intents
         intents = (
-            hikari.Intents.ALL_MESSAGES |
-            hikari.Intents.GUILD_MEMBERS |
-            hikari.Intents.GUILDS |
-            hikari.Intents.MESSAGE_CONTENT
+            hikari.Intents.ALL_MESSAGES
+            | hikari.Intents.GUILD_MEMBERS
+            | hikari.Intents.GUILDS
+            | hikari.Intents.MESSAGE_CONTENT
         )
         # Create Hikari bot first
-        self.hikari_bot = hikari.GatewayBot(token=settings.discord_token, intents=intents)
+        self.hikari_bot = hikari.GatewayBot(
+            token=settings.discord_token, intents=intents
+        )
         # Create lightbulb client
         self.bot = lightbulb.client_from_app(self.hikari_bot)
 
@@ -38,6 +39,7 @@ class DiscordBot:
 
         # Store reference to our bot instance for permission checks
         import bot.permissions.decorators as perm_decorators
+
         perm_decorators._bot_instance = self
 
         # Initialize systems
@@ -101,11 +103,18 @@ class DiscordBot:
         @self.hikari_bot.listen(hikari.GuildMessageCreateEvent)
         async def on_message_create(event: hikari.GuildMessageCreateEvent) -> None:
             # Debug logging for all messages
-            logger.debug(f"Message received: '{event.content}' from {event.author.username} in #{event.get_channel().name if event.get_channel() else 'unknown'}")
+            logger.debug(
+                f"Message received: '{event.content}' from {event.author.username} in #{event.get_channel().name if event.get_channel() else 'unknown'}"
+            )
 
             # Log if it's a potential command
-            if event.content and (event.content.startswith('/') or event.content.startswith(settings.bot_prefix)):
-                logger.info(f"Potential command detected: '{event.content}' from {event.author.username}")
+            if event.content and (
+                event.content.startswith("/")
+                or event.content.startswith(settings.bot_prefix)
+            ):
+                logger.info(
+                    f"Potential command detected: '{event.content}' from {event.author.username}"
+                )
 
             # Handle prefix commands via our custom handler
             handled = await self.message_handler.handle_message(event)

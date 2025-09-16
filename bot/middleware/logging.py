@@ -1,15 +1,15 @@
 import logging
 import time
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class LoggingMiddleware:
     def __init__(self) -> None:
-        self.start_times: Dict[str, float] = {}
+        self.start_times: dict[str, float] = {}
 
-    async def __call__(self, event_context: Dict[str, Any], phase: str) -> None:
+    async def __call__(self, event_context: dict[str, Any], phase: str) -> None:
         event_name = event_context.get("event_name")
 
         if phase == "pre":

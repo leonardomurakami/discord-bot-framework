@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -30,6 +29,7 @@ def main() -> None:
         if len(sys.argv) > 1 and sys.argv[1] == "--dev":
             # Force development mode
             import os
+
             os.environ["ENVIRONMENT"] = "development"
 
         # Create and run the bot

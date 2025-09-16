@@ -1,12 +1,12 @@
 """Pytest configuration and shared fixtures."""
 
-import pytest
 import asyncio
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock
+
 import hikari
 import lightbulb
+import pytest
 
 # Disable logging during tests
 logging.disable(logging.CRITICAL)
@@ -26,12 +26,14 @@ def mock_hikari_bot():
     bot = MagicMock(spec=hikari.GatewayBot)
     bot.cache = MagicMock()
     bot.rest = MagicMock()
-    bot.get_me = MagicMock(return_value=MagicMock(
-        id=12345,
-        username="TestBot",
-        display_name="TestBot",
-        make_avatar_url=MagicMock(return_value="https://example.com/avatar.png")
-    ))
+    bot.get_me = MagicMock(
+        return_value=MagicMock(
+            id=12345,
+            username="TestBot",
+            display_name="TestBot",
+            make_avatar_url=MagicMock(return_value="https://example.com/avatar.png"),
+        )
+    )
     bot.heartbeat_latency = 0.05
 
     # Mock cache methods
@@ -98,8 +100,14 @@ def mock_event_system():
 
 
 @pytest.fixture
-def mock_bot(mock_hikari_bot, mock_lightbulb_client, mock_db_manager,
-            mock_permission_manager, mock_plugin_loader, mock_event_system):
+def mock_bot(
+    mock_hikari_bot,
+    mock_lightbulb_client,
+    mock_db_manager,
+    mock_permission_manager,
+    mock_plugin_loader,
+    mock_event_system,
+):
     """Mock complete bot instance."""
     bot = MagicMock()
     bot.hikari_bot = mock_hikari_bot
@@ -171,7 +179,9 @@ def mock_member(mock_user):
     member.joined_at = MagicMock()
     member.joined_at.timestamp.return_value = 1641081600  # 2022-01-02
     member.role_ids = [222222222, 333333333]
-    member.permissions = hikari.Permissions.SEND_MESSAGES | hikari.Permissions.READ_MESSAGE_HISTORY
+    member.permissions = (
+        hikari.Permissions.SEND_MESSAGES | hikari.Permissions.READ_MESSAGE_HISTORY
+    )
     member.edit = AsyncMock()
     return member
 
