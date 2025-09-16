@@ -1,0 +1,32 @@
+services:
+  bot-prod:
+    build:
+      context: .
+      target: production
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/discord_bot}
+      - ENVIRONMENT=production
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    profiles:
+      - production
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=discord_bot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    profiles:
+      - production
+
+volumes:
+  postgres_data:

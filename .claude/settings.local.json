@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:arc.hypergonial.com)",
+      "WebSearch",
+      "Bash(docker-compose stop:*)",
+      "WebFetch(domain:hikari-lightbulb.readthedocs.io)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

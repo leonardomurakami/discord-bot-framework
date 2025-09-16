@@ -1,0 +1,15 @@
+services:
+  bot-dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DATABASE_URL=sqlite:///data/bot.db
+      - ENVIRONMENT=development
+    ports:
+      - "8080:8080"  # For future web interface
+    restart: unless-stopped

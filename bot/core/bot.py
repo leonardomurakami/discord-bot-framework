@@ -1,0 +1,185 @@
+import logging
+import asyncio
+from typing import Optional, Dict, Any
+import hikari
+import lightbulb
+from pathlib import Path
+
+from config.settings import settings
+from ..database import DatabaseManager, db_manager
+from .plugin_loader import PluginLoader
+from .event_system import EventSystem
+from .message_handler import MessageCommandHandler
+from ..permissions import PermissionManager
+
+logger = logging.getLogger(__name__)
+
+
+class DiscordBot:
+    def __init__(self) -> None:
+        # Initialize bot components with required intents
+        intents = (
+            hikari.Intents.ALL_MESSAGES |
+            hikari.Intents.GUILD_MEMBERS |
+            hikari.Intents.GUILDS |
+            hikari.Intents.MESSAGE_CONTENT
+        )
+        # Create Hikari bot first
+        self.hikari_bot = hikari.GatewayBot(token=settings.discord_token, intents=intents)
+        # Create lightbulb client
+        self.bot = lightbulb.client_from_app(self.hikari_bot)
+
+        # Subscribe client to bot events
+        self.hikari_bot.subscribe(hikari.StartingEvent, self.bot.start)
+
+        # Store reference to our bot instance for permission checks
+        import bot.permissions.decorators as perm_decorators
+        perm_decorators._bot_instance = self
+
+        # Initialize systems
+        self.db = db_manager
+        self.event_system = EventSystem()
+        self.message_handler = MessageCommandHandler(self)
+        self.plugin_loader = PluginLoader(self)
+        self.permission_manager = PermissionManager(self.db)
+
+        # Bot state
+        self.is_ready = False
+        self._startup_tasks: list = []
+
+        # Setup plugin directories
+        for directory in settings.plugin_directories:
+            self.plugin_loader.add_plugin_directory(directory)
+
+        # Plugin loader ready
+
+        # Setup event listeners
+        self._setup_event_listeners()
+
+    def _setup_event_listeners(self) -> None:
+        @self.hikari_bot.listen(hikari.StartingEvent)
+        async def on_starting(event: hikari.StartingEvent) -> None:
+            logger.info("Bot is starting...")
+
+        @self.hikari_bot.listen(hikari.StartedEvent)
+        async def on_started(event: hikari.StartedEvent) -> None:
+            logger.info("Bot has started, initializing systems...")
+            await self._initialize_systems()
+
+        @self.hikari_bot.listen(hikari.ShardReadyEvent)
+        async def on_ready(event: hikari.ShardReadyEvent) -> None:
+            if not self.is_ready:
+                logger.info(f"Bot is ready! Logged in as {self.hikari_bot.get_me()}")
+                await self.event_system.emit("bot_ready", self)
+                self.is_ready = True
+
+        @self.hikari_bot.listen(hikari.StoppingEvent)
+        async def on_stopping(event: hikari.StoppingEvent) -> None:
+            logger.info("Bot is stopping...")
+            await self._cleanup()
+
+        @self.hikari_bot.listen(hikari.GuildAvailableEvent)
+        async def on_guild_join(event: hikari.GuildAvailableEvent) -> None:
+            await self.event_system.emit("guild_join", event.guild)
+
+        @self.hikari_bot.listen(hikari.GuildUnavailableEvent)
+        async def on_guild_leave(event: hikari.GuildUnavailableEvent) -> None:
+            await self.event_system.emit("guild_leave", event.guild_id)
+
+        @self.hikari_bot.listen(hikari.MemberCreateEvent)
+        async def on_member_join(event: hikari.MemberCreateEvent) -> None:
+            await self.event_system.emit("member_join", event.member)
+
+        @self.hikari_bot.listen(hikari.MemberDeleteEvent)
+        async def on_member_leave(event: hikari.MemberDeleteEvent) -> None:
+            await self.event_system.emit("member_leave", event.user, event.guild_id)
+
+        @self.hikari_bot.listen(hikari.GuildMessageCreateEvent)
+        async def on_message_create(event: hikari.GuildMessageCreateEvent) -> None:
+            # Debug logging for all messages
+            logger.debug(f"Message received: '{event.content}' from {event.author.username} in #{event.get_channel().name if event.get_channel() else 'unknown'}")
+
+            # Log if it's a potential command
+            if event.content and (event.content.startswith('/') or event.content.startswith(settings.bot_prefix)):
+                logger.info(f"Potential command detected: '{event.content}' from {event.author.username}")
+
+            # Handle prefix commands via our custom handler
+            handled = await self.message_handler.handle_message(event)
+            if not handled:
+                await self.event_system.emit("message_create", event)
+
+    async def _initialize_systems(self) -> None:
+        try:
+            # Initialize database
+            await self.db.create_tables()
+            logger.info("Database initialized")
+
+            # Initialize permissions
+            await self.permission_manager.initialize()
+            logger.info("Permission system initialized")
+
+            # Load plugins
+            await self._load_plugins()
+            logger.info("Plugins loaded")
+
+            # Run startup tasks
+            for task in self._startup_tasks:
+                await task()
+
+            logger.info("All systems initialized successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize systems: {e}")
+            raise
+
+    async def _load_plugins(self) -> None:
+        try:
+            enabled_plugins = settings.enabled_plugins
+            discovered = self.plugin_loader.discover_plugins()
+
+            # Load only enabled plugins that were discovered
+            plugins_to_load = [p for p in enabled_plugins if p in discovered]
+
+            if plugins_to_load:
+                logger.info(f"Loading plugins: {plugins_to_load}")
+                await self.plugin_loader.load_all_plugins(plugins_to_load)
+            else:
+                logger.warning("No valid plugins found to load")
+
+        except Exception as e:
+            logger.error(f"Error loading plugins: {e}")
+
+    async def _cleanup(self) -> None:
+        try:
+            # Emit cleanup event
+            await self.event_system.emit("bot_stopping", self)
+
+            # Unload all plugins
+            for plugin_name in list(self.plugin_loader.plugins.keys()):
+                await self.plugin_loader.unload_plugin(plugin_name)
+
+            # Close database
+            await self.db.close()
+
+            logger.info("Cleanup completed")
+
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+
+    def add_startup_task(self, task) -> None:
+        self._startup_tasks.append(task)
+
+    async def get_guild_prefix(self, guild_id: int) -> str:
+        # This will be implemented by the database/guild settings
+        # For now, return default prefix
+        return settings.bot_prefix
+
+    def run(self) -> None:
+        try:
+            logger.info("Starting Discord bot...")
+            self.hikari_bot.run()
+        except KeyboardInterrupt:
+            logger.info("Bot stopped by user")
+        except Exception as e:
+            logger.error(f"Bot crashed: {e}")
+            raise
