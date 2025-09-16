@@ -128,9 +128,7 @@ class TestUserArgumentParser:
         arg_def = CommandArgument("test", hikari.OptionType.USER, "Test", default=None)
 
         mock_bot = MagicMock()
-        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(
-            side_effect=hikari.NotFoundError("test_url", {}, b"", "User not found")
-        )
+        mock_bot.hikari_bot.rest.fetch_user = AsyncMock(side_effect=hikari.NotFoundError("test_url", {}, b"", "User not found"))
         mock_bot.hikari_bot.cache.get_guild.return_value = None
 
         result = await parser.parse("123456789", arg_def, mock_bot, 123)
@@ -153,9 +151,7 @@ class TestUserArgumentParser:
         mock_member.display_name = "Test User"
 
         mock_bot.hikari_bot.cache.get_guild.return_value = mock_guild
-        mock_bot.hikari_bot.cache.get_members_view_for_guild.return_value = {
-            123: mock_member
-        }
+        mock_bot.hikari_bot.cache.get_members_view_for_guild.return_value = {123: mock_member}
 
         result = await parser.parse("testuser", arg_def, mock_bot, 123)
 
@@ -254,9 +250,7 @@ class TestRoleArgumentParser:
         mock_role.id = 123456789
 
         mock_bot.hikari_bot.cache.get_role.return_value = None
-        mock_bot.hikari_bot.cache.get_roles_view_for_guild.return_value = {
-            123456789: mock_role
-        }
+        mock_bot.hikari_bot.cache.get_roles_view_for_guild.return_value = {123456789: mock_role}
 
         result = await parser.parse("testrole", arg_def, mock_bot, 123)
 
@@ -301,9 +295,7 @@ class TestMentionableArgumentParser:
     async def test_parse_invalid_mention(self):
         """Test parsing invalid mention."""
         parser = MentionableArgumentParser()
-        arg_def = CommandArgument(
-            "test", hikari.OptionType.MENTIONABLE, "Test", default=None
-        )
+        arg_def = CommandArgument("test", hikari.OptionType.MENTIONABLE, "Test", default=None)
 
         mock_bot = MagicMock()
 

@@ -364,9 +364,7 @@ class TestPersistentPluginSelectView:
         mock_select.values = []
         mock_select.custom_id = "help_plugin_select"
 
-        with patch.object(
-            type(view), "children", new_callable=MagicMock, return_value=[mock_select]
-        ):
+        with patch.object(type(view), "children", new_callable=MagicMock, return_value=[mock_select]):
             await view.on_plugin_select(mock_ctx)
 
         # Should return early without errors
@@ -533,9 +531,7 @@ class TestHelpPluginMethods:
         """Test on_load calls _register_persistent_views."""
         plugin = HelpPlugin(mock_bot)
 
-        with patch.object(
-            plugin, "_register_persistent_views", new_callable=AsyncMock
-        ) as mock_register:
+        with patch.object(plugin, "_register_persistent_views", new_callable=AsyncMock) as mock_register:
             await plugin.on_load()
 
         mock_register.assert_called_once()
@@ -616,9 +612,7 @@ class TestHelpPluginIntegration:
         assert "cmd1" in formatted[0]
 
         # Test very long command descriptions
-        long_desc_commands = [
-            {"name": "cmd1", "description": "A" * 200}  # Very long description
-        ]
+        long_desc_commands = [{"name": "cmd1", "description": "A" * 200}]  # Very long description
         formatted = plugin._format_command_list(long_desc_commands)
         assert len(formatted[0]) < 2000  # Should fit in embed field limit
 
@@ -667,9 +661,7 @@ class TestHelpPluginIntegration:
         assert view.timeout is None
 
         # Should have correct custom IDs for persistence
-        select_items = [
-            child for child in view.children if isinstance(child, miru.TextSelect)
-        ]
+        select_items = [child for child in view.children if isinstance(child, miru.TextSelect)]
         assert len(select_items) > 0
         assert any(item.custom_id == "help_plugin_select" for item in select_items)
 
@@ -827,9 +819,7 @@ class TestHelpPluginAdditionalCoverage:
         assert "50 commands" in overview
 
     @pytest.mark.asyncio
-    async def test_help_command_with_miru_client_unavailable(
-        self, mock_bot, mock_context
-    ):
+    async def test_help_command_with_miru_client_unavailable(self, mock_bot, mock_context):
         """Test help command when miru client is not available."""
         plugin = HelpPlugin(mock_bot)
 
@@ -858,9 +848,7 @@ class TestHelpPluginAdditionalCoverage:
         plugin = HelpPlugin(mock_bot)
 
         # Make _get_general_help raise an exception
-        with patch.object(
-            plugin, "_get_general_help", side_effect=Exception("Test error")
-        ):
+        with patch.object(plugin, "_get_general_help", side_effect=Exception("Test error")):
             await plugin.help_command(mock_context)
 
     @pytest.mark.asyncio

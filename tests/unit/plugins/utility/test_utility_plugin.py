@@ -42,9 +42,7 @@ class TestUtilityPlugin:
         mock_context.respond.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_userinfo_command_with_member(
-        self, mock_bot, mock_context, mock_user, mock_member, mock_guild
-    ):
+    async def test_userinfo_command_with_member(self, mock_bot, mock_context, mock_user, mock_member, mock_guild):
         """Test userinfo command with guild member."""
         plugin = UtilityPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
@@ -56,15 +54,11 @@ class TestUtilityPlugin:
         mock_guild.fetch_member.assert_called_once_with(mock_user.id)
 
     @pytest.mark.asyncio
-    async def test_userinfo_command_member_not_found(
-        self, mock_bot, mock_context, mock_user, mock_guild
-    ):
+    async def test_userinfo_command_member_not_found(self, mock_bot, mock_context, mock_user, mock_guild):
         """Test userinfo command when member not found."""
         plugin = UtilityPlugin(mock_bot)
         mock_context.get_guild.return_value = mock_guild
-        mock_guild.fetch_member.side_effect = hikari.NotFoundError(
-            "Member not found", {}, b"", code=10007
-        )
+        mock_guild.fetch_member.side_effect = hikari.NotFoundError("Member not found", {}, b"", code=10007)
 
         await plugin.user_info(mock_context, mock_user)
 

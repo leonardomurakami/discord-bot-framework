@@ -179,9 +179,7 @@ def mock_member(mock_user):
     member.joined_at = MagicMock()
     member.joined_at.timestamp.return_value = 1641081600  # 2022-01-02
     member.role_ids = [222222222, 333333333]
-    member.permissions = (
-        hikari.Permissions.SEND_MESSAGES | hikari.Permissions.READ_MESSAGE_HISTORY
-    )
+    member.permissions = hikari.Permissions.SEND_MESSAGES | hikari.Permissions.READ_MESSAGE_HISTORY
     member.edit = AsyncMock()
     return member
 

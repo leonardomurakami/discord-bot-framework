@@ -18,9 +18,7 @@ class ErrorHandlerMiddleware:
 
                 # Log the error
                 logger.error(f"Error in event {event_name}: {error}")
-                logger.error(
-                    f"Traceback: {traceback.format_exception(type(error), error, error.__traceback__)}"
-                )
+                logger.error(f"Traceback: {traceback.format_exception(type(error), error, error.__traceback__)}")
 
                 # Here you could implement additional error handling:
                 # - Send to error tracking service

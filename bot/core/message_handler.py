@@ -41,9 +41,7 @@ class MessageCommandHandler:
         for alias in command.aliases:
             self.commands[alias] = command
 
-        logger.debug(
-            f"Added prefix command: {command.name} (aliases: {command.aliases})"
-        )
+        logger.debug(f"Added prefix command: {command.name} (aliases: {command.aliases})")
 
     def remove_command(self, name: str) -> None:
         if name in self.commands:
@@ -80,9 +78,7 @@ class MessageCommandHandler:
 
         command = self.commands[command_name]
 
-        logger.info(
-            f"Prefix command called: {self.prefix}{command_name} by {event.author.username}"
-        )
+        logger.info(f"Prefix command called: {self.prefix}{command_name} by {event.author.username}")
 
         try:
             # Create a context-like object for prefix commands
@@ -92,13 +88,9 @@ class MessageCommandHandler:
             if command.permission_node and hasattr(self.bot, "permission_manager"):
                 member = event.member
                 if member:
-                    has_permission = await self.bot.permission_manager.has_permission(
-                        event.guild_id, member, command.permission_node
-                    )
+                    has_permission = await self.bot.permission_manager.has_permission(event.guild_id, member, command.permission_node)
                     if not has_permission:
-                        await ctx.respond(
-                            f"❌ You don't have permission to use `{command.permission_node}`"
-                        )
+                        await ctx.respond(f"❌ You don't have permission to use `{command.permission_node}`")
                         return True
 
             # Execute command
@@ -109,15 +101,13 @@ class MessageCommandHandler:
             logger.error(f"Error executing prefix command {command_name}: {e}")
             try:
                 await ctx.respond(f"❌ Command failed: {str(e)}")
-            except:
-                pass
+            except Exception as response_error:
+                logger.error(f"Failed to send error response: {response_error}")
             return True
 
 
 class PrefixContext:
-    def __init__(
-        self, event: hikari.GuildMessageCreateEvent, bot: Any, args: list[str]
-    ):
+    def __init__(self, event: hikari.GuildMessageCreateEvent, bot: Any, args: list[str]):
         self.event = event
         self.bot = bot
         self.args = args
@@ -136,9 +126,5 @@ class PrefixContext:
     def get_channel(self) -> hikari.GuildChannel | None:
         return self.event.get_channel()
 
-    async def respond(
-        self, content: str = None, *, embed: hikari.Embed = None, components=None
-    ) -> None:
-        await self.bot.hikari_bot.rest.create_message(
-            self.channel_id, content=content, embed=embed, components=components
-        )
+    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> None:
+        await self.bot.hikari_bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)

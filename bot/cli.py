@@ -50,9 +50,7 @@ def run(
 
 
 @app.command()
-def init(
-    directory: str | None = typer.Option(None, help="Directory to initialize")
-) -> None:
+def init(directory: str | None = typer.Option(None, help="Directory to initialize")) -> None:
     """Initialize a new bot project."""
     target_dir = Path(directory) if directory else Path.cwd()
 
@@ -91,11 +89,7 @@ def plugins(
             if plugin_dir.exists():
                 for plugin_path in plugin_dir.iterdir():
                     if plugin_path.is_dir() and (plugin_path / "__init__.py").exists():
-                        enabled = (
-                            "✅"
-                            if plugin_path.name in settings.enabled_plugins
-                            else "❌"
-                        )
+                        enabled = "✅" if plugin_path.name in settings.enabled_plugins else "❌"
                         typer.echo(f"  {enabled} {plugin_path.name}")
     else:
         typer.echo("Plugin management from CLI is not yet implemented.")

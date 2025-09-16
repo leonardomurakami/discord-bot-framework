@@ -110,9 +110,7 @@ class TestErrorHandlerMiddleware:
             assert len(error_calls) == 2  # One for error, one for traceback
 
             # Check error message
-            assert "Error in event test_event: Test error message" in str(
-                error_calls[0]
-            )
+            assert "Error in event test_event: Test error message" in str(error_calls[0])
 
             # Check traceback
             assert "Traceback:" in str(error_calls[1])
@@ -186,9 +184,7 @@ class TestAnalyticsMiddleware:
             assert self.middleware.event_counts["test_event"] == 1
 
             # Check logging
-            mock_logger.info.assert_called_once_with(
-                "Analytics: test_event occurred (total: 1)"
-            )
+            mock_logger.info.assert_called_once_with("Analytics: test_event occurred (total: 1)")
 
     @pytest.mark.asyncio
     async def test_pre_phase_increments_existing_count(self):
@@ -205,9 +201,7 @@ class TestAnalyticsMiddleware:
             assert self.middleware.event_counts["test_event"] == 6
 
             # Check logging shows updated count
-            mock_logger.info.assert_called_once_with(
-                "Analytics: test_event occurred (total: 6)"
-            )
+            mock_logger.info.assert_called_once_with("Analytics: test_event occurred (total: 6)")
 
     @pytest.mark.asyncio
     async def test_pre_phase_handles_missing_event_name(self):

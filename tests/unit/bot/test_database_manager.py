@@ -14,9 +14,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.settings")
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
-    def test_database_manager_creation(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    def test_database_manager_creation(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test creating a DatabaseManager instance."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = False
@@ -32,9 +30,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.settings")
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
-    def test_database_manager_default_url(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    def test_database_manager_default_url(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test DatabaseManager with default URL from settings."""
         mock_settings.database_url = "sqlite+aiosqlite:///default.db"
         mock_settings.debug = False
@@ -51,9 +47,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.async_sessionmaker")
     @patch("bot.database.manager.Base")
     @pytest.mark.asyncio
-    async def test_create_tables(
-        self, mock_base, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    async def test_create_tables(self, mock_base, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test table creation."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = False
@@ -79,9 +73,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
     @pytest.mark.asyncio
-    async def test_session_context_manager(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    async def test_session_context_manager(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test session context manager."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = False
@@ -105,9 +97,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
     @pytest.mark.asyncio
-    async def test_close_method(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    async def test_close_method(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test database close method."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = False
@@ -126,9 +116,7 @@ class TestDatabaseManager:
         with patch("bot.database.manager.settings") as mock_settings:
             mock_settings.debug = False
 
-            with patch(
-                "bot.database.manager.create_async_engine"
-            ) as mock_create_engine:
+            with patch("bot.database.manager.create_async_engine") as mock_create_engine:
                 mock_engine = MagicMock()
                 mock_create_engine.return_value = mock_engine
 
@@ -152,9 +140,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
     @pytest.mark.asyncio
-    async def test_create_tables_no_engine(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    async def test_create_tables_no_engine(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test create_tables when engine is not initialized."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = False
@@ -168,9 +154,7 @@ class TestDatabaseManager:
     @patch("bot.database.manager.settings")
     @patch("bot.database.manager.create_async_engine")
     @patch("bot.database.manager.async_sessionmaker")
-    def test_debug_mode_enabled(
-        self, mock_sessionmaker, mock_create_engine, mock_settings
-    ):
+    def test_debug_mode_enabled(self, mock_sessionmaker, mock_create_engine, mock_settings):
         """Test database creation with debug mode enabled."""
         mock_settings.database_url = "sqlite+aiosqlite:///test.db"
         mock_settings.debug = True

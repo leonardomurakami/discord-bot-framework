@@ -15,9 +15,7 @@ class ArgumentParser(ABC):
     """Base class for argument parsers."""
 
     @abstractmethod
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         """Parse a string argument according to the definition."""
         pass
 
@@ -25,18 +23,14 @@ class ArgumentParser(ABC):
 class StringArgumentParser(ArgumentParser):
     """Parser for string arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         return arg
 
 
 class IntegerArgumentParser(ArgumentParser):
     """Parser for integer arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         try:
             return int(arg)
         except ValueError:
@@ -46,18 +40,14 @@ class IntegerArgumentParser(ArgumentParser):
 class BooleanArgumentParser(ArgumentParser):
     """Parser for boolean arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         return arg.lower() in ("true", "1", "yes", "on", "y")
 
 
 class UserArgumentParser(ArgumentParser):
     """Parser for user arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         # Parse user mention or ID
         user_input = arg.strip("<@!>")
         try:
@@ -69,23 +59,15 @@ class UserArgumentParser(ArgumentParser):
                 # Try cache first
                 guild = bot.hikari_bot.cache.get_guild(guild_id)
                 if guild:
-                    members_view = bot.hikari_bot.cache.get_members_view_for_guild(
-                        guild_id
-                    )
+                    members_view = bot.hikari_bot.cache.get_members_view_for_guild(guild_id)
                     if members_view:
                         for member in members_view.values():
-                            if (
-                                member.username.lower() == arg.lower()
-                                or member.display_name.lower() == arg.lower()
-                            ):
+                            if member.username.lower() == arg.lower() or member.display_name.lower() == arg.lower():
                                 return member.user
 
                 # Fallback to REST API if cache miss
                 async for member in bot.hikari_bot.rest.fetch_members(guild_id):
-                    if (
-                        member.username.lower() == arg.lower()
-                        or member.display_name.lower() == arg.lower()
-                    ):
+                    if member.username.lower() == arg.lower() or member.display_name.lower() == arg.lower():
                         return member
                     break  # Limit to avoid rate limits
             except (hikari.ForbiddenError, hikari.NotFoundError, AttributeError):
@@ -96,9 +78,7 @@ class UserArgumentParser(ArgumentParser):
 class ChannelArgumentParser(ArgumentParser):
     """Parser for channel arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         # Parse channel mention or ID
         channel_input = arg.strip("<#>")
         try:
@@ -112,15 +92,10 @@ class ChannelArgumentParser(ArgumentParser):
             # Try to find by name
             try:
                 # Try cache first
-                channels_view = bot.hikari_bot.cache.get_guild_channels_view_for_guild(
-                    guild_id
-                )
+                channels_view = bot.hikari_bot.cache.get_guild_channels_view_for_guild(guild_id)
                 if channels_view:
                     for channel in channels_view.values():
-                        if (
-                            hasattr(channel, "name")
-                            and channel.name.lower() == arg.lower()
-                        ):
+                        if hasattr(channel, "name") and channel.name.lower() == arg.lower():
                             return channel
 
                 # Fallback to REST API
@@ -136,9 +111,7 @@ class ChannelArgumentParser(ArgumentParser):
 class RoleArgumentParser(ArgumentParser):
     """Parser for role arguments."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         # Parse role mention or ID
         role_input = arg.strip("<@&>")
         try:
@@ -166,17 +139,15 @@ class RoleArgumentParser(ArgumentParser):
                 for role in roles:
                     if role.name.lower() == arg.lower():
                         return role
-            except (Exception, AttributeError):
-                pass
+            except (Exception, AttributeError) as e:
+                logger.debug(f"Failed to parse role argument '{arg}': {e}")
             return definition.default
 
 
 class MentionableArgumentParser(ArgumentParser):
     """Parser for mentionable arguments (users or roles)."""
 
-    async def parse(
-        self, arg: str, definition: CommandArgument, bot: Any, guild_id: int
-    ) -> Any:
+    async def parse(self, arg: str, definition: CommandArgument, bot: Any, guild_id: int) -> Any:
         # Try user mention first
         if arg.startswith("<@"):
             user_input = arg.strip("<@!>")
@@ -242,23 +213,16 @@ class ArgumentParserFactory:
             if i < len(args):
                 try:
                     # Special handling for last string argument (gets all remaining text)
-                    if (
-                        arg_def.arg_type == hikari.OptionType.STRING
-                        and i == len(command_args) - 1
-                    ):
+                    if arg_def.arg_type == hikari.OptionType.STRING and i == len(command_args) - 1:
                         parsed[arg_def.name] = " ".join(args[i:])
                     else:
                         parser = cls.get_parser(arg_def.arg_type)
-                        parsed[arg_def.name] = await parser.parse(
-                            args[i], arg_def, bot, guild_id
-                        )
+                        parsed[arg_def.name] = await parser.parse(args[i], arg_def, bot, guild_id)
 
                 except Exception as e:
                     logger.warning(f"Error parsing argument {arg_def.name}: {e}")
                     # If parsing fails, use default
-                    parsed[arg_def.name] = (
-                        arg_def.default if not arg_def.required else None
-                    )
+                    parsed[arg_def.name] = arg_def.default if not arg_def.required else None
             else:
                 # Missing argument
                 parsed[arg_def.name] = arg_def.default if not arg_def.required else None

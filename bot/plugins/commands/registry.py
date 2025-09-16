@@ -21,9 +21,7 @@ class OptionDescriptorFactory:
         # Prepare kwargs, only include choices if not None
         kwargs = {}
         if not arg_def.required:
-            kwargs["default"] = (
-                arg_def.default if arg_def.default is not None else hikari.UNDEFINED
-            )
+            kwargs["default"] = arg_def.default if arg_def.default is not None else hikari.UNDEFINED
         if arg_def.choices is not None:
             kwargs["choices"] = arg_def.choices
 
@@ -42,9 +40,7 @@ class OptionDescriptorFactory:
         if arg_def.arg_type == hikari.OptionType.BOOLEAN:
             bool_kwargs = {}
             if not arg_def.required:
-                bool_kwargs["default"] = (
-                    arg_def.default if arg_def.default is not None else hikari.UNDEFINED
-                )
+                bool_kwargs["default"] = arg_def.default if arg_def.default is not None else hikari.UNDEFINED
             return lightbulb.boolean(arg_def.name, arg_def.description, **bool_kwargs)
 
         # Types that don't support choices
@@ -83,25 +79,17 @@ class CommandRegistry:
 
     async def unregister_commands(self) -> None:
         """Unregister all commands."""
-        for command in self._commands[
-            :
-        ]:  # Create a copy to avoid modification during iteration
+        for command in self._commands[:]:  # Create a copy to avoid modification during iteration
             try:
                 if hasattr(command, "_unified_command"):
                     # Lightbulb commands are cleaned up when the plugin is unloaded
                     cmd_name = command._unified_command["name"]
-                    self.logger.debug(
-                        f"Lightbulb command {cmd_name} will be cleaned up on plugin unload"
-                    )
+                    self.logger.debug(f"Lightbulb command {cmd_name} will be cleaned up on plugin unload")
 
                 if hasattr(command, "_prefix_command"):
                     # Remove prefix command
-                    self.bot.message_handler.remove_command(
-                        command._prefix_command["name"]
-                    )
-                    self.logger.debug(
-                        f"Removed prefix command: {command._prefix_command['name']}"
-                    )
+                    self.bot.message_handler.remove_command(command._prefix_command["name"])
+                    self.logger.debug(f"Removed prefix command: {command._prefix_command['name']}")
 
             except Exception as e:
                 self.logger.error(f"Error unregistering command: {e}")
@@ -128,28 +116,26 @@ class CommandRegistry:
                 if cmd_meta.get("permission_node"):
                     from ...permissions import requires_permission
 
-                    invoke_method = requires_permission(cmd_meta["permission_node"])(
-                        invoke_method
-                    )
+                    invoke_method = requires_permission(cmd_meta["permission_node"])(invoke_method)
 
                 # Create dynamic SlashCommand subclass
                 cmd_class_name = f"{cmd_meta['name'].title().replace('-', '').replace('_', '')}Command"
                 command_args = cmd_meta.get("arguments", [])
 
                 # Create the invoke method with argument parsing
-                async def invoke_wrapper(cmd_instance, ctx):
+                async def invoke_wrapper(cmd_instance, ctx, _command_args=command_args, _invoke_method=invoke_method):
                     # Extract arguments from context options
                     kwargs = {}
-                    if command_args and hasattr(ctx, "options"):
-                        for arg_def in command_args:
+                    if _command_args and hasattr(ctx, "options"):
+                        for arg_def in _command_args:
                             value = getattr(ctx.options, arg_def.name, arg_def.default)
                             kwargs[arg_def.name] = value
 
                     # Call original method with parsed arguments
                     if kwargs:
-                        return await invoke_method(ctx, **kwargs)
+                        return await _invoke_method(ctx, **kwargs)
                     else:
-                        return await invoke_method(ctx)
+                        return await _invoke_method(ctx)
 
                 # Create command class attributes
                 class_attrs = {
@@ -175,9 +161,7 @@ class CommandRegistry:
                 # Register with lightbulb
                 self.bot.bot.register(cmd_class)
                 self._commands.append(attr)
-                self.logger.info(
-                    f"Registered slash command: {cmd_meta['name']} from plugin {self.plugin.name}"
-                )
+                self.logger.info(f"Registered slash command: {cmd_meta['name']} from plugin {self.plugin.name}")
 
             except Exception as e:
                 self.logger.error(f"Failed to register slash command {attr_name}: {e}")
@@ -198,9 +182,7 @@ class CommandRegistry:
                 command_args = prefix_meta.get("arguments", [])
 
                 # Create wrapper function for argument parsing
-                prefix_wrapper = self._create_prefix_wrapper(
-                    original_callback, prefix_meta, command_args
-                )
+                prefix_wrapper = self._create_prefix_wrapper(original_callback, prefix_meta, command_args)
 
                 prefix_cmd = PrefixCommand(
                     name=prefix_meta["name"],
@@ -214,33 +196,25 @@ class CommandRegistry:
                 self.bot.message_handler.add_command(prefix_cmd)
                 if attr not in self._commands:  # Avoid duplicates
                     self._commands.append(attr)
-                self.logger.info(
-                    f"Registered prefix command: {prefix_meta['name']} from plugin {self.plugin.name}"
-                )
+                self.logger.info(f"Registered prefix command: {prefix_meta['name']} from plugin {self.plugin.name}")
 
             except Exception as e:
                 self.logger.error(f"Failed to register prefix command {attr_name}: {e}")
 
-    def _create_prefix_wrapper(
-        self, callback: Any, meta: dict[str, Any], args: list[CommandArgument]
-    ):
+    def _create_prefix_wrapper(self, callback: Any, meta: dict[str, Any], args: list[CommandArgument]):
         """Create a wrapper function for prefix command argument parsing."""
 
         async def prefix_wrapper(ctx):
             # Parse arguments based on command definition
             if args and hasattr(ctx, "args"):
                 guild_id = getattr(ctx, "guild_id", 0) or 0
-                parsed_args = await ArgumentParserFactory.parse_arguments(
-                    ctx.args, args, self.bot, guild_id
-                )
+                parsed_args = await ArgumentParserFactory.parse_arguments(ctx.args, args, self.bot, guild_id)
 
                 # Apply permission check if needed
                 if meta.get("permission_node"):
                     from ...permissions import requires_permission
 
-                    wrapped_callback = requires_permission(meta["permission_node"])(
-                        callback
-                    )
+                    wrapped_callback = requires_permission(meta["permission_node"])(callback)
                     return await wrapped_callback(ctx, **parsed_args)
                 else:
                     return await callback(ctx, **parsed_args)
@@ -249,9 +223,7 @@ class CommandRegistry:
                 if meta.get("permission_node"):
                     from ...permissions import requires_permission
 
-                    wrapped_callback = requires_permission(meta["permission_node"])(
-                        callback
-                    )
+                    wrapped_callback = requires_permission(meta["permission_node"])(callback)
                     return await wrapped_callback(ctx)
                 else:
                     return await callback(ctx)

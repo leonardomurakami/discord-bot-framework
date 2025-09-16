@@ -29,19 +29,13 @@ class Guild(Base):
     language: Mapped[str] = mapped_column(String(10), default="en")
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     users: Mapped[list["GuildUser"]] = relationship(back_populates="guild")
-    role_permissions: Mapped[list["RolePermission"]] = relationship(
-        back_populates="guild"
-    )
+    role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="guild")
     command_usage: Mapped[list["CommandUsage"]] = relationship(back_populates="guild")
-    plugin_settings: Mapped[list["PluginSetting"]] = relationship(
-        back_populates="guild"
-    )
+    plugin_settings: Mapped[list["PluginSetting"]] = relationship(back_populates="guild")
 
 
 class User(Base):
@@ -52,9 +46,7 @@ class User(Base):
     discriminator: Mapped[str] = mapped_column(String(4))
     global_settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     guild_data: Mapped[list["GuildUser"]] = relationship(back_populates="user")
@@ -74,9 +66,7 @@ class GuildUser(Base):
     warnings: Mapped[int] = mapped_column(Integer, default=0)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     guild: Mapped["Guild"] = relationship(back_populates="users")
@@ -95,9 +85,7 @@ class Permission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    role_permissions: Mapped[list["RolePermission"]] = relationship(
-        back_populates="permission"
-    )
+    role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="permission")
 
 
 class RolePermission(Base):
@@ -152,9 +140,7 @@ class PluginSetting(Base):
     settings: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     guild: Mapped["Guild"] = relationship(back_populates="plugin_settings")

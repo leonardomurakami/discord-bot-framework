@@ -33,9 +33,7 @@ class PluginMetadata:
 class PluginLoader:
     def __init__(self, bot: Any) -> None:
         self.bot = bot
-        self.plugins: dict[str, Any] = (
-            {}
-        )  # Changed from BasePlugin to Any to avoid circular import
+        self.plugins: dict[str, Any] = {}  # Changed from BasePlugin to Any to avoid circular import
         self.plugin_metadata: dict[str, PluginMetadata] = {}
         self.plugin_directories: list[Path] = []
 
@@ -64,9 +62,7 @@ class PluginLoader:
         for directory in self.plugin_directories:
             plugin_path = directory / plugin_name
             if plugin_path.exists():
-                spec = importlib.util.spec_from_file_location(
-                    f"plugins.{plugin_name}", plugin_path / "__init__.py"
-                )
+                spec = importlib.util.spec_from_file_location(f"plugins.{plugin_name}", plugin_path / "__init__.py")
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
                     sys.modules[f"plugins.{plugin_name}"] = module
@@ -79,7 +75,7 @@ class PluginLoader:
         # Import BasePlugin here to avoid circular import
         from ..plugins.base import BasePlugin
 
-        for name, obj in inspect.getmembers(module, inspect.isclass):
+        for _name, obj in inspect.getmembers(module, inspect.isclass):
             if (
                 issubclass(obj, BasePlugin)
                 and obj is not BasePlugin
@@ -124,9 +120,7 @@ class PluginLoader:
             # Check dependencies
             for dep in metadata.dependencies:
                 if dep not in self.plugins:
-                    logger.error(
-                        f"Plugin {plugin_name} requires {dep} which is not loaded"
-                    )
+                    logger.error(f"Plugin {plugin_name} requires {dep} which is not loaded")
                     return False
 
             # Extract and instantiate plugin class
@@ -146,9 +140,7 @@ class PluginLoader:
             self.plugins[plugin_name] = plugin_instance
             self.plugin_metadata[plugin_name] = metadata
 
-            logger.info(
-                f"Successfully loaded plugin: {plugin_name} v{metadata.version}"
-            )
+            logger.info(f"Successfully loaded plugin: {plugin_name} v{metadata.version}")
             return True
 
         except Exception as e:

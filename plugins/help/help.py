@@ -49,29 +49,21 @@ class PersistentPluginSelectView(miru.View):
                 from bot.permissions.decorators import _bot_instance
 
                 if _bot_instance and hasattr(_bot_instance, "plugin_loader"):
-                    help_plugin_instance = _bot_instance.plugin_loader.plugins.get(
-                        "help"
-                    )
+                    help_plugin_instance = _bot_instance.plugin_loader.plugins.get("help")
             except (ImportError, AttributeError):
                 pass
 
             # Method 2: Try through miru client's app reference
             if not help_plugin_instance and hasattr(ctx.client, "app"):
                 bot_app = ctx.client.app
-                if hasattr(bot_app, "plugin_loader") and hasattr(
-                    bot_app.plugin_loader, "plugins"
-                ):
+                if hasattr(bot_app, "plugin_loader") and hasattr(bot_app.plugin_loader, "plugins"):
                     help_plugin_instance = bot_app.plugin_loader.plugins.get("help")
 
             # Method 3: Try through context bot reference
             if not help_plugin_instance and hasattr(ctx, "bot"):
                 bot_instance = ctx.bot
-                if hasattr(bot_instance, "plugin_loader") and hasattr(
-                    bot_instance.plugin_loader, "plugins"
-                ):
-                    help_plugin_instance = bot_instance.plugin_loader.plugins.get(
-                        "help"
-                    )
+                if hasattr(bot_instance, "plugin_loader") and hasattr(bot_instance.plugin_loader, "plugins"):
+                    help_plugin_instance = bot_instance.plugin_loader.plugins.get("help")
 
             # Debug logging
             logger.debug("Looking for help plugin instance...")
@@ -87,10 +79,7 @@ class PersistentPluginSelectView(miru.View):
             # Handle the selection using the help plugin
             select = None
             for item in self.children:
-                if (
-                    isinstance(item, miru.TextSelect)
-                    and item.custom_id == "help_plugin_select"
-                ):
+                if isinstance(item, miru.TextSelect) and item.custom_id == "help_plugin_select":
                     select = item
                     break
 
@@ -115,9 +104,7 @@ class PersistentPluginSelectView(miru.View):
                 return
 
             # Generate plugin-specific embed
-            plugin_embed = await help_plugin_instance._get_plugin_commands_embed(
-                selected_value
-            )
+            plugin_embed = await help_plugin_instance._get_plugin_commands_embed(selected_value)
 
             if plugin_embed:
                 # Update the view with current plugin options
@@ -170,15 +157,9 @@ class PluginSelectView(miru.View):
 
         for plugin_name in sorted(plugins):
             try:
-                plugin_info = self.help_plugin.bot.plugin_loader.get_plugin_info(
-                    plugin_name
-                )
+                plugin_info = self.help_plugin.bot.plugin_loader.get_plugin_info(plugin_name)
                 if plugin_info:
-                    description = (
-                        plugin_info.description[:100]
-                        if plugin_info.description
-                        else "No description"
-                    )
+                    description = plugin_info.description[:100] if plugin_info.description else "No description"
                     options.append(
                         miru.SelectOption(
                             label=plugin_info.name,
@@ -205,10 +186,7 @@ class PluginSelectView(miru.View):
         # Get the select component that triggered this callback
         select = None
         for item in self.children:
-            if (
-                isinstance(item, miru.TextSelect)
-                and item.custom_id == "help_plugin_select"
-            ):
+            if isinstance(item, miru.TextSelect) and item.custom_id == "help_plugin_select":
                 select = item
                 break
 
@@ -409,9 +387,7 @@ class HelpPlugin(BasePlugin):
                 plugins = self.bot.plugin_loader.get_loaded_plugins()
                 for plugin_name in plugins:
                     try:
-                        plugin_info = self.bot.plugin_loader.get_plugin_info(
-                            plugin_name
-                        )
+                        plugin_info = self.bot.plugin_loader.get_plugin_info(plugin_name)
                         if plugin_info:
                             plugin_categories.append(plugin_info.name)
                     except (AttributeError, TypeError):
@@ -473,25 +449,17 @@ class HelpPlugin(BasePlugin):
             if hasattr(self.bot, "message_handler") and self.bot.message_handler:
                 for cmd_name, emoji, desc in command_suggestions:
                     if cmd_name in self.bot.message_handler.commands:
-                        essential_commands.append(
-                            f"{emoji} `{prefix}{cmd_name}` - {desc}"
-                        )
+                        essential_commands.append(f"{emoji} `{prefix}{cmd_name}` - {desc}")
         except (AttributeError, TypeError):
             pass
 
         if essential_commands:
-            embed.add_field(
-                "⭐ Essential Commands", "\n".join(essential_commands[:5]), inline=False
-            )
+            embed.add_field("⭐ Essential Commands", "\n".join(essential_commands[:5]), inline=False)
 
         # Footer with helpful tip
         embed.set_footer(
             text="💡 Pro tip: Use the dropdown menu below to explore different plugin categories!",
-            icon=(
-                self.bot.hikari_bot.get_me().make_avatar_url()
-                if self.bot.hikari_bot.get_me()
-                else None
-            ),
+            icon=(self.bot.hikari_bot.get_me().make_avatar_url() if self.bot.hikari_bot.get_me() else None),
         )
 
         return embed
@@ -583,9 +551,7 @@ class HelpPlugin(BasePlugin):
             embed.add_field("Commands", commands_list, inline=False)
 
         if plugin_info.permissions:
-            perms_list = "\n".join(
-                [f"• `{perm}`" for perm in plugin_info.permissions[:5]]
-            )
+            perms_list = "\n".join([f"• `{perm}`" for perm in plugin_info.permissions[:5]])
             if len(plugin_info.permissions) > 5:
                 perms_list += f"\n... and {len(plugin_info.permissions) - 5} more"
             embed.add_field("Permissions", perms_list, inline=False)
@@ -630,9 +596,7 @@ class HelpPlugin(BasePlugin):
                 commands_text = ", ".join([f"`{cmd}`" for cmd in sorted(commands)])
                 embed.add_field(f"{group}", commands_text, inline=False)
 
-        embed.set_footer(
-            "💡 Use 'help <command>' for detailed information about any command!"
-        )
+        embed.set_footer("💡 Use 'help <command>' for detailed information about any command!")
         return embed
 
     async def _get_plugins_list(self) -> hikari.Embed:
@@ -652,9 +616,7 @@ class HelpPlugin(BasePlugin):
         for plugin_name in sorted(plugins):
             plugin_info = self.bot.plugin_loader.get_plugin_info(plugin_name)
             if plugin_info:
-                description = plugin_info.description[
-                    :100
-                ]  # Truncate long descriptions
+                description = plugin_info.description[:100]  # Truncate long descriptions
                 if len(plugin_info.description) > 100:
                     description += "..."
                 embed.add_field(
@@ -665,14 +627,10 @@ class HelpPlugin(BasePlugin):
             else:
                 embed.add_field(plugin_name, "No metadata available.", inline=False)
 
-        embed.set_footer(
-            "💡 Use 'help <plugin>' for detailed information about any plugin!"
-        )
+        embed.set_footer("💡 Use 'help <plugin>' for detailed information about any plugin!")
         return embed
 
-    async def _get_plugin_commands_embed(
-        self, plugin_name: str
-    ) -> hikari.Embed | None:
+    async def _get_plugin_commands_embed(self, plugin_name: str) -> hikari.Embed | None:
         """Generate a user-friendly embed showing all commands for a specific plugin."""
         # Get plugin info
         plugin_info = self.bot.plugin_loader.get_plugin_info(plugin_name)
@@ -703,11 +661,7 @@ class HelpPlugin(BasePlugin):
                 continue
 
             # Check if this command belongs to the plugin
-            if (
-                hasattr(cmd, "plugin_name")
-                and cmd.plugin_name
-                and cmd.plugin_name.lower() == plugin_name.lower()
-            ):
+            if hasattr(cmd, "plugin_name") and cmd.plugin_name and cmd.plugin_name.lower() == plugin_name.lower():
                 prefix_commands.append(cmd)
 
         # Display commands in a user-friendly way
@@ -727,11 +681,7 @@ class HelpPlugin(BasePlugin):
                         if arg.required:
                             arg_parts.append(f"<{arg.name}>")
                         else:
-                            default_hint = (
-                                f"={arg.default}"
-                                if arg.default is not None and arg.default != ""
-                                else ""
-                            )
+                            default_hint = f"={arg.default}" if arg.default is not None and arg.default != "" else ""
                             arg_parts.append(f"[{arg.name}{default_hint}]")
                     if arg_parts:
                         cmd_usage += f" {' '.join(arg_parts)}"
@@ -778,9 +728,7 @@ class HelpPlugin(BasePlugin):
                 else:
                     embed.add_field("📝 Commands", commands_text.strip(), inline=False)
         else:
-            embed.add_field(
-                "📝 Commands", "No commands available in this plugin.", inline=False
-            )
+            embed.add_field("📝 Commands", "No commands available in this plugin.", inline=False)
 
         embed.set_footer("💡 Use the dropdown below to view other plugins!")
         return embed

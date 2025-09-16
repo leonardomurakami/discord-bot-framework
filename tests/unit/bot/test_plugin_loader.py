@@ -246,9 +246,7 @@ class TestPluginLoader:
         """Test loading a plugin with error."""
         loader = PluginLoader(mock_bot)
 
-        with patch.object(
-            loader, "_load_plugin_module", side_effect=Exception("Test error")
-        ):
+        with patch.object(loader, "_load_plugin_module", side_effect=Exception("Test error")):
             result = await loader.load_plugin("test_plugin")
 
             assert result is False

@@ -29,9 +29,7 @@ class DatabaseManager:
             }
         elif self.database_url.startswith("postgresql"):
             # Convert postgresql:// to postgresql+asyncpg://
-            async_url = self.database_url.replace(
-                "postgresql://", "postgresql+asyncpg://"
-            )
+            async_url = self.database_url.replace("postgresql://", "postgresql+asyncpg://")
             engine_kwargs = {
                 "echo": settings.debug,
                 "pool_size": 20,
@@ -43,9 +41,7 @@ class DatabaseManager:
             raise ValueError(f"Unsupported database URL: {self.database_url}")
 
         self.engine = create_async_engine(async_url, **engine_kwargs)
-        self.session_factory = async_sessionmaker(
-            bind=self.engine, class_=AsyncSession, expire_on_commit=False
-        )
+        self.session_factory = async_sessionmaker(bind=self.engine, class_=AsyncSession, expire_on_commit=False)
 
     async def create_tables(self) -> None:
         if not self.engine:

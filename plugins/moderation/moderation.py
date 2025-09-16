@@ -194,9 +194,7 @@ class ModerationPlugin(BasePlugin):
                         color=hikari.Color(0xFF0000),
                     )
                     embed_dm.add_field("Reason", reason, inline=False)
-                    embed_dm.add_field(
-                        "Moderator", f"{ctx.author.mention}", inline=True
-                    )
+                    embed_dm.add_field("Moderator", f"{ctx.author.mention}", inline=True)
                     await dm_channel.send(embed=embed_dm)
             except Exception:
                 pass  # DM failed, continue with ban
@@ -359,9 +357,7 @@ class ModerationPlugin(BasePlugin):
             ),
         ],
     )
-    async def purge_messages(
-        self, ctx: lightbulb.Context, amount: int, user=None
-    ) -> None:
+    async def purge_messages(self, ctx: lightbulb.Context, amount: int, user=None) -> None:
         if amount <= 0 or amount > 100:
             embed = self.create_embed(
                 title="❌ Invalid Amount",
@@ -448,9 +444,7 @@ class ModerationPlugin(BasePlugin):
             ),
         ],
     )
-    async def unban_user(
-        self, ctx: lightbulb.Context, user_id: str, reason: str = "No reason provided"
-    ) -> None:
+    async def unban_user(self, ctx: lightbulb.Context, user_id: str, reason: str = "No reason provided") -> None:
         try:
             # Try to convert user_id to int
             try:
@@ -491,9 +485,7 @@ class ModerationPlugin(BasePlugin):
                 return
 
             # Unban the user
-            await ctx.get_guild().unban(
-                user_id_int, reason=f"{reason} (by {ctx.author})"
-            )
+            await ctx.get_guild().unban(user_id_int, reason=f"{reason} (by {ctx.author})")
 
             embed = self.create_embed(
                 title="✅ User Unbanned",
@@ -556,14 +548,10 @@ class ModerationPlugin(BasePlugin):
             ),
         ],
     )
-    async def slowmode(
-        self, ctx: lightbulb.Context, seconds: int = 0, channel=None
-    ) -> None:
+    async def slowmode(self, ctx: lightbulb.Context, seconds: int = 0, channel=None) -> None:
         try:
             # Validate seconds
-            if (
-                seconds < 0 or seconds > 21600
-            ):  # Discord's limit is 6 hours (21600 seconds)
+            if seconds < 0 or seconds > 21600:  # Discord's limit is 6 hours (21600 seconds)
                 embed = self.create_embed(
                     title="❌ Invalid Duration",
                     description="Slowmode must be between 0 and 21600 seconds (6 hours).",
@@ -605,18 +593,14 @@ class ModerationPlugin(BasePlugin):
                     if remaining_seconds == 0:
                         duration_text = f"{minutes} minute(s)"
                     else:
-                        duration_text = (
-                            f"{minutes} minute(s) and {remaining_seconds} second(s)"
-                        )
+                        duration_text = f"{minutes} minute(s) and {remaining_seconds} second(s)"
                 else:
                     hours = seconds // 3600
                     remaining_minutes = (seconds % 3600) // 60
                     if remaining_minutes == 0:
                         duration_text = f"{hours} hour(s)"
                     else:
-                        duration_text = (
-                            f"{hours} hour(s) and {remaining_minutes} minute(s)"
-                        )
+                        duration_text = f"{hours} hour(s) and {remaining_minutes} minute(s)"
 
                 title_emoji = "🐌"
                 title_text = "Slowmode Enabled"
@@ -624,9 +608,7 @@ class ModerationPlugin(BasePlugin):
             embed = self.create_embed(
                 title=f"{title_emoji} {title_text}",
                 description=f"Slowmode has been set to **{duration_text}** in {target_channel.mention}.",
-                color=(
-                    hikari.Color(0x00FF00) if seconds == 0 else hikari.Color(0xFFAA00)
-                ),
+                color=(hikari.Color(0x00FF00) if seconds == 0 else hikari.Color(0xFFAA00)),
             )
 
             embed.add_field("Channel", target_channel.mention, inline=True)
@@ -634,9 +616,7 @@ class ModerationPlugin(BasePlugin):
             embed.add_field("Moderator", ctx.author.mention, inline=True)
 
             if seconds > 0:
-                embed.set_footer(
-                    "Users must wait between sending messages in this channel"
-                )
+                embed.set_footer("Users must wait between sending messages in this channel")
 
             await ctx.respond(embed=embed)
             await self.log_command_usage(ctx, "slowmode", True)

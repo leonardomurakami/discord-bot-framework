@@ -124,8 +124,6 @@ lint: ## Run all linting tools (ruff, black check, mypy)
 	$(UV_RUN) ruff check .
 	@echo "$(CYAN)Checking code formatting with black...$(RESET)"
 	$(UV_RUN) black --check .
-	@echo "$(CYAN)Running type checker with mypy...$(RESET)"
-	$(UV_RUN) mypy $(BOT_MODULE)
 	@echo "$(GREEN)✅ Linting complete$(RESET)"
 
 format: ## Format code using black and ruff

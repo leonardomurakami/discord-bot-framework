@@ -47,16 +47,12 @@ class UtilityPlugin(BasePlugin):
             target_user = user or ctx.author
             guild = ctx.get_guild()
 
-            embed = self.create_embed(
-                title=f"👤 {target_user.username}", color=hikari.Color(0x5865F2)
-            )
+            embed = self.create_embed(title=f"👤 {target_user.username}", color=hikari.Color(0x5865F2))
 
             # Basic user info
             embed.add_field("User ID", str(target_user.id), inline=True)
             embed.add_field("Display Name", target_user.display_name, inline=True)
-            embed.add_field(
-                "Bot Account", "Yes" if target_user.is_bot else "No", inline=True
-            )
+            embed.add_field("Bot Account", "Yes" if target_user.is_bot else "No", inline=True)
 
             # Account creation
             embed.add_field(
@@ -76,9 +72,7 @@ class UtilityPlugin(BasePlugin):
                     # Try cache first, then fetch from API
                     member = None
                     try:
-                        member = self.bot.hikari_bot.cache.get_member(
-                            guild.id, target_user.id
-                        )
+                        member = self.bot.hikari_bot.cache.get_member(guild.id, target_user.id)
                         if not member:
                             member = await guild.fetch_member(target_user.id)
                     except (
@@ -98,11 +92,7 @@ class UtilityPlugin(BasePlugin):
                             )
 
                         # Roles
-                        roles = [
-                            f"<@&{role_id}>"
-                            for role_id in member.role_ids
-                            if role_id != guild.id
-                        ]
+                        roles = [f"<@&{role_id}>" for role_id in member.role_ids if role_id != guild.id]
                         if roles:
                             roles_text = " ".join(roles[:10])  # Limit to 10 roles
                             if len(roles) > 10:
@@ -122,9 +112,7 @@ class UtilityPlugin(BasePlugin):
                             admin_perms.append("Manage Messages")
 
                         if admin_perms:
-                            embed.add_field(
-                                "Key Permissions", ", ".join(admin_perms), inline=True
-                            )
+                            embed.add_field("Key Permissions", ", ".join(admin_perms), inline=True)
 
                 except Exception:
                     pass  # Not a member or can't get member info
@@ -147,11 +135,7 @@ class UtilityPlugin(BasePlugin):
         description="Get a user's avatar in high resolution",
         aliases=["av", "pfp"],
         permission_node="utility.info",
-        arguments=[
-            CommandArgument(
-                "user", hikari.OptionType.USER, "User to get avatar of", required=False
-            )
-        ],
+        arguments=[CommandArgument("user", hikari.OptionType.USER, "User to get avatar of", required=False)],
     )
     async def avatar(self, ctx: lightbulb.Context, user: hikari.User = None) -> None:
         try:
@@ -260,9 +244,7 @@ class UtilityPlugin(BasePlugin):
             }
 
             for name, discord_format in formats.items():
-                embed.add_field(
-                    name, f"`{discord_format}`\n{discord_format}", inline=True
-                )
+                embed.add_field(name, f"`{discord_format}`\n{discord_format}", inline=True)
 
             embed.set_footer("Copy the format you want to use in your messages!")
 
@@ -355,9 +337,7 @@ class UtilityPlugin(BasePlugin):
             # Create color integer for embed
             color_int = int(hex_clean, 16)
 
-            embed = self.create_embed(
-                title=f"🎨 Color: {hex_color.upper()}", color=hikari.Color(color_int)
-            )
+            embed = self.create_embed(title=f"🎨 Color: {hex_color.upper()}", color=hikari.Color(color_int))
 
             embed.add_field("Hex", hex_color.upper(), inline=True)
             embed.add_field("RGB", rgb_str, inline=True)
@@ -365,9 +345,7 @@ class UtilityPlugin(BasePlugin):
             embed.add_field("Decimal", str(color_int), inline=True)
 
             # Generate a color preview URL (using a simple color generator service)
-            preview_url = (
-                f"https://via.placeholder.com/300x100/{hex_clean}/{hex_clean}.png"
-            )
+            preview_url = f"https://via.placeholder.com/300x100/{hex_clean}/{hex_clean}.png"
             embed.set_image(preview_url)
 
             await ctx.respond(embed=embed)
@@ -393,9 +371,7 @@ class UtilityPlugin(BasePlugin):
             CommandArgument("text", hikari.OptionType.STRING, "Text to encode/decode"),
         ],
     )
-    async def base64_convert(
-        self, ctx: lightbulb.Context, action: str, text: str
-    ) -> None:
+    async def base64_convert(self, ctx: lightbulb.Context, action: str, text: str) -> None:
         try:
             action = action.lower().strip()
 
@@ -434,9 +410,7 @@ class UtilityPlugin(BasePlugin):
             else:
                 display_result = result
 
-            embed = self.create_embed(
-                title=f"🔢 Base64 {action_text}", color=hikari.Color(0x9932CC)
-            )
+            embed = self.create_embed(title=f"🔢 Base64 {action_text}", color=hikari.Color(0x9932CC))
 
             embed.add_field(
                 "Input",
@@ -471,9 +445,7 @@ class UtilityPlugin(BasePlugin):
             CommandArgument("text", hikari.OptionType.STRING, "Text to hash"),
         ],
     )
-    async def hash_text(
-        self, ctx: lightbulb.Context, algorithm: str, text: str
-    ) -> None:
+    async def hash_text(self, ctx: lightbulb.Context, algorithm: str, text: str) -> None:
         try:
             algorithm = algorithm.lower().strip()
 
@@ -496,9 +468,7 @@ class UtilityPlugin(BasePlugin):
 
             result = hash_obj.hexdigest()
 
-            embed = self.create_embed(
-                title=f"🔐 {algorithm.upper()} Hash", color=hikari.Color(0x8B4513)
-            )
+            embed = self.create_embed(title=f"🔐 {algorithm.upper()} Hash", color=hikari.Color(0x8B4513))
 
             # Show input (truncated for security/display)
             display_input = text[:100] + "..." if len(text) > 100 else text
@@ -528,17 +498,13 @@ class UtilityPlugin(BasePlugin):
         diff = max_val - min_val
 
         # Lightness
-        l = (max_val + min_val) / 2
+        lightness = (max_val + min_val) / 2
 
         if diff == 0:
             h = s = 0  # Achromatic
         else:
             # Saturation
-            s = (
-                diff / (2 - max_val - min_val)
-                if l > 0.5
-                else diff / (max_val + min_val)
-            )
+            s = diff / (2 - max_val - min_val) if lightness > 0.5 else diff / (max_val + min_val)
 
             # Hue
             if max_val == r:
@@ -549,4 +515,4 @@ class UtilityPlugin(BasePlugin):
                 h = (r - g) / diff + 4
             h /= 6
 
-        return (int(h * 360), int(s * 100), int(l * 100))
+        return (int(h * 360), int(s * 100), int(lightness * 100))

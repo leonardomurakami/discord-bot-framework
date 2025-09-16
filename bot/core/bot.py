@@ -18,16 +18,9 @@ logger = logging.getLogger(__name__)
 class DiscordBot:
     def __init__(self) -> None:
         # Initialize bot components with required intents
-        intents = (
-            hikari.Intents.ALL_MESSAGES
-            | hikari.Intents.GUILD_MEMBERS
-            | hikari.Intents.GUILDS
-            | hikari.Intents.MESSAGE_CONTENT
-        )
+        intents = hikari.Intents.ALL_MESSAGES | hikari.Intents.GUILD_MEMBERS | hikari.Intents.GUILDS | hikari.Intents.MESSAGE_CONTENT
         # Create Hikari bot first
-        self.hikari_bot = hikari.GatewayBot(
-            token=settings.discord_token, intents=intents
-        )
+        self.hikari_bot = hikari.GatewayBot(token=settings.discord_token, intents=intents)
         # Create lightbulb client
         self.bot = lightbulb.client_from_app(self.hikari_bot)
 
@@ -104,17 +97,13 @@ class DiscordBot:
         async def on_message_create(event: hikari.GuildMessageCreateEvent) -> None:
             # Debug logging for all messages
             logger.debug(
-                f"Message received: '{event.content}' from {event.author.username} in #{event.get_channel().name if event.get_channel() else 'unknown'}"
+                f"Message received: '{event.content}' from {event.author.username} "
+                f"in #{event.get_channel().name if event.get_channel() else 'unknown'}"
             )
 
             # Log if it's a potential command
-            if event.content and (
-                event.content.startswith("/")
-                or event.content.startswith(settings.bot_prefix)
-            ):
-                logger.info(
-                    f"Potential command detected: '{event.content}' from {event.author.username}"
-                )
+            if event.content and (event.content.startswith("/") or event.content.startswith(settings.bot_prefix)):
+                logger.info(f"Potential command detected: '{event.content}' from {event.author.username}")
 
             # Handle prefix commands via our custom handler
             handled = await self.message_handler.handle_message(event)

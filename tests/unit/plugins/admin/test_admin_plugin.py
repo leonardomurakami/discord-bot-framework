@@ -40,9 +40,7 @@ class TestAdminPlugin:
         plugin = AdminPlugin(mock_bot)
 
         # Mock permission manager to raise error
-        mock_bot.permission_manager.get_all_permissions.side_effect = Exception(
-            "Test error"
-        )
+        mock_bot.permission_manager.get_all_permissions.side_effect = Exception("Test error")
 
         await plugin.manage_permissions(mock_context)
 
@@ -130,17 +128,13 @@ class TestAdminPlugin:
             mock_process = MagicMock()
             mock_process.create_time.return_value = 1640995200  # 2022-01-01
             mock_process.cpu_percent.return_value = 1.5
-            mock_process.memory_info.return_value = MagicMock(
-                rss=1024 * 1024 * 50
-            )  # 50MB
+            mock_process.memory_info.return_value = MagicMock(rss=1024 * 1024 * 50)  # 50MB
             mock_process.pid = 12345
             mock_process_class.return_value = mock_process
 
             with patch("psutil.boot_time", return_value=1640908800):  # Earlier time
                 with patch("time.time", return_value=1641081600):  # Current time
-                    mock_bot.hikari_bot.cache.get_guilds_view.return_value = {
-                        1: MagicMock()
-                    }
+                    mock_bot.hikari_bot.cache.get_guilds_view.return_value = {1: MagicMock()}
                     mock_bot.hikari_bot.heartbeat_latency = 0.05
 
                     await plugin.uptime(mock_context)
@@ -153,9 +147,7 @@ class TestAdminPlugin:
         plugin = AdminPlugin(mock_bot)
 
         # Mock ImportError for psutil
-        with patch(
-            "builtins.__import__", side_effect=ImportError("No module named 'psutil'")
-        ):
+        with patch("builtins.__import__", side_effect=ImportError("No module named 'psutil'")):
             mock_bot.hikari_bot.cache.get_guilds_view.return_value = {1: MagicMock()}
             mock_bot.hikari_bot.heartbeat_latency = 0.05
 

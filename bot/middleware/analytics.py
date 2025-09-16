@@ -16,9 +16,7 @@ class AnalyticsMiddleware:
                 self.event_counts[event_name] = self.event_counts.get(event_name, 0) + 1
 
                 # Log analytics data (could be sent to external service)
-                logger.info(
-                    f"Analytics: {event_name} occurred (total: {self.event_counts[event_name]})"
-                )
+                logger.info(f"Analytics: {event_name} occurred (total: {self.event_counts[event_name]})")
 
                 # Here you could implement:
                 # - Send metrics to monitoring services

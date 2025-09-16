@@ -146,9 +146,7 @@ class TestMessageCommandHandler:
         """Test command execution with permission check."""
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
-        cmd = PrefixCommand(
-            name="test", callback=callback, permission_node="test.command"
-        )
+        cmd = PrefixCommand(name="test", callback=callback, permission_node="test.command")
         handler.add_command(cmd)
         mock_message_event.content = "!test"
         mock_bot.permission_manager.has_permission.return_value = True
@@ -164,9 +162,7 @@ class TestMessageCommandHandler:
         """Test command execution with permission denied."""
         handler = MessageCommandHandler(mock_bot)
         callback = AsyncMock()
-        cmd = PrefixCommand(
-            name="test", callback=callback, permission_node="test.command"
-        )
+        cmd = PrefixCommand(name="test", callback=callback, permission_node="test.command")
         handler.add_command(cmd)
         mock_message_event.content = "!test"
         mock_bot.permission_manager.has_permission.return_value = False
@@ -218,9 +214,7 @@ class TestPrefixContext:
         result = ctx.get_guild()
 
         assert result == mock_guild
-        mock_bot.hikari_bot.cache.get_guild.assert_called_once_with(
-            mock_message_event.guild_id
-        )
+        mock_bot.hikari_bot.cache.get_guild.assert_called_once_with(mock_message_event.guild_id)
 
     def test_get_guild_no_guild_id(self, mock_message_event, mock_bot):
         """Test getting guild when no guild_id."""

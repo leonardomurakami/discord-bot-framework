@@ -1,13 +1,10 @@
-
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class BotSettings(BaseSettings):
     discord_token: str = Field(..., description="Discord bot token")
-    database_url: str = Field(
-        default="sqlite:///data/bot.db", description="Database connection URL"
-    )
+    database_url: str = Field(default="sqlite:///data/bot.db", description="Database connection URL")
 
     bot_prefix: str = Field(default="!", description="Command prefix")
     environment: str = Field(default="development", description="Environment")

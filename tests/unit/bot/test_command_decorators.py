@@ -1,6 +1,5 @@
 """Tests for bot/plugins/commands/decorators.py"""
 
-
 import hikari
 
 from bot.plugins.commands.argument_types import CommandArgument
@@ -154,9 +153,7 @@ class TestCommandDecorator:
     def test_command_with_complex_arguments(self):
         """Test command with various argument types."""
         complex_args = [
-            CommandArgument(
-                "text", hikari.OptionType.STRING, "Text input", required=True
-            ),
+            CommandArgument("text", hikari.OptionType.STRING, "Text input", required=True),
             CommandArgument(
                 "number",
                 hikari.OptionType.INTEGER,
@@ -213,9 +210,7 @@ class TestCommandDecorator:
     def test_multiple_commands_independent(self):
         """Test that multiple decorated functions have independent metadata."""
 
-        @command(
-            name="first", description="First command", permission_node="first.perm"
-        )
+        @command(name="first", description="First command", permission_node="first.perm")
         async def first_func():
             return "first"
 

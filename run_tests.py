@@ -16,8 +16,7 @@ from pathlib import Path
 def run_command(cmd, capture_output=False, show_output=True):
     """Run a shell command and return the result."""
     if show_output:
-        print(f"🚀 Running: {' '.join(cmd)}")
-        print("-" * 60)
+        pass
 
     if capture_output:
         result = subprocess.run(cmd, capture_output=True, text=True)
@@ -26,9 +25,9 @@ def run_command(cmd, capture_output=False, show_output=True):
         result = subprocess.run(cmd, capture_output=True, text=True)
         if show_output:
             if result.stdout:
-                print(result.stdout)
+                pass
             if result.stderr and result.returncode != 0:
-                print("STDERR:", result.stderr)
+                pass
         return result.returncode, result.stdout, result.stderr
 
 
@@ -71,51 +70,32 @@ def display_test_results(exit_code: int, stdout: str, stderr: str, component_nam
     passed, failed, total = parse_test_output(stdout)
     coverage_info = parse_coverage_output(stdout)
 
-    print(f"\n📊 {component_name} Results:")
-    print("=" * 50)
-
     if exit_code == 0:
-        print("✅ Status: PASSED")
+        pass
     else:
-        print("❌ Status: FAILED")
-
-    print(f"📈 Tests: {passed} passed, {failed} failed, {total} total")
+        pass
 
     if coverage_info.get("total"):
-        print(f"📊 Coverage: {coverage_info['total']}%")
+        pass
 
     if failed > 0:
-        print("\n❌ Failure Details:")
         # Look for FAILURES section
         failures_start = stdout.find("FAILURES")
         if failures_start != -1:
-            failures_section = stdout[
-                failures_start : failures_start + 1000
-            ]  # Show first 1000 chars
-            print(
-                failures_section[:1000] + "..."
-                if len(failures_section) > 1000
-                else failures_section
-            )
+            stdout[failures_start : failures_start + 1000]  # Show first 1000 chars
         elif stderr:
-            print(stderr[:500] + "..." if len(stderr) > 500 else stderr)
-
-    print("-" * 50)
+            pass
 
 
 def run_separate_coverage():
     """Run tests with separate coverage for bot core and each plugin."""
     plugins = ["admin", "fun", "moderation", "utility", "help"]
 
-    print("🧪 Running separate coverage reports...")
-    print("=" * 80)
-
     all_passed = True
     coverage_results = {}
     detailed_results = {}
 
     # Run bot core tests
-    print("\n🏗️  Testing Bot Core...")
     bot_cmd = [
         "python",
         "-m",
@@ -128,9 +108,7 @@ def run_separate_coverage():
         "-v",
     ]
 
-    bot_exit, bot_stdout, bot_stderr = run_command(
-        bot_cmd, capture_output=True, show_output=False
-    )
+    bot_exit, bot_stdout, bot_stderr = run_command(bot_cmd, capture_output=True, show_output=False)
     coverage_results["bot_core"] = bot_exit == 0
     detailed_results["bot_core"] = (bot_exit, bot_stdout, bot_stderr)
 
@@ -141,7 +119,6 @@ def run_separate_coverage():
 
     # Run each plugin separately
     for plugin in plugins:
-        print(f"\n🔌 Testing {plugin.title()} Plugin...")
 
         plugin_cmd = [
             "python",
@@ -155,9 +132,7 @@ def run_separate_coverage():
             "-v",
         ]
 
-        plugin_exit, plugin_stdout, plugin_stderr = run_command(
-            plugin_cmd, capture_output=True, show_output=False
-        )
+        plugin_exit, plugin_stdout, plugin_stderr = run_command(plugin_cmd, capture_output=True, show_output=False)
         coverage_results[f"plugin_{plugin}"] = plugin_exit == 0
         detailed_results[f"plugin_{plugin}"] = (
             plugin_exit,
@@ -165,53 +140,35 @@ def run_separate_coverage():
             plugin_stderr,
         )
 
-        display_test_results(
-            plugin_exit, plugin_stdout, plugin_stderr, f"{plugin.title()} Plugin"
-        )
+        display_test_results(plugin_exit, plugin_stdout, plugin_stderr, f"{plugin.title()} Plugin")
 
         if plugin_exit != 0:
             all_passed = False
 
     # Summary
-    print("\n" + "=" * 80)
-    print("📈 FINAL SUMMARY")
-    print("=" * 80)
 
     total_tests = 0
     total_passed = 0
     total_failed = 0
 
-    for component, (exit_code, stdout, stderr) in detailed_results.items():
+    for component, (_exit_code, stdout, _stderr) in detailed_results.items():
         passed, failed, total = parse_test_output(stdout)
         coverage_info = parse_coverage_output(stdout)
 
-        status = "✅ PASS" if coverage_results[component] else "❌ FAIL"
-        coverage_str = f"{coverage_info.get('total', 'N/A')}%"
-
-        print(
-            f"  {component.replace('_', ' ').title():<20} {status:<10} "
-            f"Tests: {passed}/{total:<8} Coverage: {coverage_str}"
-        )
+        "✅ PASS" if coverage_results[component] else "❌ FAIL"
+        f"{coverage_info.get('total', 'N/A')}%"
 
         total_tests += total
         total_passed += passed
         total_failed += failed
 
-    print("-" * 80)
-    print(
-        f"  {'TOTAL':<20} {('✅ PASS' if all_passed else '❌ FAIL'):<10} "
-        f"Tests: {total_passed}/{total_tests:<8}"
-    )
-
-    print("\n📁 Coverage Reports Generated:")
-    print("  Bot Core:      htmlcov/bot_core/index.html")
     for plugin in plugins:
-        print(f"  {plugin.title()} Plugin: htmlcov/plugin_{plugin}/index.html")
+        pass
 
     if all_passed:
-        print("\n🎉 All components passed with adequate coverage!")
+        pass
     else:
-        print("\n⚠️  Some components failed or have insufficient coverage.")
+        pass
 
     return 0 if all_passed else 1
 
@@ -227,17 +184,11 @@ def main():
         help="Run with coverage reporting (default: True)",
     )
 
-    parser.add_argument(
-        "--no-coverage", action="store_true", help="Run without coverage reporting"
-    )
+    parser.add_argument("--no-coverage", action="store_true", help="Run without coverage reporting")
 
-    parser.add_argument(
-        "--html-report", action="store_true", help="Generate HTML coverage report"
-    )
+    parser.add_argument("--html-report", action="store_true", help="Generate HTML coverage report")
 
-    parser.add_argument(
-        "--unit-only", "-u", action="store_true", help="Run only unit tests"
-    )
+    parser.add_argument("--unit-only", "-u", action="store_true", help="Run only unit tests")
 
     parser.add_argument(
         "--integration-only",
@@ -265,9 +216,7 @@ def main():
 
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
-    parser.add_argument(
-        "--fail-fast", "-x", action="store_true", help="Stop on first failure"
-    )
+    parser.add_argument("--fail-fast", "-x", action="store_true", help="Stop on first failure")
 
     parser.add_argument(
         "--parallel",
@@ -276,9 +225,7 @@ def main():
         help="Run tests in parallel (requires pytest-xdist)",
     )
 
-    parser.add_argument(
-        "--markers", "-m", help="Run tests with specific markers (e.g., 'not slow')"
-    )
+    parser.add_argument("--markers", "-m", help="Run tests with specific markers (e.g., 'not slow')")
 
     parser.add_argument("test_path", nargs="?", help="Specific test path to run")
 
@@ -286,9 +233,6 @@ def main():
 
     # Check if we're in the right directory
     if not Path("pytest.ini").exists():
-        print(
-            "Error: pytest.ini not found. Please run from the project root directory."
-        )
         sys.exit(1)
 
     # Handle separate coverage mode
@@ -311,8 +255,6 @@ def main():
     elif args.plugin:
         plugin_path = f"tests/unit/plugins/{args.plugin}/"
         if not Path(plugin_path).exists():
-            print(f"Error: Plugin test directory '{plugin_path}' not found.")
-            print("Available plugins: admin, fun, moderation, utility, help")
             sys.exit(1)
         cmd.append(plugin_path)
 
@@ -349,8 +291,6 @@ def main():
         cmd.extend(["-m", args.markers])
 
     # Run the tests
-    print("🚀 Starting test run...")
-    print("=" * 80)
 
     exit_code, stdout, stderr = run_command(cmd, capture_output=True, show_output=False)
 
@@ -366,17 +306,15 @@ def main():
     display_test_results(exit_code, stdout, stderr, component_name)
 
     if args.html_report and not args.no_coverage:
-        print("\n📊 HTML coverage report generated:")
         if args.bot_core_only:
-            print("   📁 Open htmlcov/bot_core/index.html in your browser")
+            pass
         elif args.plugin:
-            print(f"   📁 Open htmlcov/plugin_{args.plugin}/index.html in your browser")
+            pass
         else:
-            print("   📁 Open htmlcov/index.html in your browser")
+            pass
 
     # Check coverage threshold
     if not args.no_coverage and exit_code == 0:
-        print("\n📈 Checking coverage threshold...")
         threshold_cmd = [
             "python",
             "-m",
@@ -388,24 +326,19 @@ def main():
             "-q",
         ]
 
-        threshold_exit, threshold_stdout, threshold_stderr = run_command(
-            threshold_cmd, capture_output=True, show_output=False
-        )
+        threshold_exit, threshold_stdout, threshold_stderr = run_command(threshold_cmd, capture_output=True, show_output=False)
 
         if threshold_exit == 0:
-            print("✅ Coverage threshold (70%) met!")
+            pass
         else:
-            print("⚠️  Coverage below 70% threshold")
             coverage_info = parse_coverage_output(threshold_stdout)
             if coverage_info.get("total"):
-                print(f"   Current coverage: {coverage_info['total']}%")
+                pass
 
-    print("\n" + "=" * 80)
     if exit_code == 0:
-        print("🎉 Test run completed successfully!")
+        pass
     else:
-        print("💥 Test run failed - see details above")
-    print("=" * 80)
+        pass
 
     sys.exit(exit_code)
 

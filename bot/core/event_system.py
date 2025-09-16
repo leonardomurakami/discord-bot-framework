@@ -40,9 +40,7 @@ class EventSystem:
                 self._listeners[event_name].remove(callback)
                 logger.debug(f"Removed listener for {event_name}: {callback.__name__}")
             except ValueError:
-                logger.warning(
-                    f"Listener {callback.__name__} not found for {event_name}"
-                )
+                logger.warning(f"Listener {callback.__name__} not found for {event_name}")
 
     def remove_all_listeners(self, event_name: str) -> None:
         if event_name in self._listeners:
@@ -81,9 +79,7 @@ class EventSystem:
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     listener_name = self._listeners[event_name][i].__name__
-                    logger.error(
-                        f"Error in listener {listener_name} for {event_name}: {result}"
-                    )
+                    logger.error(f"Error in listener {listener_name} for {event_name}: {result}")
 
         # Run middleware (post-processing)
         for middleware in self._middleware:
@@ -92,9 +88,7 @@ class EventSystem:
             except Exception as e:
                 logger.error(f"Error in middleware {middleware.__name__} (post): {e}")
 
-    async def _execute_listener(
-        self, listener: Callable, *args: Any, **kwargs: Any
-    ) -> None:
+    async def _execute_listener(self, listener: Callable, *args: Any, **kwargs: Any) -> None:
         try:
             await self._call_maybe_async(listener, *args, **kwargs)
         except Exception as e:

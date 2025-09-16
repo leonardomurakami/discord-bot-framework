@@ -40,9 +40,7 @@ class TestRequiresPermissionDecorator:
         return bot
 
     @pytest.mark.asyncio
-    async def test_decorator_grants_access_with_permission(
-        self, mock_context, mock_bot_with_permissions
-    ):
+    async def test_decorator_grants_access_with_permission(self, mock_context, mock_bot_with_permissions):
         """Test decorator allows access when user has permission."""
         # Setup
         mock_bot_with_permissions.permission_manager.has_permission.return_value = True
@@ -52,9 +50,7 @@ class TestRequiresPermissionDecorator:
             return "success"
 
         # Mock global bot instance
-        with patch(
-            "bot.permissions.decorators._bot_instance", mock_bot_with_permissions
-        ):
+        with patch("bot.permissions.decorators._bot_instance", mock_bot_with_permissions):
             result = await test_command(mock_context)
 
         # Verify
@@ -65,9 +61,7 @@ class TestRequiresPermissionDecorator:
         mock_context.respond.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_decorator_denies_access_without_permission(
-        self, mock_context, mock_bot_with_permissions
-    ):
+    async def test_decorator_denies_access_without_permission(self, mock_context, mock_bot_with_permissions):
         """Test decorator denies access when user lacks permission."""
         # Setup
         mock_bot_with_permissions.permission_manager.has_permission.return_value = False
@@ -77,9 +71,7 @@ class TestRequiresPermissionDecorator:
             return "success"
 
         # Mock global bot instance
-        with patch(
-            "bot.permissions.decorators._bot_instance", mock_bot_with_permissions
-        ):
+        with patch("bot.permissions.decorators._bot_instance", mock_bot_with_permissions):
             result = await test_command(mock_context)
 
         # Verify
@@ -90,9 +82,7 @@ class TestRequiresPermissionDecorator:
         )
 
     @pytest.mark.asyncio
-    async def test_decorator_with_custom_error_message(
-        self, mock_context, mock_bot_with_permissions
-    ):
+    async def test_decorator_with_custom_error_message(self, mock_context, mock_bot_with_permissions):
         """Test decorator uses custom error message."""
         # Setup
         mock_bot_with_permissions.permission_manager.has_permission.return_value = False
@@ -103,15 +93,11 @@ class TestRequiresPermissionDecorator:
             return "success"
 
         # Mock global bot instance
-        with patch(
-            "bot.permissions.decorators._bot_instance", mock_bot_with_permissions
-        ):
+        with patch("bot.permissions.decorators._bot_instance", mock_bot_with_permissions):
             await test_command(mock_context)
 
         # Verify
-        mock_context.respond.assert_called_once_with(
-            custom_message, flags=hikari.MessageFlag.EPHEMERAL
-        )
+        mock_context.respond.assert_called_once_with(custom_message, flags=hikari.MessageFlag.EPHEMERAL)
 
     @pytest.mark.asyncio
     async def test_decorator_skips_check_without_bot_instance(self, mock_context):
@@ -149,9 +135,7 @@ class TestRequiresPermissionDecorator:
         mock_context.respond.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_decorator_skips_check_for_non_member(
-        self, mock_context, mock_bot_with_permissions
-    ):
+    async def test_decorator_skips_check_for_non_member(self, mock_context, mock_bot_with_permissions):
         """Test decorator skips check when context member is not a Member."""
         # Setup context with non-Member user
         mock_context.member = MagicMock()  # Not a hikari.Member instance
@@ -160,9 +144,7 @@ class TestRequiresPermissionDecorator:
         async def test_command(ctx):
             return "success"
 
-        with patch(
-            "bot.permissions.decorators._bot_instance", mock_bot_with_permissions
-        ):
+        with patch("bot.permissions.decorators._bot_instance", mock_bot_with_permissions):
             result = await test_command(mock_context)
 
         # Should proceed without permission check
@@ -186,9 +168,7 @@ class TestRequiresPermissionDecorator:
         assert test_command._required_permission == "test.permission"
 
     @pytest.mark.asyncio
-    async def test_decorator_logs_permission_checks(
-        self, mock_context, mock_bot_with_permissions, caplog
-    ):
+    async def test_decorator_logs_permission_checks(self, mock_context, mock_bot_with_permissions, caplog):
         """Test decorator logs permission check details."""
         mock_bot_with_permissions.permission_manager.has_permission.return_value = True
 
@@ -196,21 +176,13 @@ class TestRequiresPermissionDecorator:
         async def test_command(ctx):
             return "success"
 
-        with patch(
-            "bot.permissions.decorators._bot_instance", mock_bot_with_permissions
-        ):
+        with patch("bot.permissions.decorators._bot_instance", mock_bot_with_permissions):
             with caplog.at_level(logging.INFO):
                 await test_command(mock_context)
 
         # Check logs
-        assert (
-            "Permission check: test_user trying to use command requiring 'test.permission'"
-            in caplog.text
-        )
-        assert (
-            "Permission result: test_user HAS permission 'test.permission'"
-            in caplog.text
-        )
+        assert "Permission check: test_user trying to use command requiring 'test.permission'" in caplog.text
+        assert "Permission result: test_user HAS permission 'test.permission'" in caplog.text
 
 
 class TestRequiresRoleDecorator:
@@ -286,9 +258,7 @@ class TestRequiresRoleDecorator:
 
         await test_command(mock_member_context)
 
-        mock_member_context.respond.assert_called_once_with(
-            custom_message, flags=hikari.MessageFlag.EPHEMERAL
-        )
+        mock_member_context.respond.assert_called_once_with(custom_message, flags=hikari.MessageFlag.EPHEMERAL)
 
     @pytest.mark.asyncio
     async def test_role_non_member_denied(self, mock_non_member_context):
@@ -421,9 +391,7 @@ class TestRequiresGuildOwnerDecorator:
 
         await test_command(mock_non_owner_context)
 
-        mock_non_owner_context.respond.assert_called_once_with(
-            custom_message, flags=hikari.MessageFlag.EPHEMERAL
-        )
+        mock_non_owner_context.respond.assert_called_once_with(custom_message, flags=hikari.MessageFlag.EPHEMERAL)
 
     @pytest.mark.asyncio
     async def test_guild_not_found(self, mock_owner_context):
@@ -480,9 +448,7 @@ class TestRequiresBotPermissionsDecorator:
         # Setup guild and bot member with permissions
         guild = MagicMock()
         bot_member = MagicMock()
-        bot_member.permissions = (
-            hikari.Permissions.SEND_MESSAGES | hikari.Permissions.MANAGE_MESSAGES
-        )
+        bot_member.permissions = hikari.Permissions.SEND_MESSAGES | hikari.Permissions.MANAGE_MESSAGES
         guild.get_member.return_value = bot_member
         mock_guild_context.get_guild.return_value = guild
 
@@ -501,9 +467,7 @@ class TestRequiresBotPermissionsDecorator:
         # Setup guild and bot member without required permissions
         guild = MagicMock()
         bot_member = MagicMock()
-        bot_member.permissions = (
-            hikari.Permissions.SEND_MESSAGES
-        )  # Missing MANAGE_MESSAGES
+        bot_member.permissions = hikari.Permissions.SEND_MESSAGES  # Missing MANAGE_MESSAGES
         guild.get_member.return_value = bot_member
         mock_guild_context.get_guild.return_value = guild
 
@@ -529,9 +493,7 @@ class TestRequiresBotPermissionsDecorator:
         guild.get_member.return_value = bot_member
         mock_guild_context.get_guild.return_value = guild
 
-        @requires_bot_permissions(
-            hikari.Permissions.MANAGE_MESSAGES, hikari.Permissions.MANAGE_CHANNELS
-        )
+        @requires_bot_permissions(hikari.Permissions.MANAGE_MESSAGES, hikari.Permissions.MANAGE_CHANNELS)
         async def test_command(ctx):
             return "success"
 
@@ -588,9 +550,7 @@ class TestRequiresBotPermissionsDecorator:
     def test_bot_permissions_decorator_metadata(self):
         """Test bot permissions decorator stores metadata."""
 
-        @requires_bot_permissions(
-            hikari.Permissions.SEND_MESSAGES, hikari.Permissions.MANAGE_MESSAGES
-        )
+        @requires_bot_permissions(hikari.Permissions.SEND_MESSAGES, hikari.Permissions.MANAGE_MESSAGES)
         async def test_command(ctx):
             return "success"
 

@@ -240,9 +240,7 @@ class TestFunPlugin:
             await plugin.choose_option(mock_context, "option1", "option2")
 
             # Should handle error gracefully
-            assert mock_context.respond.call_count >= 1 or hasattr(
-                plugin, "smart_respond"
-            )
+            assert mock_context.respond.call_count >= 1 or hasattr(plugin, "smart_respond")
 
     @pytest.mark.asyncio
     async def test_random_number_command(self, mock_bot, mock_context):

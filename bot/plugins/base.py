@@ -1,5 +1,4 @@
 import logging
-from abc import ABC
 from typing import TYPE_CHECKING, Any
 
 import hikari
@@ -11,7 +10,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class BasePlugin(ABC):
+class BasePlugin:
     def __init__(self, bot: Any) -> None:
         self.bot = bot
         self.name = self.__class__.__name__.lower().replace("plugin", "")
@@ -40,9 +39,7 @@ class BasePlugin(ABC):
                 event_name = attr._event_listener
                 self.bot.event_system.add_listener(event_name, attr)
                 self._event_listeners.append((event_name, attr))
-                self.logger.debug(
-                    f"Registered event listener: {attr_name} -> {event_name}"
-                )
+                self.logger.debug(f"Registered event listener: {attr_name} -> {event_name}")
 
     async def _unregister_event_listeners(self) -> None:
         # Unregister event listeners
@@ -90,9 +87,7 @@ class BasePlugin(ABC):
                 if plugin_setting:
                     plugin_setting.settings[key] = value
                 else:
-                    plugin_setting = PluginSetting(
-                        guild_id=guild_id, plugin_name=self.name, settings={key: value}
-                    )
+                    plugin_setting = PluginSetting(guild_id=guild_id, plugin_name=self.name, settings={key: value})
                     session.add(plugin_setting)
 
                 await session.commit()

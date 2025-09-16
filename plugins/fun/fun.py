@@ -162,11 +162,7 @@ class FunPlugin(BasePlugin):
         name="8ball",
         description="Ask the magic 8-ball a question",
         permission_node="fun.games",
-        arguments=[
-            CommandArgument(
-                "question", hikari.OptionType.STRING, "Your question for the 8-ball"
-            )
-        ],
+        arguments=[CommandArgument("question", hikari.OptionType.STRING, "Your question for the 8-ball")],
     )
     async def magic_8ball(self, ctx: lightbulb.Context, question: str) -> None:
         try:
@@ -279,9 +275,7 @@ class FunPlugin(BasePlugin):
             CommandArgument("option2", hikari.OptionType.STRING, "Option 2"),
         ],
     )
-    async def choose_option(
-        self, ctx: lightbulb.Context, option1: str, option2: str
-    ) -> None:
+    async def choose_option(self, ctx: lightbulb.Context, option1: str, option2: str) -> None:
         try:
             # Split and clean options
             choices = [option1, option2]
@@ -342,9 +336,7 @@ class FunPlugin(BasePlugin):
             ),
         ],
     )
-    async def random_number(
-        self, ctx: lightbulb.Context, min_value: int = 1, max_value: int = 100
-    ) -> None:
+    async def random_number(self, ctx: lightbulb.Context, min_value: int = 1, max_value: int = 100) -> None:
         try:
             # Validate input
             if min_value > max_value:
@@ -376,9 +368,7 @@ class FunPlugin(BasePlugin):
             )
 
             embed.add_field("Range", f"{min_value} - {max_value}", inline=True)
-            embed.add_field(
-                "Total Possibilities", str(max_value - min_value + 1), inline=True
-            )
+            embed.add_field("Total Possibilities", str(max_value - min_value + 1), inline=True)
 
             await ctx.respond(embed=embed)
             await self.log_command_usage(ctx, "random", True)
@@ -406,9 +396,7 @@ class FunPlugin(BasePlugin):
 
             if self.session:
                 try:
-                    async with self.session.get(
-                        "https://api.quotable.io/random?maxLength=150"
-                    ) as resp:
+                    async with self.session.get("https://api.quotable.io/random?maxLength=150") as resp:
                         if resp.status == 200:
                             data = await resp.json()
                             quote_text = data.get("content")

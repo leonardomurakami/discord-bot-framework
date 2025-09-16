@@ -33,11 +33,7 @@ class AdminPlugin(BasePlugin):
             if action == "list":
                 if role:
                     # List permissions for a specific role
-                    permissions = (
-                        await self.bot.permission_manager.get_role_permissions(
-                            ctx.guild_id, role.id
-                        )
-                    )
+                    permissions = await self.bot.permission_manager.get_role_permissions(ctx.guild_id, role.id)
                     if permissions:
                         perm_list = "\n".join([f"• {perm}" for perm in permissions])
                         embed = self.create_embed(
@@ -55,12 +51,7 @@ class AdminPlugin(BasePlugin):
                     # List all available permissions
                     all_perms = await self.bot.permission_manager.get_all_permissions()
                     if all_perms:
-                        perm_list = "\n".join(
-                            [
-                                f"• `{perm.node}` - {perm.description}"
-                                for perm in all_perms[:20]
-                            ]
-                        )
+                        perm_list = "\n".join([f"• `{perm.node}` - {perm.description}" for perm in all_perms[:20]])
                         if len(all_perms) > 20:
                             perm_list += f"\n... and {len(all_perms) - 20} more"
                         embed = self.create_embed(
@@ -84,14 +75,10 @@ class AdminPlugin(BasePlugin):
                     )
                 else:
                     if action == "grant":
-                        success = await self.bot.permission_manager.grant_permission(
-                            ctx.guild_id, role.id, permission
-                        )
+                        success = await self.bot.permission_manager.grant_permission(ctx.guild_id, role.id, permission)
                         action_text = "granted to"
                     else:
-                        success = await self.bot.permission_manager.revoke_permission(
-                            ctx.guild_id, role.id, permission
-                        )
+                        success = await self.bot.permission_manager.revoke_permission(ctx.guild_id, role.id, permission)
                         action_text = "revoked from"
 
                     if success:
@@ -156,9 +143,7 @@ class AdminPlugin(BasePlugin):
             embed.set_thumbnail(bot_user.display_avatar_url)
 
             if bot_user.created_at:
-                embed.set_footer(
-                    f"Created on {bot_user.created_at.strftime('%B %d, %Y')}"
-                )
+                embed.set_footer(f"Created on {bot_user.created_at.strftime('%B %d, %Y')}")
 
             await ctx.respond(embed=embed)
             await self.log_command_usage(ctx, "bot-info", True)
@@ -197,38 +182,16 @@ class AdminPlugin(BasePlugin):
             emoji_count = len(guild.get_emojis())
 
             # Count channel types
-            text_channels = len(
-                [
-                    c
-                    for c in guild.get_channels().values()
-                    if c.type == hikari.ChannelType.GUILD_TEXT
-                ]
-            )
-            voice_channels = len(
-                [
-                    c
-                    for c in guild.get_channels().values()
-                    if c.type == hikari.ChannelType.GUILD_VOICE
-                ]
-            )
-            category_channels = len(
-                [
-                    c
-                    for c in guild.get_channels().values()
-                    if c.type == hikari.ChannelType.GUILD_CATEGORY
-                ]
-            )
+            text_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_TEXT])
+            voice_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_VOICE])
+            category_channels = len([c for c in guild.get_channels().values() if c.type == hikari.ChannelType.GUILD_CATEGORY])
 
-            embed = self.create_embed(
-                title=f"🏰 {guild.name}", color=hikari.Color(0x7289DA)
-            )
+            embed = self.create_embed(title=f"🏰 {guild.name}", color=hikari.Color(0x7289DA))
 
             # Basic info
             embed.add_field("Server ID", str(guild.id), inline=True)
             embed.add_field("Owner", f"<@{guild.owner_id}>", inline=True)
-            embed.add_field(
-                "Created", f"<t:{int(guild.created_at.timestamp())}:R>", inline=True
-            )
+            embed.add_field("Created", f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
 
             # Statistics
             embed.add_field("👥 Members", str(member_count), inline=True)
@@ -331,17 +294,11 @@ class AdminPlugin(BasePlugin):
 
             formatted_uptime = ", ".join(uptime_str)
 
-            embed = self.create_embed(
-                title="📊 Bot Status & Uptime", color=hikari.Color(0x00FF7F)
-            )
+            embed = self.create_embed(title="📊 Bot Status & Uptime", color=hikari.Color(0x00FF7F))
 
             embed.add_field("⏰ Uptime", formatted_uptime, inline=True)
-            embed.add_field(
-                "🚀 Started", f"<t:{int(process_start_time)}:R>", inline=True
-            )
-            embed.add_field(
-                "📅 Current Time", f"<t:{int(current_time.timestamp())}:f>", inline=True
-            )
+            embed.add_field("🚀 Started", f"<t:{int(process_start_time)}:R>", inline=True)
+            embed.add_field("📅 Current Time", f"<t:{int(current_time.timestamp())}:f>", inline=True)
 
             # System information
             try:
