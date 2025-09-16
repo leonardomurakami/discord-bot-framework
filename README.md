@@ -1,6 +1,6 @@
 # Discord Bot Framework
 
-A modular Discord bot built with the Hikari framework, featuring a plugin system, RBAC permissions, hot reload, and database support.
+A modular Discord bot built with the Hikari framework, featuring a plugin system, RBAC permissions, and database support.
 
 ## Features
 
@@ -8,7 +8,6 @@ A modular Discord bot built with the Hikari framework, featuring a plugin system
 - 🔒 **RBAC Permissions** - Role-based access control using Discord roles
 - 🗄️ **Database Support** - SQLite for development, PostgreSQL for production
 - 🐳 **Docker Ready** - Development and production Docker configurations
-- 🔄 **Hot Reload** - Automatic plugin reloading during development
 - 📊 **Analytics & Logging** - Built-in middleware for tracking and monitoring
 - ⚡ **Fast Setup** - Get started quickly with uv package management
 
@@ -72,13 +71,14 @@ discord-bot/
 │   ├── plugins/           # Base plugin classes
 │   └── middleware/        # Event middleware
 ├── plugins/               # Plugin implementations
-│   ├── admin/            # Admin commands
-│   ├── moderation/       # Moderation commands
-│   ├── fun/              # Fun commands and games
-│   ├── utility/          # Utility commands
-│   └── music/            # Music bot functionality
-├── config/               # Configuration management
-└── tests/                # Test suite
+│   ├── admin/             # Admin commands
+│   ├── moderation/        # Moderation commands
+│   ├── fun/               # Fun commands and games
+│   ├── utility/           # Utility commands
+│   ├── help/              # Help commands
+│   └── music/             # Music bot functionality
+├── config/                # Configuration management
+└── tests/                 # Test suite
 ```
 
 ## Creating Plugins
@@ -192,7 +192,6 @@ Edit `config/settings.py` to customize:
 
 - Enabled plugins
 - Plugin directories
-- Hot reload settings
 - Database configuration
 
 ## Database
@@ -221,20 +220,11 @@ python -m bot.cli db reset
 
 ## Development
 
-### Hot Reload
-
-In development mode, the bot automatically reloads plugins when files change:
-
-```bash
-python -m bot --dev
-```
-
 ### Plugin Development
 
 1. Create plugin directory in `plugins/`
 2. Add `__init__.py` with metadata
 3. Implement plugin class extending `BasePlugin`
-4. Test with hot reload enabled
 
 ### Adding Dependencies
 
