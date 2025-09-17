@@ -12,7 +12,7 @@ class BotSettings(BaseSettings):
 
     # Plugin configuration
     enabled_plugins: list[str] = Field(
-        default=["admin", "fun", "moderation", "help", "utility"],
+        default=["admin", "fun", "moderation", "help", "utility", "music"],
         description="List of enabled plugins",
     )
     plugin_directories: list[str] = Field(
@@ -26,6 +26,12 @@ class BotSettings(BaseSettings):
     # Web interface (future)
     web_port: int = Field(default=8080, description="Web interface port")
     web_host: str = Field(default="0.0.0.0", description="Web interface host")
+
+    # Lavalink settings
+    lavalink_host: str = Field(default="lavalink", description="Lavalink server host")
+    lavalink_port: int = Field(default=2333, description="Lavalink server port")
+    lavalink_password: str = Field(default="youshallnotpass", description="Lavalink server password")
+    lavalink_secure: bool = Field(default=False, description="Use secure connection to Lavalink")
 
     # Music plugin settings
     spotify_client_id: str | None = None

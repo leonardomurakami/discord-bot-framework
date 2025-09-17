@@ -10,6 +10,27 @@ services:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - DATABASE_URL=sqlite:///data/bot.db
       - ENVIRONMENT=development
+    depends_on:
+      - lavalink
     ports:
       - "8080:8080"  # For future web interface
     restart: unless-stopped
+    networks:
+      - lavalink
+
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    environment:
+      - _JAVA_OPTIONS=-Xmx2G
+      - SERVER_PORT=2333
+      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml
+    ports:
+      - "2333:2333"
+    networks:
+      - lavalink
+
+networks:
+  lavalink:
+    driver: bridge

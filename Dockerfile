@@ -12,7 +12,7 @@ COPY pyproject.toml README.md ./
 FROM base AS development
 RUN uv pip install --system -e .[dev,music]
 COPY . .
-CMD ["python", "-m", "bot", "--dev"]
+CMD ["python", "-O", "-m", "bot", "--dev"]
 
 # PRODUCTION
 FROM base AS production
@@ -20,4 +20,4 @@ RUN uv pip install --system .
 COPY . .
 RUN useradd --create-home --shell /bin/bash bot
 USER bot
-CMD ["python", "-m", "bot"]
+CMD ["python", "-O", "-m", "bot"]

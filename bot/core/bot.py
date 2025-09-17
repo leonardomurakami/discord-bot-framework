@@ -18,7 +18,13 @@ logger = logging.getLogger(__name__)
 class DiscordBot:
     def __init__(self) -> None:
         # Initialize bot components with required intents
-        intents = hikari.Intents.ALL_MESSAGES | hikari.Intents.GUILD_MEMBERS | hikari.Intents.GUILDS | hikari.Intents.MESSAGE_CONTENT
+        intents = (
+            hikari.Intents.ALL_MESSAGES
+            | hikari.Intents.GUILD_MEMBERS
+            | hikari.Intents.GUILDS
+            | hikari.Intents.MESSAGE_CONTENT
+            | hikari.Intents.GUILD_VOICE_STATES  # Required for voice/music functionality
+        )
         # Create Hikari bot first
         self.hikari_bot = hikari.GatewayBot(token=settings.discord_token, intents=intents)
         # Create lightbulb client
