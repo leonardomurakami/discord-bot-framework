@@ -2,9 +2,9 @@ from .music import MusicPlugin
 
 PLUGIN_METADATA = {
     "name": "Music",
-    "version": "1.0.0",
+    "version": "3.0.0",
     "author": "Bot Framework",
-    "description": "Music player with queue management, repeat modes, and auto-disconnect features",
+    "description": "Feature-complete music bot with interactive controls, search selection, playlist support, queue management, and auto-disconnect",
     "permissions": ["music.play", "music.manage", "music.settings"],
 }
 

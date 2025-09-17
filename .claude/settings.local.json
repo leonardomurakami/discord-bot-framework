@@ -17,7 +17,8 @@
       "Bash(mkdir:*)",
       "WebFetch(domain:lavalink.readthedocs.io)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:docs.hikari-py.dev)"
+      "WebFetch(domain:docs.hikari-py.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
     "ask": []
