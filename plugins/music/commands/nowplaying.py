@@ -1,6 +1,8 @@
 import hikari
 import lightbulb
+
 from bot.plugins.commands import command
+
 from ..views import MusicControlView
 
 
@@ -42,27 +44,22 @@ def setup_nowplaying_commands(plugin):
         try:
             user = await ctx.bot.rest.fetch_user(requester)
             requester_mention = user.mention
-        except:
+        except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             requester_mention = f"<@{requester}>"
 
         status_emoji = "⏸️" if player.paused else "▶️"
 
         embed = plugin.create_embed(
-            title=f"{status_emoji} Now Playing",
-            color=hikari.Color(0x00FF00) if not player.paused else hikari.Color(0xFFFF00)
+            title=f"{status_emoji} Now Playing", color=hikari.Color(0x00FF00) if not player.paused else hikari.Color(0xFFFF00)
         )
 
-        embed.add_field(
-            name="🎵 Track",
-            value=f"**[{track.title}]({track.uri})**\nBy: {track.author}",
-            inline=False
-        )
+        embed.add_field(name="🎵 Track", value=f"**[{track.title}]({track.uri})**\nBy: {track.author}", inline=False)
 
         embed.add_field(
             name="⏱️ Progress",
             value=f"`{current_minutes}:{current_seconds:02d}` {bar} `{duration_minutes}:{duration_seconds:02d}`\n"
-                  f"{progress_percentage:.1%} complete",
-            inline=False
+            f"{progress_percentage:.1%} complete",
+            inline=False,
         )
 
         status_info = []
@@ -77,19 +74,11 @@ def setup_nowplaying_commands(plugin):
         if len(player.queue) > 0:
             status_info.append(f"📋 Queue: {len(player.queue)} tracks")
 
-        embed.add_field(
-            name="ℹ️ Status",
-            value="\n".join(status_info),
-            inline=True
-        )
+        embed.add_field(name="ℹ️ Status", value="\n".join(status_info), inline=True)
 
-        embed.add_field(
-            name="👤 Requested by",
-            value=requester_mention,
-            inline=True
-        )
+        embed.add_field(name="👤 Requested by", value=requester_mention, inline=True)
 
-        if hasattr(track, 'artwork_url') and track.artwork_url:
+        if hasattr(track, "artwork_url") and track.artwork_url:
             embed.set_thumbnail(track.artwork_url)
 
         view = MusicControlView(plugin, ctx.guild_id)
@@ -99,9 +88,9 @@ def setup_nowplaying_commands(plugin):
             message = await ctx.respond(embed=embed, components=view)
             miru_client.start_view(view)
 
-            if hasattr(message, 'message'):
+            if hasattr(message, "message"):
                 view.message = message.message
-            elif hasattr(message, 'id'):
+            elif hasattr(message, "id"):
                 view.message = message
         else:
             await ctx.respond(embed=embed)

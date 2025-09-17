@@ -1,23 +1,22 @@
 import asyncio
-import hikari
-import lavalink
 import logging
 from typing import Any
 
+import hikari
+
+import lavalink
 from bot.plugins.base import BasePlugin
 from config.settings import settings
-from .events import MusicEventHandler
-from .utils import (
-    save_queue_to_db, restore_all_queues, add_to_history,
-    check_voice_channel_empty, cancel_disconnect_timer
-)
-from .commands.playback import setup_playback_commands
+
+from .commands.history import setup_history_commands
 from .commands.nowplaying import setup_nowplaying_commands
+from .commands.playback import setup_playback_commands
 from .commands.queue import setup_queue_commands
-from .commands.voice import setup_voice_commands
 from .commands.search import setup_search_commands
 from .commands.settings import setup_settings_commands
-from .commands.history import setup_history_commands
+from .commands.voice import setup_voice_commands
+from .events import MusicEventHandler
+from .utils import add_to_history, check_voice_channel_empty, restore_all_queues, save_queue_to_db
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +40,8 @@ class MusicPlugin(BasePlugin):
             host=settings.lavalink_host,
             port=settings.lavalink_port,
             password=settings.lavalink_password,
-            region='us',
-            name='default-node'
+            region="us",
+            name="default-node",
         )
 
         self.lavalink_client.add_event_hooks(MusicEventHandler(self))
@@ -50,33 +49,34 @@ class MusicPlugin(BasePlugin):
         @self.bot.hikari_bot.listen(hikari.VoiceServerUpdateEvent)
         async def voice_server_update(event: hikari.VoiceServerUpdateEvent) -> None:
             lavalink_data = {
-                't': 'VOICE_SERVER_UPDATE',
-                'd': {
-                    'guild_id': event.guild_id,
-                    'endpoint': event.endpoint[6:],
-                    'token': event.token,
-                }
+                "t": "VOICE_SERVER_UPDATE",
+                "d": {
+                    "guild_id": event.guild_id,
+                    "endpoint": event.endpoint[6:],
+                    "token": event.token,
+                },
             }
             await self.lavalink_client.voice_update_handler(lavalink_data)
 
         @self.bot.hikari_bot.listen(hikari.VoiceStateUpdateEvent)
         async def voice_state_update(event: hikari.VoiceStateUpdateEvent) -> None:
             lavalink_data = {
-                't': 'VOICE_STATE_UPDATE',
-                'd': {
-                    'guild_id': event.state.guild_id,
-                    'user_id': event.state.user_id,
-                    'channel_id': event.state.channel_id,
-                    'session_id': event.state.session_id,
-                }
+                "t": "VOICE_STATE_UPDATE",
+                "d": {
+                    "guild_id": event.state.guild_id,
+                    "user_id": event.state.user_id,
+                    "channel_id": event.state.channel_id,
+                    "session_id": event.state.session_id,
+                },
             }
             await self.lavalink_client.voice_update_handler(lavalink_data)
 
             if event.state.guild_id and not event.state.member.is_bot:
                 player = self.lavalink_client.player_manager.get(event.state.guild_id)
                 if player and player.is_connected and player.channel_id:
-                    if (event.old_state and event.old_state.channel_id == player.channel_id) or \
-                       (event.state.channel_id == player.channel_id):
+                    if (event.old_state and event.old_state.channel_id == player.channel_id) or (
+                        event.state.channel_id == player.channel_id
+                    ):
                         await check_voice_channel_empty(self, event.state.guild_id, player.channel_id)
 
         logger.info("Music plugin loaded with Lavalink.py")
@@ -106,8 +106,13 @@ class MusicPlugin(BasePlugin):
 
         # Register all commands
         all_commands = (
-            playback_commands + nowplaying_commands + queue_commands +
-            voice_commands + search_commands + settings_commands + history_commands
+            playback_commands
+            + nowplaying_commands
+            + queue_commands
+            + voice_commands
+            + search_commands
+            + settings_commands
+            + history_commands
         )
 
         for command_func in all_commands:

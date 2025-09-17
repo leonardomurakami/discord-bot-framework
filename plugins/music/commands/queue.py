@@ -1,7 +1,10 @@
+import random
+
 import hikari
 import lightbulb
-import random
+
 from bot.plugins.commands import CommandArgument, command
+
 from ..utils import save_queue_to_db
 
 
@@ -33,7 +36,7 @@ def setup_queue_commands(plugin):
             embed = plugin.create_embed(
                 title="📋 Queue is Empty",
                 description="No tracks in queue. Use `/play` to add some music!",
-                color=hikari.Color(0x888888)
+                color=hikari.Color(0x888888),
             )
             await plugin.smart_respond(ctx, embed=embed)
             return
@@ -42,16 +45,15 @@ def setup_queue_commands(plugin):
         max_pages = max(1, (total_tracks + tracks_per_page - 1) // tracks_per_page)
 
         if page < 1 or page > max_pages:
-            await plugin.smart_respond(ctx, f"Invalid page. Please use a page between 1 and {max_pages}.", flags=hikari.MessageFlag.EPHEMERAL)
+            await plugin.smart_respond(
+                ctx, f"Invalid page. Please use a page between 1 and {max_pages}.", flags=hikari.MessageFlag.EPHEMERAL
+            )
             return
 
         start_idx = (page - 1) * tracks_per_page
         end_idx = min(start_idx + tracks_per_page, total_tracks)
 
-        embed = plugin.create_embed(
-            title="📋 Music Queue",
-            color=hikari.Color(0x0099FF)
-        )
+        embed = plugin.create_embed(title="📋 Music Queue", color=hikari.Color(0x0099FF))
 
         if player.current:
             current_pos = player.position
@@ -66,9 +68,9 @@ def setup_queue_commands(plugin):
             embed.add_field(
                 name=f"{status_emoji} Now Playing",
                 value=f"**[{player.current.title}]({player.current.uri})**\n"
-                      f"By: {player.current.author}\n"
-                      f"Position: `{current_minutes}:{current_seconds:02d}` / `{duration_minutes}:{duration_seconds:02d}`",
-                inline=False
+                f"By: {player.current.author}\n"
+                f"Position: `{current_minutes}:{current_seconds:02d}` / `{duration_minutes}:{duration_seconds:02d}`",
+                inline=False,
             )
 
         if total_tracks > 0:
@@ -81,7 +83,7 @@ def setup_queue_commands(plugin):
                 try:
                     user = await ctx.bot.rest.fetch_user(track.requester)
                     requester_name = user.display_name or user.username
-                except:
+                except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                     requester_name = "Unknown"
 
                 queue_text.append(
@@ -90,11 +92,7 @@ def setup_queue_commands(plugin):
                 )
 
             if queue_text:
-                embed.add_field(
-                    name=f"🎵 Up Next (Page {page}/{max_pages})",
-                    value="\n\n".join(queue_text),
-                    inline=False
-                )
+                embed.add_field(name=f"🎵 Up Next (Page {page}/{max_pages})", value="\n\n".join(queue_text), inline=False)
 
         summary_parts = []
         summary_parts.append(f"**{total_tracks}** tracks in queue")
@@ -116,17 +114,9 @@ def setup_queue_commands(plugin):
         elif repeat_mode == 2:
             summary_parts.append("🔁 Repeat: Queue")
 
-        embed.add_field(
-            name="ℹ️ Queue Info",
-            value="\n".join(summary_parts),
-            inline=True
-        )
+        embed.add_field(name="ℹ️ Queue Info", value="\n".join(summary_parts), inline=True)
 
-        embed.add_field(
-            name="🔊 Volume",
-            value=f"{player.volume}%",
-            inline=True
-        )
+        embed.add_field(name="🔊 Volume", value=f"{player.volume}%", inline=True)
 
         if max_pages > 1:
             embed.set_footer(text=f"Page {page} of {max_pages} • Use /queue <page> to view other pages")
@@ -163,9 +153,7 @@ def setup_queue_commands(plugin):
         await save_queue_to_db(plugin, ctx.guild_id)
 
         embed = plugin.create_embed(
-            title="🔀 Queue Shuffled",
-            description=f"Shuffled **{len(queue_list)}** tracks in the queue",
-            color=hikari.Color(0x00FF00)
+            title="🔀 Queue Shuffled", description=f"Shuffled **{len(queue_list)}** tracks in the queue", color=hikari.Color(0x00FF00)
         )
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -174,9 +162,7 @@ def setup_queue_commands(plugin):
         description="Toggle loop modes: off -> track -> queue -> off",
         aliases=["repeat"],
         permission_node="music.play",
-        arguments=[
-            CommandArgument("mode", hikari.OptionType.STRING, "Loop mode: off, track, or queue", required=False)
-        ],
+        arguments=[CommandArgument("mode", hikari.OptionType.STRING, "Loop mode: off, track, or queue", required=False)],
     )
     async def loop(ctx: lightbulb.Context, mode: str = None) -> None:
         if not ctx.guild_id:
@@ -202,22 +188,12 @@ def setup_queue_commands(plugin):
         plugin.repeat_modes[ctx.guild_id] = new_mode
 
         if new_mode == 0:
-            embed = plugin.create_embed(
-                title="🔁 Loop Off",
-                description="Loop mode disabled",
-                color=hikari.Color(0xFF0000)
-            )
+            embed = plugin.create_embed(title="🔁 Loop Off", description="Loop mode disabled", color=hikari.Color(0xFF0000))
         elif new_mode == 1:
-            embed = plugin.create_embed(
-                title="🔂 Loop Track",
-                description="Current track will repeat",
-                color=hikari.Color(0x00FF00)
-            )
+            embed = plugin.create_embed(title="🔂 Loop Track", description="Current track will repeat", color=hikari.Color(0x00FF00))
         else:
             embed = plugin.create_embed(
-                title="🔁 Loop Queue",
-                description="Queue will repeat when finished",
-                color=hikari.Color(0x0099FF)
+                title="🔁 Loop Queue", description="Queue will repeat when finished", color=hikari.Color(0x0099FF)
             )
 
         await plugin.smart_respond(ctx, embed=embed)
@@ -227,9 +203,7 @@ def setup_queue_commands(plugin):
         description="Remove a track from the queue by position",
         aliases=["rm"],
         permission_node="music.manage",
-        arguments=[
-            CommandArgument("position", hikari.OptionType.INTEGER, "Position in queue to remove (1-based)")
-        ],
+        arguments=[CommandArgument("position", hikari.OptionType.INTEGER, "Position in queue to remove (1-based)")],
     )
     async def remove_track(ctx: lightbulb.Context, position: int) -> None:
         if not ctx.guild_id:
@@ -243,7 +217,9 @@ def setup_queue_commands(plugin):
             return
 
         if position < 1 or position > len(player.queue):
-            await plugin.smart_respond(ctx, f"Invalid position. Please use a number between 1 and {len(player.queue)}.", ephemeral=True)
+            await plugin.smart_respond(
+                ctx, f"Invalid position. Please use a number between 1 and {len(player.queue)}.", ephemeral=True
+            )
             return
 
         removed_track = player.queue.pop(position - 1)
@@ -252,22 +228,17 @@ def setup_queue_commands(plugin):
         try:
             user = await ctx.bot.rest.fetch_user(removed_track.requester)
             requester_name = user.display_name or user.username
-        except:
+        except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             requester_name = "Unknown"
 
         embed = plugin.create_embed(
             title="🗑️ Track Removed",
-            description=f"Removed **[{removed_track.title}]({removed_track.uri})**\n"
-                       f"Originally added by: {requester_name}",
-            color=hikari.Color(0xFF6B6B)
+            description=f"Removed **[{removed_track.title}]({removed_track.uri})**\n" f"Originally added by: {requester_name}",
+            color=hikari.Color(0xFF6B6B),
         )
 
         remaining_tracks = len(player.queue)
-        embed.add_field(
-            name="📋 Queue Status",
-            value=f"{remaining_tracks} tracks remaining in queue",
-            inline=True
-        )
+        embed.add_field(name="📋 Queue Status", value=f"{remaining_tracks} tracks remaining in queue", inline=True)
 
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -277,7 +248,7 @@ def setup_queue_commands(plugin):
         permission_node="music.manage",
         arguments=[
             CommandArgument("from_position", hikari.OptionType.INTEGER, "Current position of track (1-based)"),
-            CommandArgument("to_position", hikari.OptionType.INTEGER, "New position for track (1-based)")
+            CommandArgument("to_position", hikari.OptionType.INTEGER, "New position for track (1-based)"),
         ],
     )
     async def move_track(ctx: lightbulb.Context, from_position: int, to_position: int) -> None:
@@ -294,11 +265,15 @@ def setup_queue_commands(plugin):
         queue_length = len(player.queue)
 
         if from_position < 1 or from_position > queue_length:
-            await plugin.smart_respond(ctx, f"Invalid 'from' position. Please use a number between 1 and {queue_length}.", ephemeral=True)
+            await plugin.smart_respond(
+                ctx, f"Invalid 'from' position. Please use a number between 1 and {queue_length}.", ephemeral=True
+            )
             return
 
         if to_position < 1 or to_position > queue_length:
-            await plugin.smart_respond(ctx, f"Invalid 'to' position. Please use a number between 1 and {queue_length}.", ephemeral=True)
+            await plugin.smart_respond(
+                ctx, f"Invalid 'to' position. Please use a number between 1 and {queue_length}.", ephemeral=True
+            )
             return
 
         if from_position == to_position:
@@ -315,9 +290,8 @@ def setup_queue_commands(plugin):
 
         embed = plugin.create_embed(
             title="🔄 Track Moved",
-            description=f"Moved **[{track.title}]({track.uri})**\n"
-                       f"From position #{from_position} to #{to_position}",
-            color=hikari.Color(0x4CAF50)
+            description=f"Moved **[{track.title}]({track.uri})**\n" f"From position #{from_position} to #{to_position}",
+            color=hikari.Color(0x4CAF50),
         )
 
         await plugin.smart_respond(ctx, embed=embed)
@@ -348,17 +322,11 @@ def setup_queue_commands(plugin):
         await save_queue_to_db(plugin, ctx.guild_id)
 
         embed = plugin.create_embed(
-            title="🧹 Queue Cleared",
-            description=f"Removed **{tracks_removed}** tracks from the queue",
-            color=hikari.Color(0xFF9800)
+            title="🧹 Queue Cleared", description=f"Removed **{tracks_removed}** tracks from the queue", color=hikari.Color(0xFF9800)
         )
 
         if player.current:
-            embed.add_field(
-                name="▶️ Still Playing",
-                value=f"**{player.current.title}** will continue playing",
-                inline=False
-            )
+            embed.add_field(name="▶️ Still Playing", value=f"**{player.current.title}** will continue playing", inline=False)
 
         await plugin.smart_respond(ctx, embed=embed)
 

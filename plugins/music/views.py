@@ -1,6 +1,7 @@
+import random
+
 import hikari
 import miru
-import random
 
 
 class MusicControlView(miru.View):
@@ -81,10 +82,10 @@ class MusicControlView(miru.View):
         for item in self.children:
             item.disabled = True
 
-        if hasattr(self, 'message') and self.message:
+        if hasattr(self, "message") and self.message:
             try:
                 await self.message.edit(components=self)
-            except:
+            except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 pass
 
 
@@ -110,14 +111,7 @@ class SearchResultView(miru.View):
             title = track.title[:80] + "..." if len(track.title) > 80 else track.title
             description = f"By: {track.author} | Duration: {duration_str}"
 
-            options.append(
-                miru.SelectOption(
-                    label=f"{i + 1}. {title}",
-                    value=str(i),
-                    description=description[:100],
-                    emoji="🎵"
-                )
-            )
+            options.append(miru.SelectOption(label=f"{i + 1}. {title}", value=str(i), description=description[:100], emoji="🎵"))
 
         if options:
             select = miru.TextSelect(
@@ -171,45 +165,27 @@ class SearchResultView(miru.View):
 
             if was_playing:
                 queue_position = len(player.queue)
-                embed = self.music_plugin.create_embed(
-                    title="🎵 Added to Queue",
-                    color=hikari.Color(0x00FF00)
-                )
+                embed = self.music_plugin.create_embed(title="🎵 Added to Queue", color=hikari.Color(0x00FF00))
 
                 embed.add_field(
                     name="🎶 Track",
                     value=f"**[{selected_track.title}]({selected_track.uri})**\nBy: {selected_track.author}",
-                    inline=False
+                    inline=False,
                 )
 
-                embed.add_field(
-                    name="📍 Position",
-                    value=f"#{queue_position} in queue",
-                    inline=True
-                )
+                embed.add_field(name="📍 Position", value=f"#{queue_position} in queue", inline=True)
 
-                embed.add_field(
-                    name="⏱️ Duration",
-                    value=f"`{duration_minutes}:{duration_seconds:02d}`",
-                    inline=True
-                )
+                embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
             else:
-                embed = self.music_plugin.create_embed(
-                    title="🎵 Now Playing",
-                    color=hikari.Color(0x00FF00)
-                )
+                embed = self.music_plugin.create_embed(title="🎵 Now Playing", color=hikari.Color(0x00FF00))
 
                 embed.add_field(
                     name="🎶 Track",
                     value=f"**[{selected_track.title}]({selected_track.uri})**\nBy: {selected_track.author}",
-                    inline=False
+                    inline=False,
                 )
 
-                embed.add_field(
-                    name="⏱️ Duration",
-                    value=f"`{duration_minutes}:{duration_seconds:02d}`",
-                    inline=True
-                )
+                embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
 
             for item in self.children:
                 item.disabled = True
@@ -223,13 +199,13 @@ class SearchResultView(miru.View):
         for item in self.children:
             item.disabled = True
 
-        if hasattr(self, 'message') and self.message:
+        if hasattr(self, "message") and self.message:
             try:
                 timeout_embed = self.music_plugin.create_embed(
                     title="⏰ Search Timeout",
                     description="Track selection timed out. Please use `/search` again.",
-                    color=hikari.Color(0xFF9800)
+                    color=hikari.Color(0xFF9800),
                 )
                 await self.message.edit(embed=timeout_embed, components=self)
-            except:
+            except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 pass

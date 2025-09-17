@@ -1,5 +1,6 @@
 import hikari
 import lightbulb
+
 from bot.plugins.commands import CommandArgument, command
 
 
@@ -13,7 +14,7 @@ def setup_settings_commands(plugin):
         permission_node="music.settings",
         arguments=[
             CommandArgument("setting", hikari.OptionType.STRING, "Setting to configure: auto_disconnect_timer", required=False),
-            CommandArgument("value", hikari.OptionType.INTEGER, "Value for the setting (1-30 minutes for timer)", required=False)
+            CommandArgument("value", hikari.OptionType.INTEGER, "Value for the setting (1-30 minutes for timer)", required=False),
         ],
     )
     async def music_settings(ctx: lightbulb.Context, setting: str = None, value: int = None) -> None:
@@ -25,21 +26,19 @@ def setup_settings_commands(plugin):
             auto_disconnect_minutes = await plugin.get_setting(ctx.guild_id, "auto_disconnect_timer", 5)
 
             embed = plugin.create_embed(
-                title="⚙️ Music Settings",
-                description="Current configuration for this server",
-                color=hikari.Color(0x0099FF)
+                title="⚙️ Music Settings", description="Current configuration for this server", color=hikari.Color(0x0099FF)
             )
 
             embed.add_field(
                 name="🔌 Auto-Disconnect Timer",
                 value=f"{auto_disconnect_minutes} minutes\n*Time before bot leaves empty voice channels*",
-                inline=False
+                inline=False,
             )
 
             embed.add_field(
                 name="📝 How to Configure",
                 value="Use `/music-settings auto_disconnect_timer <1-30>` to change the timer",
-                inline=False
+                inline=False,
             )
 
             await plugin.smart_respond(ctx, embed=embed)
@@ -59,13 +58,11 @@ def setup_settings_commands(plugin):
             embed = plugin.create_embed(
                 title="✅ Setting Updated",
                 description=f"Auto-disconnect timer set to **{value} minutes**",
-                color=hikari.Color(0x00FF00)
+                color=hikari.Color(0x00FF00),
             )
 
             embed.add_field(
-                name="ℹ️ Effect",
-                value=f"Bot will now leave voice channels after {value} minutes of inactivity",
-                inline=False
+                name="ℹ️ Effect", value=f"Bot will now leave voice channels after {value} minutes of inactivity", inline=False
             )
 
             await plugin.smart_respond(ctx, embed=embed)

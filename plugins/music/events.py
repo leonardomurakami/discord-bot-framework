@@ -1,5 +1,6 @@
-import lavalink
 import logging
+
+import lavalink
 
 logger = logging.getLogger(__name__)
 
@@ -10,14 +11,14 @@ class MusicEventHandler:
 
     @lavalink.listener(lavalink.TrackStartEvent)
     async def track_start(self, event: lavalink.TrackStartEvent):
-        logger.debug(f'Track started on guild: {event.player.guild_id}')
+        logger.debug(f"Track started on guild: {event.player.guild_id}")
 
         if event.track:
             await self.music_plugin._add_to_history(event.player.guild_id, event.track)
 
     @lavalink.listener(lavalink.TrackEndEvent)
     async def track_end(self, event: lavalink.TrackEndEvent):
-        logger.debug(f'Track finished on guild: {event.player.guild_id}')
+        logger.debug(f"Track finished on guild: {event.player.guild_id}")
 
         guild_id = event.player.guild_id
         repeat_mode = self.music_plugin.repeat_modes.get(guild_id, 0)
@@ -30,8 +31,8 @@ class MusicEventHandler:
 
     @lavalink.listener(lavalink.TrackExceptionEvent)
     async def track_exception(self, event: lavalink.TrackExceptionEvent):
-        logger.warning(f'Track exception event happened on guild: {event.player.guild_id}')
+        logger.warning(f"Track exception event happened on guild: {event.player.guild_id}")
 
     @lavalink.listener(lavalink.QueueEndEvent)
     async def queue_finish(self, event: lavalink.QueueEndEvent):
-        logger.debug(f'Queue finished on guild: {event.player.guild_id}')
+        logger.debug(f"Queue finished on guild: {event.player.guild_id}")

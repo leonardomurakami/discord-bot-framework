@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def save_queue_to_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
+async def save_queue_to_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
     """Save the current queue to database for persistence."""
     if guild_id in music_plugin._restoring_queues:
         return
@@ -20,13 +20,11 @@ async def save_queue_to_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
             return
 
         async with music_plugin.bot.db.session() as session:
-            from bot.database.models import MusicQueue, MusicSession
             from sqlalchemy import text
 
-            await session.execute(
-                text("DELETE FROM music_queues WHERE guild_id = :guild_id"),
-                {"guild_id": guild_id}
-            )
+            from bot.database.models import MusicQueue, MusicSession
+
+            await session.execute(text("DELETE FROM music_queues WHERE guild_id = :guild_id"), {"guild_id": guild_id})
 
             for position, track in enumerate(player.queue):
                 queue_entry = MusicQueue(
@@ -37,7 +35,7 @@ async def save_queue_to_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
                     track_author=track.author,
                     track_duration=track.duration,
                     track_uri=track.uri,
-                    requester_id=track.requester
+                    requester_id=track.requester,
                 )
                 session.add(queue_entry)
 
@@ -60,7 +58,7 @@ async def save_queue_to_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
                     is_paused=player.paused,
                     volume=player.volume,
                     repeat_mode="off" if repeat_mode == 0 else ("track" if repeat_mode == 1 else "queue"),
-                    current_track_position=player.position
+                    current_track_position=player.position,
                 )
                 session.add(session_data)
 
@@ -71,7 +69,7 @@ async def save_queue_to_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
         logger.error(f"Error saving queue for guild {guild_id}: {e}")
 
 
-async def restore_queue_from_db(music_plugin: 'MusicPlugin', guild_id: int) -> bool:
+async def restore_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> bool:
     """Restore queue from database after bot restart."""
     if guild_id in music_plugin._restoring_queues:
         return False
@@ -80,18 +78,15 @@ async def restore_queue_from_db(music_plugin: 'MusicPlugin', guild_id: int) -> b
         music_plugin._restoring_queues.add(guild_id)
 
         async with music_plugin.bot.db.session() as session:
-            from bot.database.models import MusicQueue, MusicSession
             from sqlalchemy import select
+
+            from bot.database.models import MusicQueue, MusicSession
 
             session_data = await session.get(MusicSession, guild_id)
             if not session_data:
                 return False
 
-            result = await session.execute(
-                select(MusicQueue)
-                .where(MusicQueue.guild_id == guild_id)
-                .order_by(MusicQueue.position)
-            )
+            result = await session.execute(select(MusicQueue).where(MusicQueue.guild_id == guild_id).order_by(MusicQueue.position))
             queue_tracks = result.scalars().all()
 
             if not queue_tracks:
@@ -131,38 +126,31 @@ async def restore_queue_from_db(music_plugin: 'MusicPlugin', guild_id: int) -> b
         music_plugin._restoring_queues.discard(guild_id)
 
 
-async def clear_queue_from_db(music_plugin: 'MusicPlugin', guild_id: int) -> None:
+async def clear_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
     """Clear queue from database when player is stopped."""
     try:
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import text
 
-            await session.execute(
-                text("DELETE FROM music_queues WHERE guild_id = :guild_id"),
-                {"guild_id": guild_id}
-            )
-            await session.execute(
-                text("DELETE FROM music_sessions WHERE guild_id = :guild_id"),
-                {"guild_id": guild_id}
-            )
+            await session.execute(text("DELETE FROM music_queues WHERE guild_id = :guild_id"), {"guild_id": guild_id})
+            await session.execute(text("DELETE FROM music_sessions WHERE guild_id = :guild_id"), {"guild_id": guild_id})
             await session.commit()
             logger.debug(f"Cleared persistent queue for guild {guild_id}")
     except Exception as e:
         logger.error(f"Error clearing queue from database for guild {guild_id}: {e}")
 
 
-async def restore_all_queues(music_plugin: 'MusicPlugin') -> None:
+async def restore_all_queues(music_plugin: "MusicPlugin") -> None:
     """Restore all queues from database on bot startup."""
     try:
         await asyncio.sleep(5)
 
         async with music_plugin.bot.db.session() as session:
-            from bot.database.models import MusicSession
             from sqlalchemy import select
 
-            result = await session.execute(
-                select(MusicSession.guild_id).distinct()
-            )
+            from bot.database.models import MusicSession
+
+            result = await session.execute(select(MusicSession.guild_id).distinct())
             guild_ids = [row[0] for row in result.fetchall()]
 
             restored_count = 0
@@ -180,30 +168,35 @@ async def restore_all_queues(music_plugin: 'MusicPlugin') -> None:
         logger.error(f"Error during queue restoration: {e}")
 
 
-async def add_to_history(music_plugin: 'MusicPlugin', guild_id: int, track) -> None:
+async def add_to_history(music_plugin: "MusicPlugin", guild_id: int, track) -> None:
     """Add a track to the guild's music history."""
     try:
         async with music_plugin.bot.db.session() as session:
+            from sqlalchemy import exc, text
+
             from bot.database.models import MusicQueue
-            from sqlalchemy import text, exc
 
             # First, clean up old history entries before adding new one
             await session.execute(
-                text("""DELETE FROM music_queues
+                text(
+                    """DELETE FROM music_queues
                    WHERE guild_id = :guild_id AND position = -1
                    AND id NOT IN (
                        SELECT id FROM music_queues
                        WHERE guild_id = :guild_id AND position = -1
                        ORDER BY created_at DESC LIMIT 49
-                   )"""),
-                {"guild_id": guild_id}
+                   )"""
+                ),
+                {"guild_id": guild_id},
             )
 
             # Find the next available position for history (should be negative)
             result = await session.execute(
-                text("""SELECT MIN(position) FROM music_queues
-                        WHERE guild_id = :guild_id AND position < 0"""),
-                {"guild_id": guild_id}
+                text(
+                    """SELECT MIN(position) FROM music_queues
+                        WHERE guild_id = :guild_id AND position < 0"""
+                ),
+                {"guild_id": guild_id},
             )
             min_position = result.scalar()
             next_position = min_position - 1 if min_position is not None else -1
@@ -217,25 +210,26 @@ async def add_to_history(music_plugin: 'MusicPlugin', guild_id: int, track) -> N
                 track_duration=track.duration,
                 track_uri=track.uri,
                 requester_id=track.requester,
-                created_at=datetime.utcnow()
+                created_at=datetime.utcnow(),
             )
             session.add(history_entry)
 
             await session.commit()
             logger.debug(f"Added track to history for guild {guild_id}: {track.title}")
 
-    except exc.IntegrityError as e:
+    except exc.IntegrityError:
         # Handle constraint violations gracefully
         logger.debug(f"History entry already exists for guild {guild_id}, skipping: {track.title}")
     except Exception as e:
         logger.error(f"Error adding track to history for guild {guild_id}: {e}")
 
 
-async def check_voice_channel_empty(music_plugin: 'MusicPlugin', guild_id: int, channel_id: int) -> None:
+async def check_voice_channel_empty(music_plugin: "MusicPlugin", guild_id: int, channel_id: int) -> None:
     """Check if voice channel is empty and start disconnect timer if needed."""
     try:
         voice_states = [
-            vs for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
+            vs
+            for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
             if vs.channel_id == channel_id and not vs.member.is_bot
         ]
 
@@ -248,7 +242,7 @@ async def check_voice_channel_empty(music_plugin: 'MusicPlugin', guild_id: int, 
         logger.error(f"Error checking voice channel: {e}")
 
 
-async def start_disconnect_timer(music_plugin: 'MusicPlugin', guild_id: int) -> None:
+async def start_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> None:
     """Start auto-disconnect timer for a guild."""
     await cancel_disconnect_timer(music_plugin, guild_id)
 
@@ -262,7 +256,8 @@ async def start_disconnect_timer(music_plugin: 'MusicPlugin', guild_id: int) -> 
             if player and player.is_connected:
                 if player.channel_id:
                     voice_states = [
-                        vs for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
+                        vs
+                        for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
                         if vs.channel_id == player.channel_id and not vs.member.is_bot
                     ]
 
@@ -281,7 +276,7 @@ async def start_disconnect_timer(music_plugin: 'MusicPlugin', guild_id: int) -> 
     music_plugin.disconnect_timers[guild_id] = task
 
 
-async def cancel_disconnect_timer(music_plugin: 'MusicPlugin', guild_id: int) -> None:
+async def cancel_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> None:
     """Cancel auto-disconnect timer for a guild."""
     if guild_id in music_plugin.disconnect_timers:
         task = music_plugin.disconnect_timers.pop(guild_id)
@@ -289,7 +284,7 @@ async def cancel_disconnect_timer(music_plugin: 'MusicPlugin', guild_id: int) ->
             task.cancel()
 
 
-async def handle_playlist_add(music_plugin: 'MusicPlugin', ctx, search_result, player, channel_id: int) -> None:
+async def handle_playlist_add(music_plugin: "MusicPlugin", ctx, search_result, player, channel_id: int) -> None:
     """Handle adding a playlist to the queue."""
     tracks = search_result.tracks
 
@@ -310,49 +305,26 @@ async def handle_playlist_add(music_plugin: 'MusicPlugin', ctx, search_result, p
     total_hours = total_minutes // 60
     remaining_minutes = total_minutes % 60
 
-    embed = music_plugin.create_embed(
-        title="📋 Playlist Added",
-        color=music_plugin.bot.hikari_bot.get_me().accent_color or 0x00FF00
-    )
+    embed = music_plugin.create_embed(title="📋 Playlist Added", color=music_plugin.bot.hikari_bot.get_me().accent_color or 0x00FF00)
 
     playlist_name = "Unknown Playlist"
-    if hasattr(search_result, 'playlist_info') and search_result.playlist_info:
-        playlist_name = getattr(search_result.playlist_info, 'name', 'Unknown Playlist') or 'Unknown Playlist'
+    if hasattr(search_result, "playlist_info") and search_result.playlist_info:
+        playlist_name = getattr(search_result.playlist_info, "name", "Unknown Playlist") or "Unknown Playlist"
 
-    embed.add_field(
-        name="📄 Playlist",
-        value=f"**{playlist_name}**",
-        inline=False
-    )
+    embed.add_field(name="📄 Playlist", value=f"**{playlist_name}**", inline=False)
 
-    embed.add_field(
-        name="🎵 Tracks Added",
-        value=f"{added_count} tracks",
-        inline=True
-    )
+    embed.add_field(name="🎵 Tracks Added", value=f"{added_count} tracks", inline=True)
 
     if total_hours > 0:
         duration_str = f"{total_hours}h {remaining_minutes}m"
     else:
         duration_str = f"{total_minutes}m"
 
-    embed.add_field(
-        name="⏱️ Total Duration",
-        value=duration_str,
-        inline=True
-    )
+    embed.add_field(name="⏱️ Total Duration", value=duration_str, inline=True)
 
-    embed.add_field(
-        name="👤 Requested by",
-        value=ctx.author.mention,
-        inline=True
-    )
+    embed.add_field(name="👤 Requested by", value=ctx.author.mention, inline=True)
 
     status = "🎵 Now Playing" if not was_playing else "📋 Added to Queue"
-    embed.add_field(
-        name="📍 Status",
-        value=status,
-        inline=False
-    )
+    embed.add_field(name="📍 Status", value=status, inline=False)
 
     await music_plugin.smart_respond(ctx, embed=embed)

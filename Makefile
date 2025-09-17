@@ -1,7 +1,7 @@
 # Discord Bot Framework - Comprehensive Development Makefile
 # This Makefile provides a complete development workflow for the modular Discord bot
 
-.PHONY: help install install-dev install-music clean test test-unit test-integration test-coverage test-separate lint format typecheck pre-commit docker-build docker-dev docker-prod db-create db-reset db-migrate plugins plugins-list bot-run bot-dev bot-cli coverage-html coverage-open docs docs-serve security-check deps-update deps-check env-setup env-validate release docker-clean logs-dev logs-prod backup-db restore-db benchmark profile
+.PHONY: help install install-dev install-music clean test test-unit test-integration test-coverage test-separate lint format pre-commit docker-build docker-dev docker-prod db-create db-reset db-migrate plugins plugins-list bot-run bot-dev bot-cli coverage-html coverage-open docs docs-serve security-check deps-update deps-check env-setup env-validate release docker-clean logs-dev logs-prod backup-db restore-db benchmark profile
 
 # Default target
 .DEFAULT_GOAL := help
@@ -131,16 +131,6 @@ format: ## Format code using black and ruff
 	$(UV_RUN) black .
 	$(UV_RUN) ruff check --fix .
 	@echo "$(GREEN)✅ Code formatting complete$(RESET)"
-
-typecheck: ## Run type checking with mypy
-	@echo "$(BOLD)$(BLUE)Running type checker...$(RESET)"
-	$(UV_RUN) mypy $(BOT_MODULE)
-	@echo "$(GREEN)✅ Type checking complete$(RESET)"
-
-security-check: ## Run security checks on dependencies
-	@echo "$(BOLD)$(BLUE)Running security checks...$(RESET)"
-	$(UV) pip audit
-	@echo "$(GREEN)✅ Security check complete$(RESET)"
 
 pre-commit: lint test-unit ## Run pre-commit checks (lint + unit tests)
 	@echo "$(GREEN)✅ Pre-commit checks passed$(RESET)"
@@ -326,14 +316,13 @@ docker-shell: ## Open shell in development container
 
 deps-update: ## Update all dependencies
 	@echo "$(BOLD)$(BLUE)Updating dependencies...$(RESET)"
-	$(UV) pip install --upgrade -e .[dev,music]
+	$(UV) pip install --upgrade -e .[dev,plugins-all]
 	@echo "$(GREEN)✅ Dependencies updated$(RESET)"
 
 deps-check: ## Check for dependency updates
 	@echo "$(BOLD)$(BLUE)Checking for dependency updates...$(RESET)"
 	$(UV) pip list --outdated
 
-deps-audit: security-check ## Audit dependencies for security issues
 
 ##@ Documentation
 

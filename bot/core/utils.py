@@ -1,13 +1,10 @@
 """Utility functions for the Discord bot framework."""
 
 import hikari
-from typing import Optional
 
 
 def calculate_member_permissions(
-    member: hikari.Member,
-    guild: hikari.Guild,
-    channel: Optional[hikari.GuildChannel] = None
+    member: hikari.Member, guild: hikari.Guild, channel: hikari.GuildChannel | None = None
 ) -> hikari.Permissions:
     """
     Calculate the effective permissions for a member in a guild or channel.
@@ -35,7 +32,7 @@ def calculate_member_permissions(
         return ~hikari.Permissions.NONE  # All permissions set
 
     # Apply channel overwrites if channel is provided
-    if channel and hasattr(channel, 'permission_overwrites'):
+    if channel and hasattr(channel, "permission_overwrites"):
         # Apply @everyone overwrites first
         everyone_overwrite = channel.permission_overwrites.get(guild.id)
         if everyone_overwrite:
@@ -59,10 +56,7 @@ def calculate_member_permissions(
 
 
 def has_permissions(
-    member: hikari.Member,
-    guild: hikari.Guild,
-    required_permissions: hikari.Permissions,
-    channel: Optional[hikari.GuildChannel] = None
+    member: hikari.Member, guild: hikari.Guild, required_permissions: hikari.Permissions, channel: hikari.GuildChannel | None = None
 ) -> bool:
     """
     Check if a member has the required permissions in a guild or channel.

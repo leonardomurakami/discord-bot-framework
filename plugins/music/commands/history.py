@@ -1,6 +1,8 @@
+import logging
+
 import hikari
 import lightbulb
-import logging
+
 from bot.plugins.commands import CommandArgument, command
 
 logger = logging.getLogger(__name__)
@@ -25,8 +27,9 @@ def setup_history_commands(plugin):
 
         try:
             async with plugin.bot.db.session() as session:
-                from bot.database.models import MusicQueue
                 from sqlalchemy import select
+
+                from bot.database.models import MusicQueue
 
                 result = await session.execute(
                     select(MusicQueue)
@@ -37,15 +40,9 @@ def setup_history_commands(plugin):
 
                 if not history_tracks:
                     embed = plugin.create_embed(
-                        title="📜 Music History",
-                        description="No recently played tracks found.",
-                        color=hikari.Color(0x888888)
+                        title="📜 Music History", description="No recently played tracks found.", color=hikari.Color(0x888888)
                     )
-                    embed.add_field(
-                        name="💡 Tip",
-                        value="Play some music to start building your history!",
-                        inline=False
-                    )
+                    embed.add_field(name="💡 Tip", value="Play some music to start building your history!", inline=False)
                     await plugin.smart_respond(ctx, embed=embed)
                     return
 
@@ -62,9 +59,7 @@ def setup_history_commands(plugin):
                 page_tracks = history_tracks[start_idx:end_idx]
 
                 embed = plugin.create_embed(
-                    title="📜 Music History",
-                    description=f"Recently played tracks in this server",
-                    color=hikari.Color(0x9932CC)
+                    title="📜 Music History", description="Recently played tracks in this server", color=hikari.Color(0x9932CC)
                 )
 
                 history_text = ""
@@ -75,7 +70,7 @@ def setup_history_commands(plugin):
                     try:
                         user = await ctx.bot.rest.fetch_user(track.requester_id)
                         requester_name = user.display_name or user.username
-                    except:
+                    except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                         requester_name = "Unknown"
 
                     timestamp = f"<t:{int(track.created_at.timestamp())}:R>"
@@ -84,17 +79,9 @@ def setup_history_commands(plugin):
                     history_text += f"    └ By: {track.track_author} | Duration: `{duration_minutes}:{duration_seconds:02d}`\n"
                     history_text += f"    └ Played {timestamp} • Requested by: {requester_name}\n\n"
 
-                embed.add_field(
-                    name=f"🎵 Recently Played (Page {page}/{max_pages})",
-                    value=history_text,
-                    inline=False
-                )
+                embed.add_field(name=f"🎵 Recently Played (Page {page}/{max_pages})", value=history_text, inline=False)
 
-                embed.add_field(
-                    name="📊 Statistics",
-                    value=f"Total tracks in history: **{total_tracks}**",
-                    inline=True
-                )
+                embed.add_field(name="📊 Statistics", value=f"Total tracks in history: **{total_tracks}**", inline=True)
 
                 if max_pages > 1:
                     embed.set_footer(text=f"Page {page} of {max_pages} • Use /history <page> to view other pages")
@@ -106,7 +93,7 @@ def setup_history_commands(plugin):
             embed = plugin.create_embed(
                 title="❌ History Error",
                 description="Failed to retrieve music history. Please try again.",
-                color=hikari.Color(0xFF0000)
+                color=hikari.Color(0xFF0000),
             )
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
 

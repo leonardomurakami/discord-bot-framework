@@ -1,7 +1,9 @@
 import hikari
 import lightbulb
+
 from bot.plugins.commands import CommandArgument, command
-from ..utils import save_queue_to_db, handle_playlist_add
+
+from ..utils import handle_playlist_add, save_queue_to_db
 
 
 def setup_playback_commands(plugin):
@@ -11,9 +13,7 @@ def setup_playback_commands(plugin):
         name="play",
         description="Play a song",
         permission_node="music.play",
-        arguments=[
-            CommandArgument("query", hikari.OptionType.STRING, "Song name or URL to play")
-        ],
+        arguments=[CommandArgument("query", hikari.OptionType.STRING, "Song name or URL to play")],
     )
     async def play(ctx: lightbulb.Context, query: str) -> None:
         if not ctx.guild_id:
@@ -65,34 +65,15 @@ def setup_playback_commands(plugin):
         if was_playing:
             queue_position = len(player.queue)
 
-            embed = plugin.create_embed(
-                title="🎵 Added to Queue",
-                color=hikari.Color(0x00FF00)
-            )
+            embed = plugin.create_embed(title="🎵 Added to Queue", color=hikari.Color(0x00FF00))
 
-            embed.add_field(
-                name="🎶 Track",
-                value=f"**[{track.title}]({track.uri})**\nBy: {track.author}",
-                inline=False
-            )
+            embed.add_field(name="🎶 Track", value=f"**[{track.title}]({track.uri})**\nBy: {track.author}", inline=False)
 
-            embed.add_field(
-                name="📍 Position",
-                value=f"#{queue_position} in queue",
-                inline=True
-            )
+            embed.add_field(name="📍 Position", value=f"#{queue_position} in queue", inline=True)
 
-            embed.add_field(
-                name="⏱️ Duration",
-                value=f"`{duration_minutes}:{duration_seconds:02d}`",
-                inline=True
-            )
+            embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
 
-            embed.add_field(
-                name="👤 Requested by",
-                value=ctx.author.mention,
-                inline=True
-            )
+            embed.add_field(name="👤 Requested by", value=ctx.author.mention, inline=True)
 
             if queue_position > 1:
                 current_remaining = player.current.duration - player.position if player.current else 0
@@ -108,34 +89,15 @@ def setup_playback_commands(plugin):
                 else:
                     wait_time_str = f"`{wait_minutes}m`"
 
-                embed.add_field(
-                    name="⏰ Estimated Wait",
-                    value=wait_time_str,
-                    inline=True
-                )
+                embed.add_field(name="⏰ Estimated Wait", value=wait_time_str, inline=True)
         else:
-            embed = plugin.create_embed(
-                title="🎵 Now Playing",
-                color=hikari.Color(0x00FF00)
-            )
+            embed = plugin.create_embed(title="🎵 Now Playing", color=hikari.Color(0x00FF00))
 
-            embed.add_field(
-                name="🎶 Track",
-                value=f"**[{track.title}]({track.uri})**\nBy: {track.author}",
-                inline=False
-            )
+            embed.add_field(name="🎶 Track", value=f"**[{track.title}]({track.uri})**\nBy: {track.author}", inline=False)
 
-            embed.add_field(
-                name="⏱️ Duration",
-                value=f"`{duration_minutes}:{duration_seconds:02d}`",
-                inline=True
-            )
+            embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
 
-            embed.add_field(
-                name="👤 Requested by",
-                value=ctx.author.mention,
-                inline=True
-            )
+            embed.add_field(name="👤 Requested by", value=ctx.author.mention, inline=True)
 
             status_parts = []
             status_parts.append(f"🔊 Volume: {player.volume}%")
@@ -146,13 +108,9 @@ def setup_playback_commands(plugin):
             elif repeat_mode == 2:
                 status_parts.append("🔁 Repeat: Queue")
 
-            embed.add_field(
-                name="ℹ️ Status",
-                value="\n".join(status_parts),
-                inline=True
-            )
+            embed.add_field(name="ℹ️ Status", value="\n".join(status_parts), inline=True)
 
-        if hasattr(track, 'artwork_url') and track.artwork_url:
+        if hasattr(track, "artwork_url") and track.artwork_url:
             embed.set_thumbnail(track.artwork_url)
 
         await plugin.smart_respond(ctx, embed=embed)
@@ -178,11 +136,7 @@ def setup_playback_commands(plugin):
             return
 
         await player.set_pause(True)
-        embed = plugin.create_embed(
-            title="⏸️ Paused",
-            description=f"Paused: **{player.current.title}**",
-            color=hikari.Color(0xFFFF00)
-        )
+        embed = plugin.create_embed(title="⏸️ Paused", description=f"Paused: **{player.current.title}**", color=hikari.Color(0xFFFF00))
         await plugin.smart_respond(ctx, embed=embed)
 
     @command(
@@ -207,9 +161,7 @@ def setup_playback_commands(plugin):
 
         await player.set_pause(False)
         embed = plugin.create_embed(
-            title="▶️ Resumed",
-            description=f"Resumed: **{player.current.title}**",
-            color=hikari.Color(0x00FF00)
+            title="▶️ Resumed", description=f"Resumed: **{player.current.title}**", color=hikari.Color(0x00FF00)
         )
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -234,6 +186,7 @@ def setup_playback_commands(plugin):
         await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, None)
 
         from ..utils import clear_queue_from_db
+
         await clear_queue_from_db(plugin, ctx.guild_id)
 
         await plugin.smart_respond(ctx, "⏹️ Stopped the music and cleared the queue.")
@@ -264,16 +217,9 @@ def setup_playback_commands(plugin):
         await player.skip()
         await save_queue_to_db(plugin, ctx.guild_id)
 
-        embed = plugin.create_embed(
-            title="⏭️ Track Skipped",
-            color=hikari.Color(0x00FF00)
-        )
+        embed = plugin.create_embed(title="⏭️ Track Skipped", color=hikari.Color(0x00FF00))
 
-        embed.add_field(
-            name="🎵 Skipped",
-            value=f"**{current_title}**",
-            inline=False
-        )
+        embed.add_field(name="🎵 Skipped", value=f"**{current_title}**", inline=False)
 
         if next_track:
             next_duration_minutes = next_track.duration // 60000
@@ -282,57 +228,33 @@ def setup_playback_commands(plugin):
             try:
                 next_user = await ctx.bot.rest.fetch_user(next_track.requester)
                 next_requester = next_user.display_name or next_user.username
-            except:
+            except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 next_requester = "Unknown"
 
             embed.add_field(
                 name="▶️ Now Playing",
                 value=f"**[{next_track.title}]({next_track.uri})**\n"
-                      f"By: {next_track.author}\n"
-                      f"Duration: `{next_duration_minutes}:{next_duration_seconds:02d}`\n"
-                      f"Requested by: {next_requester}",
-                inline=False
+                f"By: {next_track.author}\n"
+                f"Duration: `{next_duration_minutes}:{next_duration_seconds:02d}`\n"
+                f"Requested by: {next_requester}",
+                inline=False,
             )
 
             remaining_tracks = len(player.queue) - 1
             if remaining_tracks > 0:
-                embed.add_field(
-                    name="📋 Queue Status",
-                    value=f"{remaining_tracks} tracks remaining",
-                    inline=True
-                )
+                embed.add_field(name="📋 Queue Status", value=f"{remaining_tracks} tracks remaining", inline=True)
 
             repeat_mode = plugin.repeat_modes.get(ctx.guild_id, 0)
             if repeat_mode == 1:
-                embed.add_field(
-                    name="🔂 Repeat Mode",
-                    value="Track repeat",
-                    inline=True
-                )
+                embed.add_field(name="🔂 Repeat Mode", value="Track repeat", inline=True)
             elif repeat_mode == 2:
-                embed.add_field(
-                    name="🔁 Repeat Mode",
-                    value="Queue repeat",
-                    inline=True
-                )
+                embed.add_field(name="🔁 Repeat Mode", value="Queue repeat", inline=True)
         else:
-            embed.add_field(
-                name="📭 Queue Empty",
-                value="No more tracks in queue",
-                inline=False
-            )
+            embed.add_field(name="📭 Queue Empty", value="No more tracks in queue", inline=False)
 
-            embed.add_field(
-                name="💡 Tip",
-                value="Use `/play` to add more music!",
-                inline=False
-            )
+            embed.add_field(name="💡 Tip", value="Use `/play` to add more music!", inline=False)
 
-        embed.add_field(
-            name="👤 Skipped by",
-            value=ctx.author.mention,
-            inline=True
-        )
+        embed.add_field(name="👤 Skipped by", value=ctx.author.mention, inline=True)
 
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -340,9 +262,7 @@ def setup_playback_commands(plugin):
         name="seek",
         description="Seek to a specific position in the track (format: mm:ss or seconds)",
         permission_node="music.play",
-        arguments=[
-            CommandArgument("position", hikari.OptionType.STRING, "Position to seek to (mm:ss or seconds)")
-        ],
+        arguments=[CommandArgument("position", hikari.OptionType.STRING, "Position to seek to (mm:ss or seconds)")],
     )
     async def seek(ctx: lightbulb.Context, position: str) -> None:
         if not ctx.guild_id:
@@ -380,7 +300,7 @@ def setup_playback_commands(plugin):
         embed = plugin.create_embed(
             title="🎯 Seeked",
             description=f"Seeked to **{seek_minutes}:{seek_seconds:02d}** in **{player.current.title}**",
-            color=hikari.Color(0x00FF00)
+            color=hikari.Color(0x00FF00),
         )
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -416,9 +336,9 @@ def setup_playback_commands(plugin):
         embed = plugin.create_embed(
             title="📍 Track Position",
             description=f"**{player.current.title}**\n"
-                       f"`{current_minutes}:{current_seconds:02d}` {bar} `{duration_minutes}:{duration_seconds:02d}`\n"
-                       f"Progress: {progress_percentage:.1%}",
-            color=hikari.Color(0x0099FF)
+            f"`{current_minutes}:{current_seconds:02d}` {bar} `{duration_minutes}:{duration_seconds:02d}`\n"
+            f"Progress: {progress_percentage:.1%}",
+            color=hikari.Color(0x0099FF),
         )
         await plugin.smart_respond(ctx, embed=embed)
 

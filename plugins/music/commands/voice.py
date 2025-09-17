@@ -1,6 +1,8 @@
 import hikari
 import lightbulb
+
 from bot.plugins.commands import CommandArgument, command
+
 from ..utils import cancel_disconnect_timer
 
 
@@ -33,20 +35,14 @@ def setup_voice_commands(plugin):
         try:
             channel = await ctx.bot.rest.fetch_channel(voice_state.channel_id)
             channel_name = channel.name
-        except:
+        except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             channel_name = "Unknown Channel"
 
         embed = plugin.create_embed(
-            title="🔗 Joined Voice Channel",
-            description=f"Connected to **{channel_name}**",
-            color=hikari.Color(0x00FF00)
+            title="🔗 Joined Voice Channel", description=f"Connected to **{channel_name}**", color=hikari.Color(0x00FF00)
         )
 
-        embed.add_field(
-            name="🎵 Ready to Play",
-            value="Use `/play` to start playing music!",
-            inline=False
-        )
+        embed.add_field(name="🎵 Ready to Play", value="Use `/play` to start playing music!", inline=False)
 
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -74,7 +70,7 @@ def setup_voice_commands(plugin):
             try:
                 channel = await ctx.bot.rest.fetch_channel(player.channel_id)
                 channel_name = channel.name
-            except:
+            except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 pass
 
         await player.stop()
@@ -82,9 +78,7 @@ def setup_voice_commands(plugin):
         await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, None)
 
         embed = plugin.create_embed(
-            title="👋 Disconnected",
-            description=f"Left **{channel_name}** and cleared the queue",
-            color=hikari.Color(0xFF9800)
+            title="👋 Disconnected", description=f"Left **{channel_name}** and cleared the queue", color=hikari.Color(0xFF9800)
         )
 
         await plugin.smart_respond(ctx, embed=embed)
@@ -93,9 +87,7 @@ def setup_voice_commands(plugin):
         name="volume",
         description="Set or check the volume (0-100)",
         permission_node="music.play",
-        arguments=[
-            CommandArgument("level", hikari.OptionType.INTEGER, "Volume level (0-100)", required=False)
-        ],
+        arguments=[CommandArgument("level", hikari.OptionType.INTEGER, "Volume level (0-100)", required=False)],
     )
     async def volume(ctx: lightbulb.Context, level: int = None) -> None:
         if not ctx.guild_id:
@@ -110,9 +102,7 @@ def setup_voice_commands(plugin):
 
         if level is None:
             embed = plugin.create_embed(
-                title="🔊 Volume",
-                description=f"Current volume: **{player.volume}%**",
-                color=hikari.Color(0x0099FF)
+                title="🔊 Volume", description=f"Current volume: **{player.volume}%**", color=hikari.Color(0x0099FF)
             )
             await plugin.smart_respond(ctx, embed=embed)
             return
@@ -133,9 +123,7 @@ def setup_voice_commands(plugin):
             emoji = "📢"
 
         embed = plugin.create_embed(
-            title=f"{emoji} Volume Set",
-            description=f"Volume set to **{level}%**",
-            color=hikari.Color(0x00FF00)
+            title=f"{emoji} Volume Set", description=f"Volume set to **{level}%**", color=hikari.Color(0x00FF00)
         )
         await plugin.smart_respond(ctx, embed=embed)
 
