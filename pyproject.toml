@@ -32,9 +32,13 @@ dev = [
     "ruff>=0.1.0",
     "pre-commit>=3.4.0",
 ]
-music = [
+plugin-music = [
     "lavalink>=5.9.0",
     "yt-dlp>=2023.7.6",
+]
+
+plugins-all = [
+    "bot[plugin-music]"
 ]
 
 [project.scripts]

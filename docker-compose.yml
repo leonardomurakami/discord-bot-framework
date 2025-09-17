@@ -15,29 +15,5 @@ services:
     profiles:
       - production
 
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    profiles:
-      - production
-
-  lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4-alpine
-    environment:
-      - LAVALINK_SERVER_PASSWORD=${LAVALINK_PASSWORD:-youshallnotpass}
-    volumes:
-      - ./lavalink/application.yml:/opt/Lavalink/application.yml
-    ports:
-      - "2333:2333"
-    profiles:
-      - production
-
 volumes:
   postgres_data:

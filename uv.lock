@@ -178,6 +178,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274, upload-time = "2024-11-06T16:41:39.6Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233, upload-time = "2024-11-06T16:41:37.9Z" },
+]
+
+[[package]]
 name = "asyncpg"
 version = "0.30.0"
 source = { registry = "https://pypi.org/simple" }
@@ -211,11 +220,11 @@ wheels = [
 
 [[package]]
 name = "attrs"
-version = "24.3.0"
+version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/48/c8/6260f8ccc11f0917360fc0da435c5c9c7504e3db174d5a12a1494887b045/attrs-24.3.0.tar.gz", hash = "sha256:8f5c07333d543103541ba7be0e2ce16eeee8130cb0b3f9238ab904ce1e85baff", size = 805984, upload-time = "2024-12-16T06:59:29.899Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/b0/1367933a8532ee6ff8d63537de4f1177af4bff9f3e829baf7331f595bb24/attrs-25.3.0.tar.gz", hash = "sha256:75d7cefc7fb576747b2c81b4442d4d4a1ce0900973527c011d1030fd3bf4af1b", size = 812032, upload-time = "2025-03-13T11:10:22.779Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/aa/ab0f7891a01eeb2d2e338ae8fecbe57fcebea1a24dbb64d45801bfab481d/attrs-24.3.0-py3-none-any.whl", hash = "sha256:ac96cd038792094f438ad1f6ff80837353805ac950cd2aa0e0625ef19850c308", size = 63397, upload-time = "2024-12-16T06:59:26.977Z" },
+    { url = "https://files.pythonhosted.org/packages/77/06/bb80f5f86020c4551da315d78b3ab75e8228f89f0162f2c3a819e407941a/attrs-25.3.0-py3-none-any.whl", hash = "sha256:427318ce031701fea540783410126f03899a97ffc6f61596ad581ac2e40e3bc3", size = 63815, upload-time = "2025-03-13T11:10:21.14Z" },
 ]
 
 [[package]]
@@ -278,8 +287,12 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
-music = [
-    { name = "hikari-ongaku" },
+plugin-music = [
+    { name = "lavalink" },
+    { name = "yt-dlp" },
+]
+plugins-all = [
+    { name = "lavalink" },
     { name = "yt-dlp" },
 ]
 
@@ -290,10 +303,11 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.12.0" },
     { name = "asyncpg", specifier = ">=0.28.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
-    { name = "hikari", extras = ["speedups"], specifier = ">=2.0.0" },
-    { name = "hikari-lightbulb", specifier = ">=2.3.5" },
-    { name = "hikari-miru", specifier = ">=4.0.0" },
-    { name = "hikari-ongaku", marker = "extra == 'music'", specifier = ">=1.0.3" },
+    { name = "bot", extras = ["plugin-music"], marker = "extra == 'plugins-all'" },
+    { name = "hikari", extras = ["speedups"], specifier = ">=2.4.1" },
+    { name = "hikari-lightbulb", specifier = ">=3.2.1" },
+    { name = "hikari-miru", specifier = ">=4.2.0" },
+    { name = "lavalink", marker = "extra == 'plugin-music'", specifier = ">=5.9.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.4.0" },
     { name = "psutil", specifier = ">=5.9.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
@@ -304,13 +318,13 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "rich", specifier = ">=13.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.43" },
     { name = "structlog", specifier = ">=23.0.0" },
     { name = "typer", specifier = ">=0.9.0" },
     { name = "watchfiles", specifier = ">=0.20.0" },
-    { name = "yt-dlp", marker = "extra == 'music'", specifier = ">=2023.7.6" },
+    { name = "yt-dlp", marker = "extra == 'plugin-music'", specifier = ">=2023.7.6" },
 ]
-provides-extras = ["dev", "music"]
+provides-extras = ["dev", "plugin-music", "plugins-all"]
 
 [[package]]
 name = "brotli"
@@ -538,6 +552,15 @@ wheels = [
 ]
 
 [[package]]
+name = "confspec"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/59/d236c71e2c4f9c43735f973638c43936658d9139115896316f6b6d300fbc/confspec-0.0.3.tar.gz", hash = "sha256:1d421b4e3342df6ea094119728ad03f89aff06b75b813db37a6726ca63e702fc", size = 59885, upload-time = "2025-05-24T16:10:26.747Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/eb/2a56b42535249452642199adb4c683c3332658762a15dd2e54772f63dfcb/confspec-0.0.3-py3-none-any.whl", hash = "sha256:0deaf3cccefbf55a4a2184bdcf5806fedb8b9343ba19641393f31dfd6fe2e78e", size = 15918, upload-time = "2025-05-24T16:10:24.961Z" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.10.6"
 source = { registry = "https://pypi.org/simple" }
@@ -756,7 +779,7 @@ wheels = [
 
 [[package]]
 name = "hikari"
-version = "2.0.0"
+version = "2.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -764,9 +787,9 @@ dependencies = [
     { name = "colorlog" },
     { name = "multidict" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/69/63f9d38ca50e0b92be80f5de44c8926c21fa40d6167a8612b299eec38128/hikari-2.0.0.tar.gz", hash = "sha256:84e7839399b8c2d3918aae4a56329680a63313d44c4a5d09f3b5d4f122f69ba4", size = 442402, upload-time = "2024-08-28T12:35:27.833Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f4/e1/c4fe33881475026b840109b48b26049122dfc1867b9454944cd3b84fbafc/hikari-2.4.1.tar.gz", hash = "sha256:fb423b90fdf26679e421af1eb04c6f5b4b3a07bc2de24f705b3468fdd6fae690", size = 1896038, upload-time = "2025-09-08T21:52:38.604Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/1a/b57bfd3c4be643c13081f11553111024440b8c761f7dd4b213005cb86810/hikari-2.0.0-py3-none-any.whl", hash = "sha256:0dcfcdf7c09bdc6cf14f8976045a21fef1bd103951310bf057369e3772e7d6c0", size = 545210, upload-time = "2024-08-28T12:35:25.12Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/d8/b9abc8901c01474f3e08f46ecd2ac16dabdebe4b6918ee3a42e3591ffab8/hikari-2.4.1-py3-none-any.whl", hash = "sha256:b8c71d9dd286c11487b3c8aaee45ad69e8a9237ba6774437aac286887e4adcec", size = 585380, upload-time = "2025-09-08T21:52:36.642Z" },
 ]
 
 [package.optional-dependencies]
@@ -778,14 +801,18 @@ speedups = [
 
 [[package]]
 name = "hikari-lightbulb"
-version = "2.3.5.post0"
+version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "async-timeout" },
+    { name = "confspec" },
     { name = "hikari" },
+    { name = "linkd" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ab/cc/c448d722be21122428a0ad4ce33dcd4fed802e427f03cdd53e5cddebd4f3/hikari-lightbulb-2.3.5.post0.tar.gz", hash = "sha256:388b5c995494e6d576fde7db98c093f0aaa1f8e5db87807c20e753aa1689877f", size = 87476, upload-time = "2024-08-28T20:10:58.198Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/68/e44caf1d552003445ebe8f71e491a7e9fcc99d536f1c849e26e9a114f600/hikari_lightbulb-3.2.1.tar.gz", hash = "sha256:14e41cd546c54bf4ff0e63e32c0825d25c5c0ac7635b3ed875091089eb5e5680", size = 136672, upload-time = "2025-09-09T13:25:03.805Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/13/be5d334e170f86921f33b535ac65ad9338f3d1bd27b13283787d0e7ad457/hikari_lightbulb-2.3.5.post0-py3-none-any.whl", hash = "sha256:2aa307da50e7e0647c0278c5e23a8e98d01585d22f97f87e535e55b512a41d5f", size = 118214, upload-time = "2024-08-28T20:10:55.953Z" },
+    { url = "https://files.pythonhosted.org/packages/96/09/00d4e30451fc920ee7572968c74bd8f019f77b92e7b562dabe1b543c1eb3/hikari_lightbulb-3.2.1-py3-none-any.whl", hash = "sha256:aa8bcc78200224a7e44ce8ed5197f9ba4434b23e9e374e89c3a6c9210d9870a6", size = 104985, upload-time = "2025-09-09T13:25:01.766Z" },
 ]
 
 [[package]]
@@ -801,19 +828,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2d/ce/d97375fa52eaf9c66639e97b0dfb528a1f9cc38c982efa667e4e57bd69da/hikari_miru-4.2.0.tar.gz", hash = "sha256:1bb6737c7f1fe062ab0d7b357b9b447de2e84e9cea27b8bb826f66f307abb8a0", size = 52243, upload-time = "2024-10-08T16:30:20.863Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/21/08aaaafba09d193898ba296d2903d16f6cef696ff6770a7626e613e6aff4/hikari_miru-4.2.0-py3-none-any.whl", hash = "sha256:0a9e25cea76b6dbf6ec0efd64ac2f0b0a4c51de31a19bc6c101779c5ca06ea80", size = 90612, upload-time = "2024-10-08T16:30:19.143Z" },
-]
-
-[[package]]
-name = "hikari-ongaku"
-version = "1.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "hikari" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/21/24/9bbe432d1a62c76144da61b719ccc9b510ba55a1c1f05c38e2042cccbe88/hikari_ongaku-1.0.3.tar.gz", hash = "sha256:7d394c479657939fe9b550071469126aa74b7b1c587f1308fdeb5b36af4f575d", size = 71416, upload-time = "2024-08-21T12:57:54.378Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/61/93bd1c67dbec9a4cfd0d8caf96c82f7a683edf476117b61f21c55489fd0f/hikari_ongaku-1.0.3-py3-none-any.whl", hash = "sha256:c2c3b451e07fc1b8e8781c7fa73dd58925865fbeaf82a7bc275cad9ae19dc48d", size = 93927, upload-time = "2024-08-21T12:57:53.276Z" },
 ]
 
 [[package]]
@@ -841,6 +855,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f2/97/ebf4da567aa6827c909642694d71c9fcf53e5b504f2d96afea02718862f3/iniconfig-2.1.0.tar.gz", hash = "sha256:3abbd2e30b36733fee78f9c7f7308f2d0050e88f0087fd25c2645f63c773e1c7", size = 4793, upload-time = "2025-03-19T20:09:59.721Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/e1/e6716421ea10d38022b952c159d5161ca1193197fb744506875fbb87ea7b/iniconfig-2.1.0-py3-none-any.whl", hash = "sha256:9deba5723312380e77435581c6bf4935c94cbfab9b1ed33ef8d238ea168eb760", size = 6050, upload-time = "2025-03-19T20:10:01.071Z" },
+]
+
+[[package]]
+name = "lavalink"
+version = "5.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/da/6be2f013a2c63d7b139b2bfa9de4cbf715cbb68f74cf9ed76c85a87aece2/lavalink-5.9.0.tar.gz", hash = "sha256:a01aff4bdf25a51387d2d7729e110a8ced442c21da558dccdceffbc1e0f3861d", size = 52091, upload-time = "2024-09-22T14:06:49.059Z" }
+
+[[package]]
+name = "linkd"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/e6/bb03a751cd924f3cae2fae5bc935c5a46a653b4c7ce3b2263b39d298f9fc/linkd-0.1.0.tar.gz", hash = "sha256:d346edd0b008bbbc027cc5ae7823b865034bf66607b2fc428244d12f9c83f8b2", size = 44154, upload-time = "2025-08-24T10:56:56.469Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/6d/2203183c5a6626e1b811ac07cb87fa46b8b25ed363b78e6cd3b62f7d0b0d/linkd-0.1.0-py3-none-any.whl", hash = "sha256:8dc69cfd27717721b29f0fe5d42f834a89a3c5215b7bc8e691c74b6faf4d725c", size = 39722, upload-time = "2025-08-24T10:56:55.17Z" },
 ]
 
 [[package]]

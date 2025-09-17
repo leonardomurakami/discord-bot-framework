@@ -1,10 +1,10 @@
-from .music import MusicPlugin
+from .music_plugin import MusicPlugin
 
 PLUGIN_METADATA = {
     "name": "Music",
-    "version": "3.0.0",
+    "version": "4.0.0",
     "author": "Bot Framework",
-    "description": "Feature-complete music bot with interactive controls, search selection, playlist support, queue management, and auto-disconnect",
+    "description": "Advanced music bot with persistent queues, interactive controls, search selection, playlist support, queue management, auto-disconnect, and music history tracking",
     "permissions": ["music.play", "music.manage", "music.settings"],
 }
 

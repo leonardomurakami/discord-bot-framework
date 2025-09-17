@@ -18,7 +18,8 @@
       "WebFetch(domain:lavalink.readthedocs.io)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.hikari-py.dev)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
