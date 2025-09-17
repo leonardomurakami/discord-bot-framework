@@ -45,9 +45,9 @@ python -m bot.cli db create
 
 5. Run the bot:
 ```bash
-python -m bot --dev  # Development mode with hot reload
+python -m bot.cli run --dev  # Development mode with hot reload
 # or
-python -m bot.cli run --dev
+python -m bot.cli run        # Production mode
 ```
 
 ### Docker Development
@@ -90,53 +90,80 @@ discord-bot/
 from .myplugin import MyPlugin
 
 PLUGIN_METADATA = {
-    "name": "MyPlugin",
+    "name": "My Plugin",
     "version": "1.0.0",
     "author": "Your Name",
     "description": "My awesome plugin",
-    "dependencies": [],
     "permissions": ["myplugin.use"],
 }
 
-def setup(bot):
-    return MyPlugin(bot)
+__all__ = ["MyPlugin"]
 ```
 
 ```python
 # plugins/myplugin/myplugin.py
+import logging
 import hikari
-import arc
+import lightbulb
 from bot.plugins.base import BasePlugin
-from bot.permissions import requires_permission
+from bot.plugins.commands import command, CommandArgument
+
+logger = logging.getLogger(__name__)
 
 class MyPlugin(BasePlugin):
-    @property
-    def metadata(self):
-        return {
-            "name": "MyPlugin",
-            "version": "1.0.0",
-            "description": "My awesome plugin",
-        }
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
-    @arc.slash_command(name="hello", description="Say hello")
-    @requires_permission("myplugin.use")
-    async def hello_command(self, ctx: arc.GatewayContext):
+    async def on_load(self) -> None:
+        """Called when the plugin is loaded."""
+        await super().on_load()
+        logger.info("MyPlugin loaded successfully")
+
+    async def on_unload(self) -> None:
+        """Called when the plugin is unloaded."""
+        await super().on_unload()
+        logger.info("MyPlugin unloaded")
+
+    @command(
+        name="hello",
+        description="Say hello to the user",
+        permission_node="myplugin.use"
+    )
+    async def hello_command(self, ctx) -> None:
         embed = self.create_embed(
-            title="Hello!",
-            description="Hello from my plugin!",
+            title="👋 Hello!",
+            description=f"Hello, {ctx.author.mention}!",
             color=hikari.Color(0x00FF00)
+        )
+        await ctx.respond(embed=embed)
+
+    @command(
+        name="greet",
+        description="Greet a specific user",
+        arguments=[
+            CommandArgument("user", hikari.OptionType.USER, "User to greet"),
+            CommandArgument("message", hikari.OptionType.STRING, "Custom message", required=False)
+        ],
+        permission_node="myplugin.use"
+    )
+    async def greet_command(self, ctx, user: hikari.User, message: str = "Hello") -> None:
+        embed = self.create_embed(
+            title="👋 Greetings!",
+            description=f"{message}, {user.mention}!",
+            color=hikari.Color(0x5865F2)
         )
         await ctx.respond(embed=embed)
 ```
 
 ### Plugin Features
 
-- **Slash Commands**: Use `@arc.slash_command()` decorator
-- **Permissions**: Use `@requires_permission()` for RBAC
-- **Settings**: Per-guild plugin configuration
-- **Events**: Listen to Discord and bot events
-- **Database**: Built-in database access
-- **Logging**: Automatic command usage tracking
+- **Commands**: Use `@command()` decorator with support for arguments and permissions
+- **Lifecycle Management**: `on_load()` and `on_unload()` methods for initialization and cleanup
+- **Permissions**: Built-in RBAC with `permission_node` parameter
+- **Event Handling**: Listen to Discord events using Hikari event system
+- **Database Access**: Built-in database manager for data persistence
+- **Utilities**: Helper methods for embeds, responses, and command logging
+- **Error Handling**: Comprehensive error handling and logging support
 
 ## Permission System
 
@@ -155,24 +182,19 @@ The bot uses a role-based access control (RBAC) system with automatic hierarchy:
 - **Admin**: `admin.config`, `admin.plugins`, `admin.permissions`
 - **Moderation**: `moderation.kick`, `moderation.ban`, `moderation.mute`, `moderation.timeout`, `moderation.purge`
 - **Fun**: `fun.games`, `fun.images` *(available by default)*
-- **Utility**: `utility.info`, `utility.stats` *(available by default)*
-- **Music**: `music.play`, `music.queue` *(available by default)*, `music.skip`, `music.volume`
+- **Utility**: Basic utility commands *(available by default)*
+- **Music**: `music.play`, `music.manage`, `music.settings`
 
 ### Managing Permissions
 
-```bash
-# Grant permission to a role
-/permission grant @Moderator moderation.kick
+Use the `/permission` command in Discord to manage role permissions:
 
-# Revoke permission from a role
-/permission revoke @Moderator moderation.kick
+- Grant permissions to roles
+- Revoke permissions from roles
+- List permissions for specific roles
+- View all available permissions
 
-# List permissions for a role
-/permission list @Moderator
-
-# List all available permissions
-/permission list
-```
+See the Admin Plugin documentation for detailed usage examples.
 
 ## Configuration
 
@@ -261,24 +283,16 @@ docker-compose --profile production up -d
 
 ## Available Plugins
 
-### Admin Plugin
-- `/reload` - Reload plugins
-- `/plugins` - List loaded plugins
-- `/permission` - Manage permissions
-- `/bot-info` - Bot information
+The bot includes several built-in plugins with various functionality:
 
-### Moderation Plugin
-- `/kick` - Kick members
-- `/ban` - Ban users
-- `/timeout` - Timeout members
-- `/purge` - Delete messages
+- **Admin Plugin**: Bot management, permissions, server information
+- **Moderation Plugin**: Member management, message moderation, timeouts
+- **Fun Plugin**: Games, entertainment commands, random utilities
+- **Utility Plugin**: User info, timestamps, encoding utilities
+- **Help Plugin**: Command help and plugin information
+- **Music Plugin**: Full-featured music bot with queue management
 
-### Fun Plugin
-- `/roll` - Roll dice
-- `/coinflip` - Flip a coin
-- `/8ball` - Magic 8-ball
-- `/joke` - Random jokes
-- `/choose` - Choose from options
+Each plugin has its own README with detailed command documentation. See the `plugins/` directory for specific plugin documentation.
 
 ## Contributing
 
