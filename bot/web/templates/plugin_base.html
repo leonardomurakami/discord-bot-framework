@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ plugin_name }} - {{ bot_name }}{% endblock %}</title>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+    <!-- Shared styles -->
+    {% include "_styles.html" %}
+
+    <!-- Plugin-specific styling -->
+    <style>
+        main.main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .plugin-header {
+            position: relative;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 244, 255, 0.9) 45%, rgba(233, 238, 255, 0.9) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: var(--card-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+        }
+
+        .plugin-header::after {
+            content: '';
+            position: absolute;
+            inset: -42% 38% 32% -12%;
+            background: radial-gradient(circle, var(--accent-soft), transparent 68%);
+            opacity: 0.45;
+            filter: blur(0.5px);
+            pointer-events: none;
+        }
+
+        .plugin-header h1 {
+            margin: 0;
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .plugin-description {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            max-width: 70ch;
+            position: relative;
+            z-index: 1;
+        }
+
+        .plugin-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.75rem;
+        }
+
+        .feature-card,
+        .game-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--card-radius);
+            padding: 1.6rem 1.8rem;
+            box-shadow: var(--shadow-sm);
+            color: var(--text-primary);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover,
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-title,
+        .game-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            background: var(--accent-color);
+            color: var(--accent-contrast);
+            border: 1px solid transparent;
+            padding: 0.65rem 1.35rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            box-shadow: 0 14px 28px var(--accent-soft);
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.25);
+        }
+
+        .btn-success:hover {
+            background: #0ea970;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #1f2937;
+            box-shadow: 0 12px 24px rgba(245, 158, 11, 0.22);
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .input-group input,
+        .input-group select,
+        .input-group textarea {
+            width: 100%;
+            padding: 0.7rem 0.85rem;
+            border: 1px solid var(--input-border);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+            transition: border 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .input-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .input-group input::placeholder,
+        .input-group textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.65;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
+        .result {
+            margin-top: 1rem;
+            padding: 1.1rem 1.25rem;
+            background: linear-gradient(120deg, rgba(99, 102, 241, 0.12), rgba(99, 102, 241, 0.05));
+            border-radius: calc(var(--card-radius) - 8px);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            display: none;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 0.25s ease;
+            color: var(--text-secondary);
+            font-style: italic;
+            margin-left: 0.65rem;
+        }
+
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+
+        .htmx-request button {
+            opacity: 0.75;
+            transform: scale(0.97);
+        }
+
+        .info-box {
+            border-radius: calc(var(--card-radius) - 8px);
+            padding: 1.15rem 1.25rem;
+            margin: 0.5rem 0;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(148, 163, 184, 0.12);
+            box-shadow: var(--shadow-sm);
+            color: var(--text-primary);
+        }
+
+        .info-box.warning {
+            background: rgba(245, 158, 11, 0.16);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .info-box.error {
+            background: rgba(239, 68, 68, 0.16);
+            border-color: rgba(239, 68, 68, 0.32);
+        }
+
+        .info-box.success {
+            background: rgba(16, 185, 129, 0.16);
+            border-color: rgba(16, 185, 129, 0.32);
+        }
+
+        [data-theme="dark"] .plugin-header {
+            background: linear-gradient(140deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.88) 45%, rgba(30, 41, 59, 0.85) 100%);
+        }
+
+        [data-theme="dark"] .plugin-header::after {
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 70%);
+            opacity: 0.42;
+        }
+
+        [data-theme="dark"] .feature-card,
+        [data-theme="dark"] .game-card {
+            background: rgba(15, 23, 42, 0.92);
+        }
+
+        [data-theme="dark"] .result {
+            background: linear-gradient(120deg, rgba(139, 92, 246, 0.18), rgba(99, 102, 241, 0.12));
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        [data-theme="dark"] .info-box {
+            background: rgba(148, 163, 184, 0.12);
+            border-color: rgba(148, 163, 184, 0.24);
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .info-box.warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.35);
+        }
+
+        [data-theme="dark"] .info-box.error {
+            background: rgba(248, 113, 113, 0.22);
+            border-color: rgba(248, 113, 113, 0.38);
+        }
+
+        [data-theme="dark"] .info-box.success {
+            background: rgba(52, 211, 153, 0.22);
+            border-color: rgba(52, 211, 153, 0.38);
+        }
+
+        @media (max-width: 768px) {
+            .plugin-header {
+                padding: 1.5rem;
+            }
+
+            .plugin-header h1 {
+                font-size: 1.85rem;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Plugin-specific styles can be added in extra_styles block */
+        {% block extra_styles %}{% endblock %}
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% include "_sidebar.html" %}
+
+        <main class="main-content">
+            <div class="plugin-header">
+                <h1>
+                    {% if plugin_icon %}{{ plugin_icon }} {% endif %}
+                    {{ plugin_name }}
+                </h1>
+                {% if plugin_description %}
+                <p class="plugin-description">{{ plugin_description }}</p>
+                {% endif %}
+            </div>
+
+            <div class="plugin-content">
+                {% block content %}
+                <!-- Plugin-specific content goes here -->
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Base JavaScript for all plugin panels -->
+    <script>
+        // Auto-show result divs when HTMX updates them
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target.classList.contains('result')) {
+                event.detail.target.style.display = 'block';
+                event.detail.target.classList.add('show');
+            }
+        });
+
+        // Clear previous results when starting new requests
+        document.body.addEventListener('htmx:beforeRequest', function(event) {
+            const targetSelector = event.detail.elt.getAttribute('hx-target');
+            if (targetSelector) {
+                const target = document.querySelector(targetSelector);
+                if (target && target.classList.contains('result')) {
+                    target.style.display = 'none';
+                    target.classList.remove('show');
+                    target.innerHTML = '';
+                }
+            }
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+
+    <!-- Shared JavaScript -->
+    {% include "_scripts.html" %}
+</body>
+</html>

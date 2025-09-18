@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bot-info">
+    <div class="bot-header">
+        {% if bot_avatar %}
+        <img src="{{ bot_avatar }}" alt="{{ bot_name }}" class="bot-avatar">
+        {% endif %}
+        <div>
+            <h1>{{ bot_name }}</h1>
+            <span class="status-badge {% if is_ready %}status-online{% else %}status-offline{% endif %}">
+                {% if is_ready %}Online{% else %}Offline{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="stats-grid" hx-get="/api/stats" hx-trigger="every 30s" hx-swap="innerHTML">
+        <div class="stat-card">
+            <div class="stat-value">{{ guild_count }}</div>
+            <div class="stat-label">Servers</div>
+        </div>
+        <!-- More stats will be loaded via HTMX -->
+    </div>
+</div>
+
+<div id="plugin-panels">
+    <!-- Plugin panels will be loaded here -->
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Auto-refresh status indicator
+    setInterval(async () => {
+        try {
+            const response = await fetch('/health');
+            const data = await response.json();
+            const badge = document.querySelector('.status-badge');
+            if (data.bot_ready) {
+                badge.textContent = 'Online';
+                badge.className = 'status-badge status-online';
+            } else {
+                badge.textContent = 'Offline';
+                badge.className = 'status-badge status-offline';
+            }
+        } catch (e) {
+            console.error('Failed to update status:', e);
+        }
+    }, 10000); // Every 10 seconds
+</script>
+{% endblock %}

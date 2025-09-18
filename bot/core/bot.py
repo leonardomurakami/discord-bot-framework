@@ -48,6 +48,10 @@ class DiscordBot:
         self.plugin_loader = PluginLoader(self)
         self.permission_manager = PermissionManager(self.db)
 
+        # Initialize web panel manager
+        from ..web import WebPanelManager
+        self.web_panel_manager = WebPanelManager(self)
+
         # Bot state
         self.is_ready = False
         self._startup_tasks: list = []
@@ -130,6 +134,10 @@ class DiscordBot:
             await self._load_plugins()
             logger.info("Plugins loaded")
 
+            # Start web panel
+            await self.web_panel_manager.start()
+            logger.info("Web panel started")
+
             # Run startup tasks
             for task in self._startup_tasks:
                 await task()
@@ -161,6 +169,9 @@ class DiscordBot:
         try:
             # Emit cleanup event
             await self.event_system.emit("bot_stopping", self)
+
+            # Stop web panel
+            await self.web_panel_manager.stop()
 
             # Unload all plugins
             for plugin_name in list(self.plugin_loader.plugins.keys()):

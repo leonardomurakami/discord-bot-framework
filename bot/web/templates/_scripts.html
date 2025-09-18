@@ -1,0 +1,88 @@
+<!-- Shared JavaScript for sidebar functionality -->
+<script>
+    // Global guild selection handler
+    function handleGuildChange(guildId) {
+        if (guildId) {
+            // Store selected guild in localStorage for persistence
+            localStorage.setItem('selectedGuildId', guildId);
+
+            // Get guild name from option data
+            const select = document.getElementById('guild-select');
+            const selectedOption = select.options[select.selectedIndex];
+            const guildName = selectedOption.getAttribute('data-name');
+
+            // Emit custom events for plugins to listen to
+            const guildChangeEvent = new CustomEvent('guildChanged', {
+                detail: { guildId, guildName }
+            });
+            document.dispatchEvent(guildChangeEvent);
+
+            console.log('Selected guild:', guildName, '(ID:', guildId, ')');
+        } else {
+            // Clear selection
+            localStorage.removeItem('selectedGuildId');
+
+            const clearEvent = new CustomEvent('guildCleared');
+            document.dispatchEvent(clearEvent);
+        }
+    }
+
+    // Logout function with token revocation
+    async function logout() {
+        try {
+            // Call logout endpoint which will revoke tokens
+            const response = await fetch('/auth/logout', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+
+            // Clear any local storage
+            localStorage.clear();
+
+            // Redirect to home page
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Still redirect even if revocation fails
+            window.location.href = '/';
+        }
+    }
+
+    // Dark mode toggle
+    function toggleDarkMode() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+
+        // Update toggle button text
+        const toggleBtn = document.getElementById('theme-toggle');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = newTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+    }
+
+    // Restore guild selection and theme on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Restore guild selection
+        const savedGuildId = localStorage.getItem('selectedGuildId');
+        const guildSelect = document.getElementById('guild-select');
+
+        if (savedGuildId && guildSelect) {
+            guildSelect.value = savedGuildId;
+            // Trigger change event to notify components
+            handleGuildChange(savedGuildId);
+        }
+
+        // Restore theme preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Update toggle button if it exists
+        const toggleBtn = document.getElementById('theme-toggle');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+        }
+    });
+</script>

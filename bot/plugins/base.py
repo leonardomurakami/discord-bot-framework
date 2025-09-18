@@ -24,11 +24,13 @@ class BasePlugin:
     async def on_load(self) -> None:
         await self._command_registry.register_commands()
         await self._register_event_listeners()
+        await self._register_web_panel()
         self.logger.info(f"Plugin {self.name} loaded successfully")
 
     async def on_unload(self) -> None:
         await self._command_registry.unregister_commands()
         await self._unregister_event_listeners()
+        await self._unregister_web_panel()
         self.logger.info(f"Plugin {self.name} unloaded successfully")
 
     async def _register_event_listeners(self) -> None:
@@ -47,6 +49,20 @@ class BasePlugin:
             self.bot.event_system.remove_listener(event_name, listener)
 
         self._event_listeners.clear()
+
+    async def _register_web_panel(self) -> None:
+        # Register web panel if plugin supports it
+        from ..web.mixins import WebPanelMixin
+        if isinstance(self, WebPanelMixin):
+            self.bot.web_panel_manager.register_plugin_panel(self.name, self)
+            self.logger.debug(f"Registered web panel for plugin: {self.name}")
+
+    async def _unregister_web_panel(self) -> None:
+        # Unregister web panel if plugin supports it
+        from ..web.mixins import WebPanelMixin
+        if isinstance(self, WebPanelMixin):
+            self.bot.web_panel_manager.unregister_plugin_panel(self.name)
+            self.logger.debug(f"Unregistered web panel for plugin: {self.name}")
 
     async def get_setting(self, guild_id: int, key: str, default: Any = None) -> Any:
         # Get plugin-specific setting for a guild

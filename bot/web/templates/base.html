@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ bot_name }} - Bot Panel{% endblock %}</title>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+    <!-- Shared styles -->
+    {% include "_styles.html" %}
+
+    <!-- Dashboard-specific styles -->
+    <style>
+        main.main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+        }
+
+        .bot-info {
+            position: relative;
+            background: linear-gradient(132deg, rgba(255, 255, 255, 0.97) 0%, rgba(242, 245, 255, 0.9) 42%, rgba(233, 238, 255, 0.88) 100%);
+            padding: 2rem;
+            border-radius: var(--card-radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+
+        .bot-info::after {
+            content: '';
+            position: absolute;
+            inset: -45% 36% 34% -12%;
+            background: radial-gradient(circle, var(--accent-soft), transparent 68%);
+            opacity: 0.42;
+            filter: blur(0.5px);
+            pointer-events: none;
+        }
+
+        .bot-header {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .bot-info .bot-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 20px 35px rgba(15, 23, 42, 0.18);
+            object-fit: cover;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+        }
+
+        .status-online {
+            background: rgba(16, 185, 129, 0.22);
+            color: #065f46;
+        }
+
+        .status-offline {
+            background: rgba(239, 68, 68, 0.22);
+            color: #7f1d1d;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: calc(var(--card-radius) - 8px);
+            padding: 1.25rem 1.4rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-value {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+        }
+
+        [data-theme="dark"] .bot-info {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.88) 45%, rgba(30, 41, 59, 0.85) 100%);
+        }
+
+        [data-theme="dark"] .bot-info::after {
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 70%);
+            opacity: 0.4;
+        }
+
+        [data-theme="dark"] .status-online {
+            color: #d1fae5;
+        }
+
+        [data-theme="dark"] .status-offline {
+            color: #fee2e2;
+        }
+
+        @media (max-width: 768px) {
+            .bot-info {
+                padding: 1.5rem;
+            }
+
+            .bot-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .bot-info .bot-avatar {
+                width: 64px;
+                height: 64px;
+            }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% include "_sidebar.html" %}
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+
+    <!-- Shared JavaScript -->
+    {% include "_scripts.html" %}
+</body>
+</html>

@@ -12,12 +12,14 @@ services:
       - ENVIRONMENT=development
     depends_on:
       - lavalink
+      - redis
     ports:
-      - "8080:8080"  # For future web interface
+      - "8080:8080"  # Web interface
     restart: unless-stopped
     networks:
       - lavalink
       - postgres
+      - redis
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4-alpine
@@ -45,11 +47,25 @@ services:
     networks:
       - postgres
 
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - redis
+
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   lavalink:
     driver: bridge
   postgres:
+    driver: bridge
+  redis:
     driver: bridge

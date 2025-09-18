@@ -1,0 +1,127 @@
+{% extends "plugin_base.html" %}
+
+{% block extra_styles %}
+/* Fun plugin specific styling - extends the base template */
+.game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Add subtle animation for game cards */
+.game-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+{% endblock %}
+
+{% block content %}
+<div class="game-grid">
+    <div class="game-card">
+        <div class="game-title">🎲 Dice Roller</div>
+        <p>Roll dice using standard notation (e.g., 2d6, 3d20)</p>
+        <form hx-post="/plugin/fun/api/roll" hx-target="#roll-result" hx-indicator="#roll-loading">
+            <div class="input-group">
+                <label for="dice">Dice Notation:</label>
+                <input type="text" id="dice" name="dice" value="1d6" placeholder="e.g., 2d6, 3d20">
+            </div>
+            <button type="submit" class="btn">🎲 Roll Dice</button>
+            <span id="roll-loading" class="htmx-indicator">Rolling...</span>
+        </form>
+        <div id="roll-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">🪙 Coin Flip</div>
+        <p>Flip a virtual coin and see if it lands on heads or tails</p>
+        <button class="btn" hx-post="/plugin/fun/api/coinflip" hx-target="#coinflip-result" hx-indicator="#coinflip-loading">
+            🪙 Flip Coin
+        </button>
+        <span id="coinflip-loading" class="htmx-indicator">Flipping...</span>
+        <div id="coinflip-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">🎱 Magic 8-Ball</div>
+        <p>Ask the magic 8-ball a question and get a mystical answer</p>
+        <form hx-post="/plugin/fun/api/8ball" hx-target="#eightball-result" hx-indicator="#eightball-loading">
+            <div class="input-group">
+                <label for="question">Your Question:</label>
+                <input type="text" id="question" name="question" placeholder="Ask anything...">
+            </div>
+            <button type="submit" class="btn">🎱 Ask 8-Ball</button>
+            <span id="eightball-loading" class="htmx-indicator">Consulting the spirits...</span>
+        </form>
+        <div id="eightball-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">🎲 Random Number</div>
+        <p>Generate a random number within your specified range</p>
+        <form hx-post="/plugin/fun/api/random" hx-target="#random-result" hx-indicator="#random-loading">
+            <div class="input-group">
+                <label for="min">Minimum:</label>
+                <input type="number" id="min" name="min" value="1">
+            </div>
+            <div class="input-group">
+                <label for="max">Maximum:</label>
+                <input type="number" id="max" name="max" value="100">
+            </div>
+            <button type="submit" class="btn">🎯 Generate Number</button>
+            <span id="random-loading" class="htmx-indicator">Generating...</span>
+        </form>
+        <div id="random-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">😂 Random Joke</div>
+        <p>Get a random joke to brighten your day</p>
+        <button class="btn" hx-post="/plugin/fun/api/joke" hx-target="#joke-result" hx-indicator="#joke-loading">
+            😂 Tell me a joke!
+        </button>
+        <span id="joke-loading" class="htmx-indicator">Finding a good one...</span>
+        <div id="joke-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">💭 Inspirational Quote</div>
+        <p>Get motivated with an inspirational quote</p>
+        <button class="btn btn-success" hx-post="/plugin/fun/api/quote" hx-target="#quote-result" hx-indicator="#quote-loading">
+            ✨ Inspire me!
+        </button>
+        <span id="quote-loading" class="htmx-indicator">Finding wisdom...</span>
+        <div id="quote-result" class="result"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-show result divs when HTMX updates them
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.classList.contains('result')) {
+        event.detail.target.style.display = 'block';
+        event.detail.target.classList.add('show');
+    }
+});
+
+// Clear previous results when starting new requests
+document.body.addEventListener('htmx:beforeRequest', function(event) {
+    const targetSelector = event.detail.elt.getAttribute('hx-target');
+    if (targetSelector) {
+        const target = document.querySelector(targetSelector);
+        if (target && target.classList.contains('result')) {
+            target.style.display = 'none';
+            target.classList.remove('show');
+            target.innerHTML = '';
+        }
+    }
+});
+
+console.log('Fun & Games panel loaded with plugin-local templates!');
+</script>
+{% endblock %}

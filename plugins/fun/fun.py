@@ -7,6 +7,10 @@ import lightbulb
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import CommandArgument, command
+from bot.web.mixins import WebPanelMixin
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from typing import Dict, Any
 
 # Plugin metadata for the loader
 PLUGIN_METADATA = {
@@ -20,7 +24,7 @@ PLUGIN_METADATA = {
 logger = logging.getLogger(__name__)
 
 
-class FunPlugin(BasePlugin):
+class FunPlugin(BasePlugin, WebPanelMixin):
     def __init__(self, bot) -> None:
         super().__init__(bot)
         self.session: aiohttp.ClientSession = None
@@ -494,3 +498,183 @@ class FunPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "quote", False, str(e))
+
+    # Web Panel Implementation
+    def get_panel_info(self) -> Dict[str, Any]:
+        """Return metadata about this plugin's web panel"""
+        return {
+            "name": "Fun & Games",
+            "description": "Interactive fun commands and games panel",
+            "route": "/plugin/fun",
+            "icon": "🎮",
+            "nav_order": 10
+        }
+
+    def register_web_routes(self, app: FastAPI) -> None:
+        """Register web routes for the fun plugin"""
+
+        @app.get("/plugin/fun", response_class=HTMLResponse)
+        async def fun_panel(request: Request):
+            """Main fun plugin panel"""
+            return self.render_plugin_template(request, "panel.html")
+
+        @app.post("/plugin/fun/api/roll")
+        async def api_roll_dice(request: Request):
+            """API endpoint for dice rolling"""
+            import random
+            try:
+                form_data = await request.form()
+                dice = form_data.get("dice", "1d6")
+
+                if "d" not in dice.lower():
+                    return HTMLResponse("❌ <strong>Invalid Format</strong><br>Please use dice notation like 1d6, 2d20, etc.")
+
+                parts = dice.lower().split("d")
+                if len(parts) != 2:
+                    return HTMLResponse("❌ <strong>Invalid Format</strong><br>Please use dice notation like 1d6, 2d20, etc.")
+
+                num_dice = int(parts[0]) if parts[0] else 1
+                num_sides = int(parts[1])
+
+                if not (1 <= num_dice <= 20) or not (2 <= num_sides <= 1000):
+                    return HTMLResponse("❌ <strong>Invalid Range</strong><br>Dice: 1-20, Sides: 2-1000")
+
+                rolls = [random.randint(1, num_sides) for _ in range(num_dice)]
+                total = sum(rolls)
+
+                if num_dice == 1:
+                    result = f"🎲 <strong>You rolled a {total}!</strong>"
+                else:
+                    rolls_text = ", ".join(str(roll) for roll in rolls)
+                    result = f"🎲 <strong>Rolls:</strong> {rolls_text}<br><strong>Total:</strong> {total}"
+
+                return HTMLResponse(result)
+
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
+
+        @app.post("/plugin/fun/api/coinflip")
+        async def api_coinflip(request: Request):
+            """API endpoint for coin flipping"""
+            import random
+            try:
+                result = random.choice(["Heads", "Tails"])
+                return HTMLResponse(f"🪙 <strong>The coin landed on {result}!</strong>")
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
+
+        @app.post("/plugin/fun/api/8ball")
+        async def api_8ball(request: Request):
+            """API endpoint for magic 8-ball"""
+            import random
+            try:
+                form_data = await request.form()
+                question = form_data.get("question", "").strip()
+
+                if not question:
+                    return HTMLResponse("❌ <strong>Please ask a question!</strong>")
+
+                responses = [
+                    "It is certain", "It is decidedly so", "Without a doubt", "Yes definitely",
+                    "You may rely on it", "As I see it, yes", "Most likely", "Outlook good",
+                    "Yes", "Signs point to yes", "Reply hazy, try again", "Ask again later",
+                    "Better not tell you now", "Cannot predict now", "Concentrate and ask again",
+                    "Don't count on it", "My reply is no", "My sources say no", "Outlook not so good", "Very doubtful"
+                ]
+
+                response = random.choice(responses)
+                return HTMLResponse(f"🎱 <strong>Question:</strong> {question}<br><strong>Answer:</strong> {response}")
+
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
+
+        @app.post("/plugin/fun/api/random")
+        async def api_random_number(request: Request):
+            """API endpoint for random number generation"""
+            import random
+            try:
+                form_data = await request.form()
+                min_val = int(form_data.get("min", 1))
+                max_val = int(form_data.get("max", 100))
+
+                if min_val > max_val:
+                    return HTMLResponse("❌ <strong>Invalid Range</strong><br>Minimum cannot be greater than maximum")
+
+                if abs(max_val - min_val) > 10_000_000:
+                    return HTMLResponse("❌ <strong>Range Too Large</strong><br>Range cannot exceed 10 million numbers")
+
+                result = random.randint(min_val, max_val)
+                total_possibilities = max_val - min_val + 1
+
+                return HTMLResponse(f"🎯 <strong>Generated:</strong> {result}<br><strong>Range:</strong> {min_val} - {max_val}<br><strong>Possibilities:</strong> {total_possibilities:,}")
+
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
+
+        @app.post("/plugin/fun/api/joke")
+        async def api_joke(request: Request):
+            """API endpoint for random jokes"""
+            import random
+            try:
+                # Try online API first, fallback to local jokes
+                if self.session:
+                    try:
+                        async with self.session.get("https://v2.jokeapi.dev/joke/Programming,Miscellaneous?blacklistFlags=nsfw,religious,political,racist,sexist,explicit") as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                if data["type"] == "single":
+                                    joke_text = data["joke"]
+                                else:
+                                    joke_text = f"{data['setup']}<br><br>{data['delivery']}"
+                                return HTMLResponse(f"😂 <strong>Here's a joke for you:</strong><br><br>{joke_text}")
+                    except:
+                        pass
+
+                # Fallback to local jokes
+                local_jokes = [
+                    "Why don't scientists trust atoms? Because they make up everything!",
+                    "Why did the scarecrow win an award? He was outstanding in his field!",
+                    "Why don't eggs tell jokes? They'd crack each other up!",
+                    "What do you call a fake noodle? An impasta!",
+                    "Why did the math book look so sad? Because it was full of problems!",
+                ]
+
+                joke = random.choice(local_jokes)
+                return HTMLResponse(f"😂 <strong>Here's a joke for you:</strong><br><br>{joke}")
+
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
+
+        @app.post("/plugin/fun/api/quote")
+        async def api_quote(request: Request):
+            """API endpoint for inspirational quotes"""
+            import random
+            try:
+                # Try online API first
+                if self.session:
+                    try:
+                        async with self.session.get("https://api.quotable.io/random?maxLength=150") as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                quote_text = data.get("content")
+                                quote_author = data.get("author")
+                                if quote_text and quote_author:
+                                    return HTMLResponse(f'💭 <strong>Inspirational Quote:</strong><br><br><em>"{quote_text}"</em><br><br>— {quote_author}')
+                    except:
+                        pass
+
+                # Fallback to local quotes
+                local_quotes = [
+                    ("The only way to do great work is to love what you do.", "Steve Jobs"),
+                    ("Innovation distinguishes between a leader and a follower.", "Steve Jobs"),
+                    ("Life is what happens to you while you're busy making other plans.", "John Lennon"),
+                    ("The future belongs to those who believe in the beauty of their dreams.", "Eleanor Roosevelt"),
+                    ("It is during our darkest moments that we must focus to see the light.", "Aristotle"),
+                    ("Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"),
+                ]
+
+                quote_text, quote_author = random.choice(local_quotes)
+                return HTMLResponse(f'💭 <strong>Inspirational Quote:</strong><br><br><em>"{quote_text}"</em><br><br>— {quote_author}')
+
+            except Exception as e:
+                return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
