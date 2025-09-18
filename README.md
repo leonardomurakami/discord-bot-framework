@@ -4,7 +4,7 @@ A modular Discord bot built with the Hikari framework, featuring a plugin system
 
 ## Features
 
-- 🔌 **Plugin System** - Modular architecture with hot reload support
+- 🔌 **Plugin System** - Modular architecture with dynamic plugin loading
 - 🔒 **RBAC Permissions** - Role-based access control using Discord roles
 - 🗄️ **Database Support** - SQLite for development, PostgreSQL for production
 - 🐳 **Docker Ready** - Development and production Docker configurations
@@ -45,7 +45,7 @@ python -m bot.cli db create
 
 5. Run the bot:
 ```bash
-python -m bot.cli run --dev  # Development mode with hot reload
+python -m bot.cli run --dev  # Development mode with development defaults
 # or
 python -m bot.cli run        # Production mode
 ```
@@ -53,7 +53,7 @@ python -m bot.cli run        # Production mode
 ### Docker Development
 
 ```bash
-# Development with hot reload
+# Development environment
 docker-compose up bot-dev
 
 # Production with PostgreSQL

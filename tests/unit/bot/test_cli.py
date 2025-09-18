@@ -71,7 +71,6 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert os.environ.get("ENVIRONMENT") == "development"
-        assert os.environ.get("HOT_RELOAD") == "true"
         mock_discord_bot.assert_called_once()
         mock_bot_instance.run.assert_called_once()
 
@@ -258,15 +257,11 @@ class TestEnvironmentVariables:
         # Clear environment variables first
         if "ENVIRONMENT" in os.environ:
             del os.environ["ENVIRONMENT"]
-        if "HOT_RELOAD" in os.environ:
-            del os.environ["HOT_RELOAD"]
-
         with patch("bot.cli.DiscordBot"), patch("bot.cli.setup_logging"):
             result = runner.invoke(app, ["run", "--dev"])
 
             assert result.exit_code == 0
             assert os.environ.get("ENVIRONMENT") == "development"
-            assert os.environ.get("HOT_RELOAD") == "true"
 
     def test_log_level_sets_environment_var(self):
         """Test that log level option sets environment variable."""
