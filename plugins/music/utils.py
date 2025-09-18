@@ -230,7 +230,7 @@ async def check_voice_channel_empty(music_plugin: "MusicPlugin", guild_id: int, 
         voice_states = [
             vs
             for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
-            if vs.channel_id == channel_id and not vs.member.is_bot
+            if vs.channel_id == channel_id and vs.member is not None and not vs.member.is_bot
         ]
 
         if len(voice_states) == 0:
@@ -258,7 +258,7 @@ async def start_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> 
                     voice_states = [
                         vs
                         for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
-                        if vs.channel_id == player.channel_id and not vs.member.is_bot
+                        if vs.channel_id == player.channel_id and vs.member is not None and not vs.member.is_bot
                     ]
 
                     if len(voice_states) == 0:

@@ -71,7 +71,7 @@ class MusicPlugin(BasePlugin):
             }
             await self.lavalink_client.voice_update_handler(lavalink_data)
 
-            if event.state.guild_id and not event.state.member.is_bot:
+            if event.state.guild_id and event.state.member is not None and not event.state.member.is_bot:
                 player = self.lavalink_client.player_manager.get(event.state.guild_id)
                 if player and player.is_connected and player.channel_id:
                     if (event.old_state and event.old_state.channel_id == player.channel_id) or (
