@@ -33,7 +33,6 @@ def run(
         import os
 
         os.environ["ENVIRONMENT"] = "development"
-        os.environ["HOT_RELOAD"] = "true"
 
     if log_level:
         import os
