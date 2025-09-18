@@ -13,6 +13,7 @@ def setup_playback_commands(plugin):
         name="play",
         description="Play a song",
         permission_node="music.play",
+        aliases=["p"],
         arguments=[CommandArgument("query", hikari.OptionType.STRING, "Song name or URL to play")],
     )
     async def play(ctx: lightbulb.Context, query: str) -> None:
