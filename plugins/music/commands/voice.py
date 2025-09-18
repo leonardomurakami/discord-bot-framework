@@ -33,7 +33,7 @@ def setup_voice_commands(plugin):
         await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, voice_state.channel_id)
 
         try:
-            channel = await ctx.bot.rest.fetch_channel(voice_state.channel_id)
+            channel = await ctx.bot.hikari_bot.rest.fetch_channel(voice_state.channel_id)
             channel_name = channel.name
         except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             channel_name = "Unknown Channel"
@@ -68,7 +68,7 @@ def setup_voice_commands(plugin):
         channel_name = "Unknown Channel"
         if player.channel_id:
             try:
-                channel = await ctx.bot.rest.fetch_channel(player.channel_id)
+                channel = await ctx.bot.hikari_bot.rest.fetch_channel(player.channel_id)
                 channel_name = channel.name
             except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 pass

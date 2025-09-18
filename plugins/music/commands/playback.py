@@ -190,7 +190,12 @@ def setup_playback_commands(plugin):
 
         await clear_queue_from_db(plugin, ctx.guild_id)
 
-        await plugin.smart_respond(ctx, "⏹️ Stopped the music and cleared the queue.")
+        embed = plugin.create_embed(
+            title="⏹️ Stopped",
+            description="Stopped the music and cleared the queue.",
+            color=hikari.Color(0xFF0000)
+        )
+        await plugin.smart_respond(ctx, embed=embed)
 
     @command(
         name="skip",
@@ -227,7 +232,7 @@ def setup_playback_commands(plugin):
             next_duration_seconds = (next_track.duration % 60000) // 1000
 
             try:
-                next_user = await ctx.bot.rest.fetch_user(next_track.requester)
+                next_user = await ctx.bot.hikari_bot.rest.fetch_user(next_track.requester)
                 next_requester = next_user.display_name or next_user.username
             except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 next_requester = "Unknown"

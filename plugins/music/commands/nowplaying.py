@@ -42,7 +42,7 @@ def setup_nowplaying_commands(plugin):
 
         requester = track.requester
         try:
-            user = await ctx.bot.rest.fetch_user(requester)
+            user = await ctx.bot.hikari_bot.rest.fetch_user(requester)
             requester_mention = user.mention
         except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             requester_mention = f"<@{requester}>"
