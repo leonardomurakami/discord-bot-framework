@@ -243,7 +243,7 @@ bot-run: env-validate ## Run the bot in production mode
 	@echo "$(BOLD)$(BLUE)Starting bot in production mode...$(RESET)"
 	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE)
 
-bot-dev: env-validate ## Run the bot in development mode with hot reload
+bot-dev: env-validate ## Run the bot in development mode
 	@echo "$(BOLD)$(BLUE)Starting bot in development mode...$(RESET)"
 	$(UV_RUN) $(PYTHON) -m $(BOT_MODULE) --dev
 
