@@ -19,7 +19,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.hikari-py.dev)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

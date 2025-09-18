@@ -100,19 +100,23 @@ class UtilityPlugin(BasePlugin):
                             embed.add_field("Roles", roles_text, inline=False)
 
                         # Guild permissions
-                        permissions = member.permissions
-                        admin_perms = []
-                        if permissions & hikari.Permissions.ADMINISTRATOR:
-                            admin_perms.append("Administrator")
-                        elif permissions & hikari.Permissions.MANAGE_GUILD:
-                            admin_perms.append("Manage Server")
-                        elif permissions & hikari.Permissions.MANAGE_CHANNELS:
-                            admin_perms.append("Manage Channels")
-                        elif permissions & hikari.Permissions.MANAGE_MESSAGES:
-                            admin_perms.append("Manage Messages")
+                        try:
+                            from bot.core.utils import calculate_member_permissions
+                            permissions = calculate_member_permissions(member, guild)
+                            admin_perms = []
+                            if permissions & hikari.Permissions.ADMINISTRATOR:
+                                admin_perms.append("Administrator")
+                            elif permissions & hikari.Permissions.MANAGE_GUILD:
+                                admin_perms.append("Manage Server")
+                            elif permissions & hikari.Permissions.MANAGE_CHANNELS:
+                                admin_perms.append("Manage Channels")
+                            elif permissions & hikari.Permissions.MANAGE_MESSAGES:
+                                admin_perms.append("Manage Messages")
 
-                        if admin_perms:
-                            embed.add_field("Key Permissions", ", ".join(admin_perms), inline=True)
+                            if admin_perms:
+                                embed.add_field("Key Permissions", ", ".join(admin_perms), inline=True)
+                        except Exception:
+                            pass  # Skip permissions if we can't calculate them
 
                 except Exception:
                     pass  # Not a member or can't get member info

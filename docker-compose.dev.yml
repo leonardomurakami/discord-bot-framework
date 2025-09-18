@@ -8,7 +8,7 @@ services:
       - ./data:/app/data
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - DATABASE_URL=sqlite:///data/bot.db
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/discord_bot}
       - ENVIRONMENT=development
     depends_on:
       - lavalink
@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
     networks:
       - lavalink
+      - postgres
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4-alpine
@@ -31,6 +32,24 @@ services:
     networks:
       - lavalink
 
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-discord_bot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - postgres
+
+volumes:
+  postgres_data:
+
 networks:
   lavalink:
+    driver: bridge
+  postgres:
     driver: bridge

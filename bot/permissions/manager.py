@@ -155,9 +155,14 @@ class PermissionManager:
             return True
 
         # Users with Administrator permission have all permissions
-        if user.permissions & hikari.Permissions.ADMINISTRATOR:
-            logger.debug(f"User {user.username} has Administrator permission - granting all permissions")
-            return True
+        try:
+            from ..core.utils import calculate_member_permissions
+            member_permissions = calculate_member_permissions(user, guild)
+            if member_permissions & hikari.Permissions.ADMINISTRATOR:
+                logger.debug(f"User {user.username} has Administrator permission - granting all permissions")
+                return True
+        except Exception as e:
+            logger.debug(f"Could not calculate member permissions: {e}")
 
         # Check if this permission is granted by default to all users
         if self._has_default_permission(permission_node):

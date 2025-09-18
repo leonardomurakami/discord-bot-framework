@@ -126,9 +126,15 @@ def requires_bot_permissions(*permissions: hikari.Permissions) -> Callable:
 
             # Check if bot has required permissions
             missing_perms = []
-            for perm in permissions:
-                if not (bot_member.permissions & perm):
-                    missing_perms.append(perm.name)
+            try:
+                from ..core.utils import calculate_member_permissions
+                bot_permissions = calculate_member_permissions(bot_member, guild)
+                for perm in permissions:
+                    if not (bot_permissions & perm):
+                        missing_perms.append(perm.name)
+            except Exception:
+                # Fallback: assume we don't have permissions if we can't calculate them
+                missing_perms = [perm.name for perm in permissions]
 
             if missing_perms:
                 perm_list = ", ".join(f"`{perm}`" for perm in missing_perms)
