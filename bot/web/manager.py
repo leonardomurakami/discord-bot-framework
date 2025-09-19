@@ -67,6 +67,11 @@ class WebPanelManager:
             # Register web routes
             plugin.register_web_routes(self.web_app.app)
 
+            # Register plugin static files if available
+            static_dir = plugin.get_static_directory()
+            if static_dir:
+                self.web_app.register_plugin_static(plugin_name, static_dir)
+
             # Store plugin and panel info
             self.registered_panels[plugin_name] = {
                 'plugin': plugin,

@@ -18,6 +18,7 @@ CMD ["python", "-O", "-m", "bot", "--dev"]
 FROM base AS production
 RUN uv pip install --system .[plugins-all]
 COPY . .
-RUN useradd --create-home --shell /bin/bash bot
+RUN useradd --create-home --shell /bin/bash bot && \
+    chown -R bot:bot /app
 USER bot
 CMD ["python", "-O", "-m", "bot"]

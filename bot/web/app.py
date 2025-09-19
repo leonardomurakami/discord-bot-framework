@@ -30,18 +30,12 @@ class WebApp:
         # Setup paths
         self.web_dir = Path(__file__).parent
         self.templates_dir = self.web_dir / "templates"
-        self.static_dir = self.web_dir / "static"
 
-        # Create directories if they don't exist
+        # Create templates directory if it doesn't exist (needed for web interface)
         self.templates_dir.mkdir(exist_ok=True)
-        self.static_dir.mkdir(exist_ok=True)
 
         # Setup Jinja2 templates
         self.templates = Jinja2Templates(directory=str(self.templates_dir))
-
-        # Mount static files
-        if self.static_dir.exists():
-            self.app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
 
         # Setup authentication
         from .auth import DiscordAuth
@@ -56,6 +50,15 @@ class WebApp:
 
         # Navigation data for templates
         self.navigation_panels = []
+
+    def register_plugin_static(self, plugin_name: str, static_dir: str) -> None:
+        """Register a plugin's static files directory"""
+        if os.path.exists(static_dir) and os.path.isdir(static_dir):
+            mount_path = f"/static/{plugin_name}"
+            self.app.mount(mount_path, StaticFiles(directory=static_dir), name=f"static_{plugin_name}")
+            logger.info(f"Registered static files for plugin '{plugin_name}' at {mount_path}")
+        else:
+            logger.warning(f"Static directory for plugin '{plugin_name}' not found: {static_dir}")
 
     def _setup_routes(self) -> None:
         @self.app.get("/", response_class=HTMLResponse)
