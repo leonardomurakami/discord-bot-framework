@@ -435,7 +435,7 @@ class UtilsPlugin(BasePlugin):
     @command(
         name="serverinfo",
         description="Display server information",
-        permission_node="utils.info"
+        permission_node="basic.info"
     )
     async def server_info(self, ctx) -> None:
         guild = ctx.get_guild()

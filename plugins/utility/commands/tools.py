@@ -35,7 +35,7 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="onthisday",
         description="Show historical events for a date (timedelta or dd/mm/yyyy)",
         aliases=["otd", "history"],
-        permission_node="utility.tools",
+        permission_node="basic.tools",
         arguments=[
             CommandArgument(
                 "date",
@@ -182,7 +182,7 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="qr",
         description="Generate a QR code from text or URL",
         aliases=["qrcode"],
-        permission_node="utility.tools",
+        permission_node="basic.tools",
         arguments=[
             CommandArgument(
                 "text",
@@ -235,7 +235,7 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
     @command(
         name="poll",
         description="Create a reaction-based poll",
-        permission_node="utility.tools",
+        permission_node="basic.tools",
         arguments=[
             CommandArgument("question", hikari.OptionType.STRING, "The poll question"),
             CommandArgument("option1", hikari.OptionType.STRING, "First option"),

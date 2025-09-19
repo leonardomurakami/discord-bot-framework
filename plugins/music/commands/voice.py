@@ -12,7 +12,7 @@ def setup_voice_commands(plugin):
     @command(
         name="join",
         description="Join your voice channel",
-        permission_node="music.play",
+        permission_node="basic.music.play",
     )
     async def join_voice(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -50,7 +50,7 @@ def setup_voice_commands(plugin):
         name="disconnect",
         description="Disconnect from voice channel",
         aliases=["leave"],
-        permission_node="music.manage",
+        permission_node="moderation.music.manage",
     )
     async def disconnect(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -86,7 +86,7 @@ def setup_voice_commands(plugin):
     @command(
         name="volume",
         description="Set or check the volume (0-100)",
-        permission_node="music.play",
+        permission_node="basic.music.play",
         arguments=[CommandArgument("level", hikari.OptionType.INTEGER, "Volume level (0-100)", required=False)],
     )
     async def volume(ctx: lightbulb.Context, level: int = None) -> None:

@@ -15,7 +15,7 @@ def setup_queue_commands(plugin):
         name="queue",
         description="Show the current queue with detailed information",
         aliases=["q"],
-        permission_node="music.play",
+        permission_node="basic.music.play",
         arguments=[
             CommandArgument("page", hikari.OptionType.INTEGER, "Page number (shows 5 tracks per page)", required=False, default=1)
         ],
@@ -126,7 +126,7 @@ def setup_queue_commands(plugin):
     @command(
         name="shuffle",
         description="Shuffle the current queue",
-        permission_node="music.play",
+        permission_node="basic.music.play",
     )
     async def shuffle(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -161,7 +161,7 @@ def setup_queue_commands(plugin):
         name="loop",
         description="Toggle loop modes: off -> track -> queue -> off",
         aliases=["repeat"],
-        permission_node="music.play",
+        permission_node="basic.music.play",
         arguments=[CommandArgument("mode", hikari.OptionType.STRING, "Loop mode: off, track, or queue", required=False)],
     )
     async def loop(ctx: lightbulb.Context, mode: str = None) -> None:
@@ -202,7 +202,7 @@ def setup_queue_commands(plugin):
         name="remove",
         description="Remove a track from the queue by position",
         aliases=["rm"],
-        permission_node="music.manage",
+        permission_node="moderation.music.manage",
         arguments=[CommandArgument("position", hikari.OptionType.INTEGER, "Position in queue to remove (1-based)")],
     )
     async def remove_track(ctx: lightbulb.Context, position: int) -> None:
@@ -245,7 +245,7 @@ def setup_queue_commands(plugin):
     @command(
         name="move",
         description="Move a track to a different position in the queue",
-        permission_node="music.manage",
+        permission_node="moderation.music.manage",
         arguments=[
             CommandArgument("from_position", hikari.OptionType.INTEGER, "Current position of track (1-based)"),
             CommandArgument("to_position", hikari.OptionType.INTEGER, "New position for track (1-based)"),
@@ -299,7 +299,7 @@ def setup_queue_commands(plugin):
     @command(
         name="clear",
         description="Clear the queue (keeps currently playing track)",
-        permission_node="music.manage",
+        permission_node="moderation.music.manage",
     )
     async def clear_queue(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:

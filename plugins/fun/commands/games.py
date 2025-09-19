@@ -32,7 +32,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
         name="roll",
         description="Roll dice (format: NdN, e.g., 2d6)",
         aliases=["r"],
-        permission_node="fun.games",
+        permission_node="basic.games",
         arguments=[
             CommandArgument(
                 "dice",
@@ -116,7 +116,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
             await plugin.log_command_usage(ctx, "roll", False, str(exc))
 
-    @command(name="coinflip", description="Flip a coin", permission_node="fun.games")
+    @command(name="coinflip", description="Flip a coin", permission_node="basic.games")
     async def flip_coin(ctx: lightbulb.Context) -> None:
         try:
             result = random.choice(["Heads", "Tails"])
@@ -138,7 +138,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
     @command(
         name="8ball",
         description="Ask the magic 8-ball a question",
-        permission_node="fun.games",
+        permission_node="basic.games",
         arguments=[CommandArgument("question", hikari.OptionType.STRING, "Your question for the 8-ball")],
     )
     async def magic_8ball(ctx: lightbulb.Context, question: str) -> None:
@@ -230,7 +230,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
         name="random",
         description="Generate random numbers within a range",
         aliases=["rng", "rand"],
-        permission_node="fun.games",
+        permission_node="basic.games",
         arguments=[
             CommandArgument(
                 "min_value",
@@ -295,7 +295,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
     @command(
         name="trivia",
         description="Start an interactive trivia question",
-        permission_node="fun.games",
+        permission_node="basic.games",
     )
     async def trivia_question(ctx: lightbulb.Context) -> None:
         try:
@@ -366,7 +366,7 @@ def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
         name="would-you-rather",
         description="Get a would you rather question",
         aliases=["wyr", "wouldyourather"],
-        permission_node="fun.games",
+        permission_node="basic.games",
     )
     async def would_you_rather(ctx: lightbulb.Context) -> None:
         try:

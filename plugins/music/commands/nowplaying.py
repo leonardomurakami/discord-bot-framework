@@ -13,7 +13,7 @@ def setup_nowplaying_commands(plugin):
         name="nowplaying",
         description="Show the currently playing track with detailed information",
         aliases=["np", "current"],
-        permission_node="music.play",
+        permission_node="basic.music.play",
     )
     async def now_playing(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:

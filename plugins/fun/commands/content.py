@@ -129,7 +129,7 @@ def setup_content_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
     @command(
         name="meme",
         description="Get a random meme",
-        permission_node="fun.images",
+        permission_node="basic.images",
     )
     async def random_meme(ctx: lightbulb.Context) -> None:
         try:

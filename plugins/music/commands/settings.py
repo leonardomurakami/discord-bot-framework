@@ -11,7 +11,7 @@ def setup_settings_commands(plugin):
         name="music-settings",
         description="Configure music plugin settings",
         aliases=["msettings"],
-        permission_node="music.settings",
+        permission_node="admin.music.settings",
         arguments=[
             CommandArgument("setting", hikari.OptionType.STRING, "Setting to configure: auto_disconnect_timer", required=False),
             CommandArgument("value", hikari.OptionType.INTEGER, "Value for the setting (1-30 minutes for timer)", required=False),

@@ -39,7 +39,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="timestamp",
         description="Convert time to Discord timestamp formats",
         aliases=["time", "ts"],
-        permission_node="utility.convert",
+        permission_node="basic.convert",
         arguments=[
             CommandArgument(
                 "time_input",
@@ -105,7 +105,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="color",
         description="Display information about a color",
         aliases=["colour"],
-        permission_node="utility.tools",
+        permission_node="basic.tools",
         arguments=[
             CommandArgument(
                 "color_input",
@@ -172,7 +172,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="base64",
         description="Encode or decode base64 text",
         aliases=["b64"],
-        permission_node="utility.convert",
+        permission_node="basic.convert",
         arguments=[
             CommandArgument("action", hikari.OptionType.STRING, "encode or decode"),
             CommandArgument("text", hikari.OptionType.STRING, "Text to encode/decode"),
@@ -230,7 +230,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
     @command(
         name="hash",
         description="Generate hash of text (MD5, SHA1, SHA256)",
-        permission_node="utility.tools",
+        permission_node="basic.tools",
         arguments=[
             CommandArgument(
                 "algorithm",
@@ -279,7 +279,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         name="translate",
         description="Translate text to different languages",
         aliases=["tr"],
-        permission_node="utility.convert",
+        permission_node="basic.convert",
         arguments=[
             CommandArgument(
                 "target_language",

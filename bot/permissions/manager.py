@@ -202,6 +202,8 @@ class PermissionManager:
 
     def _has_default_permission(self, permission_node: str) -> bool:
         """Check if this permission should be granted by default to all users."""
+        if permission_node.startswith("basic."):
+            return True
         # Permissions that are available to everyone by default
         default_permissions = {
             # Fun commands - available to all
