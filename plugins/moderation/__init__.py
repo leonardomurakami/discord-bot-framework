@@ -1,4 +1,4 @@
-from .moderation import ModerationPlugin
+from .moderation_plugin import ModerationPlugin
 
 PLUGIN_METADATA = {
     "name": "Moderation",
@@ -13,6 +13,7 @@ PLUGIN_METADATA = {
         "moderation.warn",
         "moderation.purge",
         "moderation.timeout",
+        "moderation.slowmode",
     ],
 }
 
