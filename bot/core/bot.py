@@ -112,7 +112,8 @@ class DiscordBot:
             )
 
             # Log if it's a potential command
-            if event.content and (event.content.startswith("/") or event.content.startswith(settings.bot_prefix)):
+            potential_prefix = await self.get_guild_prefix(event.guild_id) if event.guild_id else settings.bot_prefix
+            if event.content and (event.content.startswith("/") or event.content.startswith(potential_prefix)):
                 logger.info(f"Potential command detected: '{event.content}' from {event.author.username}")
 
             # Handle prefix commands via our custom handler
@@ -189,8 +190,22 @@ class DiscordBot:
         self._startup_tasks.append(task)
 
     async def get_guild_prefix(self, guild_id: int) -> str:
-        # This will be implemented by the database/guild settings
-        # For now, return default prefix
+        """Get the prefix for a specific guild, falling back to default if not found."""
+        try:
+            async with self.db.session() as session:
+                from bot.database.models import Guild
+                from sqlalchemy import select
+
+                result = await session.execute(select(Guild).where(Guild.id == guild_id))
+                guild = result.scalar_one_or_none()
+
+                if guild and guild.prefix:
+                    return guild.prefix
+
+        except Exception as e:
+            logger.error(f"Error getting guild prefix for {guild_id}: {e}")
+
+        # Return default prefix if no guild found or error occurred
         return settings.bot_prefix
 
     def run(self) -> None:

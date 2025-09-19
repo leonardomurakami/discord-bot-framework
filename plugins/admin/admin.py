@@ -4,7 +4,8 @@ import hikari
 import lightbulb
 
 from bot.plugins.base import BasePlugin
-from bot.plugins.commands import command
+from bot.plugins.commands import CommandArgument, command
+from bot.core.event_system import event_listener
 
 # Plugin metadata for the loader
 PLUGIN_METADATA = {
@@ -367,3 +368,312 @@ class AdminPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "uptime", False, str(e))
+
+    @command(
+        name="prefix",
+        description="View or set the bot's prefix for this server",
+        permission_node="admin.config",
+        arguments=[
+            CommandArgument(
+                "new_prefix",
+                hikari.OptionType.STRING,
+                "New prefix to set (leave empty to view current prefix)",
+                required=False,
+            )
+        ],
+    )
+    async def manage_prefix(self, ctx: lightbulb.Context, new_prefix: str = None) -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            if new_prefix is None:
+                # Get current prefix
+                current_prefix = await self.bot.get_guild_prefix(ctx.guild_id)
+                embed = self.create_embed(
+                    title="🔧 Current Server Prefix",
+                    description=f"The current prefix for this server is: `{current_prefix}`",
+                    color=hikari.Color(0x7289DA),
+                )
+                embed.add_field(
+                    "Usage",
+                    f"Use `{current_prefix}help` to see all commands\nUse `/prefix <new_prefix>` to change the prefix",
+                    inline=False,
+                )
+            else:
+                # Validate new prefix
+                if len(new_prefix) > 5:
+                    embed = self.create_embed(
+                        title="❌ Invalid Prefix",
+                        description="Prefix must be 5 characters or less.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                if len(new_prefix.strip()) == 0:
+                    embed = self.create_embed(
+                        title="❌ Invalid Prefix",
+                        description="Prefix cannot be empty or only whitespace.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                # Check for problematic characters
+                problematic_chars = ['"', "'", "`", "\n", "\r", "\t"]
+                if any(char in new_prefix for char in problematic_chars):
+                    embed = self.create_embed(
+                        title="❌ Invalid Prefix",
+                        description="Prefix cannot contain quotes, backticks, or whitespace characters.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                # Update prefix in database
+                async with self.bot.db.session() as session:
+                    from bot.database.models import Guild
+                    from sqlalchemy import select
+
+                    # Get or create guild
+                    result = await session.execute(select(Guild).where(Guild.id == ctx.guild_id))
+                    guild = result.scalar_one_or_none()
+
+                    if not guild:
+                        # Create new guild entry
+                        guild_obj = ctx.get_guild()
+                        guild = Guild(
+                            id=ctx.guild_id,
+                            name=guild_obj.name if guild_obj else "Unknown",
+                            prefix=new_prefix,
+                        )
+                        session.add(guild)
+                    else:
+                        # Update existing guild
+                        guild.prefix = new_prefix
+
+                    await session.commit()
+
+                embed = self.create_embed(
+                    title="✅ Prefix Updated",
+                    description=f"Server prefix has been changed to: `{new_prefix}`",
+                    color=hikari.Color(0x00FF00),
+                )
+                embed.add_field(
+                    "Usage",
+                    f"Use `{new_prefix}help` to see all commands",
+                    inline=False,
+                )
+                embed.add_field("Changed by", ctx.author.mention, inline=True)
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "prefix", True)
+
+        except Exception as e:
+            logger.error(f"Error in prefix command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to manage prefix: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "prefix", False, str(e))
+
+    @command(
+        name="autorole",
+        description="Configure roles automatically assigned to new members",
+        permission_node="admin.config",
+        arguments=[
+            CommandArgument(
+                "action",
+                hikari.OptionType.STRING,
+                "Action: add, remove, list, or clear",
+            ),
+            CommandArgument(
+                "role",
+                hikari.OptionType.ROLE,
+                "Role to add/remove (not needed for list/clear)",
+                required=False,
+            ),
+        ],
+    )
+    async def autorole(self, ctx: lightbulb.Context, action: str, role: hikari.Role = None) -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            action = action.lower().strip()
+
+            # Get current autoroles
+            current_autoroles = await self.get_setting(ctx.guild_id, "autoroles", [])
+
+            if action == "list":
+                if not current_autoroles:
+                    embed = self.create_embed(
+                        title="📋 Auto Roles",
+                        description="No auto roles are currently configured.",
+                        color=hikari.Color(0x7289DA),
+                    )
+                else:
+                    role_mentions = []
+                    for role_id in current_autoroles:
+                        try:
+                            role_obj = ctx.get_guild().get_role(role_id)
+                            if role_obj:
+                                role_mentions.append(role_obj.mention)
+                        except Exception:
+                            # Role might have been deleted
+                            pass
+
+                    if role_mentions:
+                        embed = self.create_embed(
+                            title="📋 Auto Roles",
+                            description=f"New members automatically receive:\n" + "\n".join([f"• {role}" for role in role_mentions]),
+                            color=hikari.Color(0x7289DA),
+                        )
+                    else:
+                        embed = self.create_embed(
+                            title="📋 Auto Roles",
+                            description="No valid auto roles found (they may have been deleted).",
+                            color=hikari.Color(0xFFAA00),
+                        )
+
+            elif action == "clear":
+                await self.set_setting(ctx.guild_id, "autoroles", [])
+                embed = self.create_embed(
+                    title="✅ Auto Roles Cleared",
+                    description="All auto roles have been removed.",
+                    color=hikari.Color(0x00FF00),
+                )
+
+            elif action in ["add", "remove"]:
+                if not role:
+                    embed = self.create_embed(
+                        title="❌ Missing Role",
+                        description=f"Please specify a role to {action}.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                # Check if bot can assign this role
+                bot_member = ctx.get_guild().get_member(ctx.client.get_me().id)
+                if not bot_member:
+                    embed = self.create_embed(
+                        title="❌ Bot Permission Error",
+                        description="Cannot verify bot permissions.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                bot_top_role = max(bot_member.role_ids) if bot_member.role_ids else ctx.guild_id
+                bot_role = ctx.get_guild().get_role(bot_top_role) if bot_top_role != ctx.guild_id else None
+
+                if bot_role and role.position >= bot_role.position:
+                    embed = self.create_embed(
+                        title="❌ Role Hierarchy Error",
+                        description=f"I cannot assign {role.mention} because it's higher than or equal to my highest role.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                if action == "add":
+                    if role.id in current_autoroles:
+                        embed = self.create_embed(
+                            title="❌ Already Configured",
+                            description=f"{role.mention} is already an auto role.",
+                            color=hikari.Color(0xFF0000),
+                        )
+                    else:
+                        current_autoroles.append(role.id)
+                        await self.set_setting(ctx.guild_id, "autoroles", current_autoroles)
+                        embed = self.create_embed(
+                            title="✅ Auto Role Added",
+                            description=f"{role.mention} will now be automatically assigned to new members.",
+                            color=hikari.Color(0x00FF00),
+                        )
+
+                elif action == "remove":
+                    if role.id not in current_autoroles:
+                        embed = self.create_embed(
+                            title="❌ Not Configured",
+                            description=f"{role.mention} is not an auto role.",
+                            color=hikari.Color(0xFF0000),
+                        )
+                    else:
+                        current_autoroles.remove(role.id)
+                        await self.set_setting(ctx.guild_id, "autoroles", current_autoroles)
+                        embed = self.create_embed(
+                            title="✅ Auto Role Removed",
+                            description=f"{role.mention} will no longer be automatically assigned to new members.",
+                            color=hikari.Color(0x00FF00),
+                        )
+
+            else:
+                embed = self.create_embed(
+                    title="❌ Invalid Action",
+                    description="Valid actions are: `add`, `remove`, `list`, `clear`",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "autorole", True)
+
+        except Exception as e:
+            logger.error(f"Error in autorole command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to manage auto roles: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "autorole", False, str(e))
+
+    @event_listener("member_join")
+    async def on_member_join(self, member: hikari.Member) -> None:
+        """Handle new member joins and assign auto roles."""
+        try:
+            # Get autoroles for this guild
+            autoroles = await self.get_setting(member.guild_id, "autoroles", [])
+
+            if not autoroles:
+                return  # No autoroles configured
+
+            guild = self.bot.hikari_bot.cache.get_guild(member.guild_id)
+            if not guild:
+                return
+
+            # Assign each autorole
+            roles_assigned = []
+            for role_id in autoroles:
+                try:
+                    role = guild.get_role(role_id)
+                    if role:
+                        await member.add_role(role, reason="Auto role assignment")
+                        roles_assigned.append(role.name)
+                        logger.info(f"Assigned auto role {role.name} to {member.username} in {guild.name}")
+                except Exception as e:
+                    logger.error(f"Failed to assign auto role {role_id} to {member.username}: {e}")
+
+            if roles_assigned:
+                logger.info(f"Assigned {len(roles_assigned)} auto roles to {member.username} in {guild.name}")
+
+        except Exception as e:
+            logger.error(f"Error in auto role assignment for {member.username}: {e}")

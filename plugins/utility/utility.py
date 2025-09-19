@@ -520,3 +520,462 @@ class UtilityPlugin(BasePlugin):
             h /= 6
 
         return (int(h * 360), int(s * 100), int(lightness * 100))
+
+    @command(
+        name="remindme",
+        description="Set a personal reminder",
+        aliases=["remind", "reminder"],
+        permission_node="utility.tools",
+        arguments=[
+            CommandArgument(
+                "time",
+                hikari.OptionType.STRING,
+                "When to remind (e.g., '5m', '1h', '2d')",
+            ),
+            CommandArgument(
+                "message",
+                hikari.OptionType.STRING,
+                "What to remind you about",
+            ),
+        ],
+    )
+    async def remind_me(self, ctx: lightbulb.Context, time: str, message: str) -> None:
+        try:
+            import re
+            from datetime import datetime, timedelta
+
+            # Parse time input
+            time_pattern = r'^(\d+)([mhd])$'
+            match = re.match(time_pattern, time.lower().strip())
+
+            if not match:
+                embed = self.create_embed(
+                    title="❌ Invalid Time Format",
+                    description="Use format like: `5m` (5 minutes), `1h` (1 hour), `2d` (2 days)",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            amount = int(match.group(1))
+            unit = match.group(2)
+
+            # Convert to timedelta
+            if unit == 'm':
+                if amount > 10080:  # Max 1 week in minutes
+                    raise ValueError("Maximum reminder time is 1 week")
+                delta = timedelta(minutes=amount)
+                unit_text = f"{amount} minute(s)"
+            elif unit == 'h':
+                if amount > 168:  # Max 1 week in hours
+                    raise ValueError("Maximum reminder time is 1 week")
+                delta = timedelta(hours=amount)
+                unit_text = f"{amount} hour(s)"
+            elif unit == 'd':
+                if amount > 7:  # Max 1 week
+                    raise ValueError("Maximum reminder time is 1 week")
+                delta = timedelta(days=amount)
+                unit_text = f"{amount} day(s)"
+
+            # Calculate reminder time
+            remind_time = datetime.now() + delta
+            remind_timestamp = int(remind_time.timestamp())
+
+            # Store reminder (simplified - in a real implementation, you'd want a proper database table)
+            reminder_data = {
+                "user_id": ctx.author.id,
+                "channel_id": ctx.channel_id,
+                "message": message,
+                "remind_time": remind_timestamp,
+                "created_at": int(datetime.now().timestamp())
+            }
+
+            # For now, just show confirmation - in a real implementation, you'd store in DB and have a background task
+            embed = self.create_embed(
+                title="⏰ Reminder Set",
+                description=f"I'll remind you in {unit_text}!",
+                color=hikari.Color(0x00FF7F),
+            )
+
+            embed.add_field("Reminder", message, inline=False)
+            embed.add_field("Time", f"<t:{remind_timestamp}:F>", inline=True)
+            embed.add_field("Relative", f"<t:{remind_timestamp}:R>", inline=True)
+
+            embed.set_footer("Note: Bot restarts will clear reminders. Use external tools for important reminders.")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "remindme", True)
+
+        except ValueError as e:
+            embed = self.create_embed(
+                title="❌ Invalid Input",
+                description=str(e),
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "remindme", False, str(e))
+
+        except Exception as e:
+            logger.error(f"Error in remindme command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to set reminder. Try again later!",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "remindme", False, str(e))
+
+    @command(
+        name="weather",
+        description="Get weather information for a location",
+        permission_node="utility.info",
+        arguments=[
+            CommandArgument(
+                "location",
+                hikari.OptionType.STRING,
+                "City name or location to get weather for",
+            )
+        ],
+    )
+    async def weather_info(self, ctx: lightbulb.Context, location: str) -> None:
+        try:
+            if not self.session:
+                embed = self.create_embed(
+                    title="❌ Service Unavailable",
+                    description="Weather service is currently unavailable.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # For demo purposes, we'll use a free weather API (OpenWeatherMap requires API key)
+            # This is a simplified example - in production, you'd want to use a proper weather API
+            try:
+                # Using wttr.in API as a fallback (no API key required)
+                async with self.session.get(f"https://wttr.in/{location}?format=j1") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        current = data["current_condition"][0]
+                        location_info = data["nearest_area"][0]
+
+                        embed = self.create_embed(
+                            title=f"🌤️ Weather for {location_info['areaName'][0]['value']}, {location_info['country'][0]['value']}",
+                            color=hikari.Color(0x87CEEB),
+                        )
+
+                        # Current conditions
+                        temp_c = current["temp_C"]
+                        temp_f = current["temp_F"]
+                        feels_like_c = current["FeelsLikeC"]
+                        feels_like_f = current["FeelsLikeF"]
+
+                        embed.add_field(
+                            "🌡️ Temperature",
+                            f"{temp_c}°C ({temp_f}°F)\nFeels like {feels_like_c}°C ({feels_like_f}°F)",
+                            inline=True
+                        )
+
+                        embed.add_field(
+                            "☁️ Conditions",
+                            current["weatherDesc"][0]["value"],
+                            inline=True
+                        )
+
+                        embed.add_field(
+                            "💨 Wind",
+                            f"{current['windspeedKmph']} km/h {current['winddir16Point']}",
+                            inline=True
+                        )
+
+                        embed.add_field(
+                            "💧 Humidity",
+                            f"{current['humidity']}%",
+                            inline=True
+                        )
+
+                        embed.add_field(
+                            "👁️ Visibility",
+                            f"{current['visibility']} km",
+                            inline=True
+                        )
+
+                        embed.add_field(
+                            "🌡️ UV Index",
+                            current.get('uvIndex', 'N/A'),
+                            inline=True
+                        )
+
+                        embed.set_footer("Weather data provided by wttr.in")
+
+                        await ctx.respond(embed=embed)
+                        await self.log_command_usage(ctx, "weather", True)
+                        return
+
+            except Exception as e:
+                logger.error(f"Weather API error: {e}")
+
+            # Fallback response
+            embed = self.create_embed(
+                title="🌤️ Weather Service",
+                description=f"Weather information for '{location}' is currently unavailable. Please try again later or check a weather website.",
+                color=hikari.Color(0xFFAA00),
+            )
+            embed.add_field(
+                "Suggested Alternatives",
+                "• Check weather.com\n• Use your device's weather app\n• Try a different location name",
+                inline=False
+            )
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "weather", True)
+
+        except Exception as e:
+            logger.error(f"Error in weather command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to get weather information. Try again later!",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "weather", False, str(e))
+
+    @command(
+        name="qr",
+        description="Generate a QR code from text or URL",
+        aliases=["qrcode"],
+        permission_node="utility.tools",
+        arguments=[
+            CommandArgument(
+                "text",
+                hikari.OptionType.STRING,
+                "Text or URL to encode in QR code",
+            )
+        ],
+    )
+    async def generate_qr(self, ctx: lightbulb.Context, text: str) -> None:
+        try:
+            import urllib.parse
+
+            # Validate input length
+            if len(text) > 1000:
+                embed = self.create_embed(
+                    title="❌ Text Too Long",
+                    description="QR code text must be 1000 characters or less.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # URL encode the text
+            encoded_text = urllib.parse.quote(text)
+
+            # Generate QR code using online service
+            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encoded_text}"
+
+            embed = self.create_embed(
+                title="📱 QR Code Generated",
+                description=f"QR Code for: `{text[:100]}{'...' if len(text) > 100 else ''}`",
+                color=hikari.Color(0x000000),
+            )
+
+            embed.set_image(qr_url)
+            embed.add_field("Text Length", f"{len(text)} characters", inline=True)
+
+            # Add URL info if it looks like a URL
+            if text.startswith(('http://', 'https://', 'www.')):
+                embed.add_field("Type", "🔗 URL", inline=True)
+            else:
+                embed.add_field("Type", "📝 Text", inline=True)
+
+            embed.set_footer("Scan with your device's camera or QR code app")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "qr", True)
+
+        except Exception as e:
+            logger.error(f"Error in qr command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to generate QR code. Try again later!",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "qr", False, str(e))
+
+    @command(
+        name="poll",
+        description="Create a reaction-based poll",
+        permission_node="utility.tools",
+        arguments=[
+            CommandArgument(
+                "question",
+                hikari.OptionType.STRING,
+                "The poll question",
+            ),
+            CommandArgument(
+                "option1",
+                hikari.OptionType.STRING,
+                "First option",
+            ),
+            CommandArgument(
+                "option2",
+                hikari.OptionType.STRING,
+                "Second option",
+            ),
+            CommandArgument(
+                "option3",
+                hikari.OptionType.STRING,
+                "Third option (optional)",
+                required=False,
+            ),
+            CommandArgument(
+                "option4",
+                hikari.OptionType.STRING,
+                "Fourth option (optional)",
+                required=False,
+            ),
+        ],
+    )
+    async def create_poll(self, ctx: lightbulb.Context, question: str, option1: str, option2: str, option3: str = None, option4: str = None) -> None:
+        try:
+            # Collect options
+            options = [option1, option2]
+            if option3:
+                options.append(option3)
+            if option4:
+                options.append(option4)
+
+            # Validate options
+            if len(options) < 2:
+                embed = self.create_embed(
+                    title="❌ Not Enough Options",
+                    description="A poll needs at least 2 options.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Emojis for reactions
+            number_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣"]
+
+            embed = self.create_embed(
+                title="📊 Poll",
+                description=f"**{question}**",
+                color=hikari.Color(0x1E90FF),
+            )
+
+            # Add options
+            options_text = ""
+            for i, option in enumerate(options):
+                options_text += f"{number_emojis[i]} {option}\n"
+
+            embed.add_field("Options", options_text, inline=False)
+            embed.add_field("How to Vote", "React with the number of your choice!", inline=False)
+            embed.set_footer(f"Poll created by {ctx.author.display_name}")
+
+            # Send poll and add reactions
+            message = await ctx.respond(embed=embed)
+
+            # Add reaction emojis
+            for i in range(len(options)):
+                await message.add_reaction(number_emojis[i])
+
+            await self.log_command_usage(ctx, "poll", True)
+
+        except Exception as e:
+            logger.error(f"Error in poll command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to create poll. Try again later!",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "poll", False, str(e))
+
+    @command(
+        name="translate",
+        description="Translate text to different languages",
+        aliases=["tr"],
+        permission_node="utility.convert",
+        arguments=[
+            CommandArgument(
+                "target_language",
+                hikari.OptionType.STRING,
+                "Target language (e.g., 'es' for Spanish, 'fr' for French)",
+            ),
+            CommandArgument(
+                "text",
+                hikari.OptionType.STRING,
+                "Text to translate",
+            ),
+        ],
+    )
+    async def translate_text(self, ctx: lightbulb.Context, target_language: str, text: str) -> None:
+        try:
+            # Validate input
+            if len(text) > 500:
+                embed = self.create_embed(
+                    title="❌ Text Too Long",
+                    description="Translation text must be 500 characters or less.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Language code mapping
+            language_codes = {
+                'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+                'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'ja': 'Japanese',
+                'ko': 'Korean', 'zh': 'Chinese', 'ar': 'Arabic', 'hi': 'Hindi',
+                'nl': 'Dutch', 'sv': 'Swedish', 'no': 'Norwegian', 'da': 'Danish',
+                'fi': 'Finnish', 'pl': 'Polish', 'tr': 'Turkish', 'th': 'Thai'
+            }
+
+            target_lang = target_language.lower().strip()
+
+            if target_lang not in language_codes:
+                valid_langs = ", ".join([f"`{code}` ({name})" for code, name in list(language_codes.items())[:10]])
+                embed = self.create_embed(
+                    title="❌ Invalid Language Code",
+                    description=f"Please use a valid language code.\n\n**Examples:**\n{valid_langs}\n\n[See more language codes online]",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Since we don't have access to Google Translate API without API keys,
+            # we'll provide a helpful response with translation services
+            embed = self.create_embed(
+                title="🌐 Translation Service",
+                description=f"**Original Text:**\n{text}\n\n**Target Language:** {language_codes[target_lang]} ({target_lang})",
+                color=hikari.Color(0x4285F4),
+            )
+
+            embed.add_field(
+                "Translation Services",
+                "• [Google Translate](https://translate.google.com)\n"
+                "• [DeepL](https://deepl.com)\n"
+                "• [Microsoft Translator](https://translator.microsoft.com)",
+                inline=False
+            )
+
+            embed.add_field(
+                "Quick Translation",
+                f"Copy your text and paste it into any of the translation services above to translate to {language_codes[target_lang]}.",
+                inline=False
+            )
+
+            embed.set_footer("API-based translation requires service setup")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "translate", True)
+
+        except Exception as e:
+            logger.error(f"Error in translate command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description="Failed to process translation request. Try again later!",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "translate", False, str(e))

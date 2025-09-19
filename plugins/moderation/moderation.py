@@ -639,3 +639,467 @@ class ModerationPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "slowmode", False, str(e))
+
+    @command(
+        name="warn",
+        description="Issue a warning to a member",
+        permission_node="moderation.warn",
+        arguments=[
+            CommandArgument(
+                "member",
+                hikari.OptionType.USER,
+                "Member to warn",
+            ),
+            CommandArgument(
+                "reason",
+                hikari.OptionType.STRING,
+                "Reason for the warning",
+                required=False,
+                default="No reason provided",
+            ),
+        ],
+    )
+    async def warn_member(self, ctx: lightbulb.Context, member: hikari.User, reason: str = "No reason provided") -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            if member.id == ctx.author.id:
+                embed = self.create_embed(
+                    title="❌ Invalid Target",
+                    description="You cannot warn yourself!",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            if member.id == ctx.client.get_me().id:
+                embed = self.create_embed(
+                    title="❌ Invalid Target",
+                    description="I cannot warn myself!",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Get current warnings
+            current_warnings = await self.get_setting(ctx.guild_id, "user_warnings", {})
+            user_warnings = current_warnings.get(str(member.id), [])
+
+            # Add new warning
+            from datetime import datetime
+            warning_data = {
+                "reason": reason,
+                "moderator": ctx.author.id,
+                "timestamp": int(datetime.now().timestamp()),
+                "id": len(user_warnings) + 1
+            }
+            user_warnings.append(warning_data)
+            current_warnings[str(member.id)] = user_warnings
+
+            # Save warnings
+            await self.set_setting(ctx.guild_id, "user_warnings", current_warnings)
+
+            # Try to send DM to warned user
+            try:
+                dm_channel = await member.fetch_dm_channel()
+                embed_dm = self.create_embed(
+                    title="⚠️ You have been warned",
+                    description=f"You have been warned in **{ctx.get_guild().name}**",
+                    color=hikari.Color(0xFFAA00),
+                )
+                embed_dm.add_field("Reason", reason, inline=False)
+                embed_dm.add_field("Moderator", f"{ctx.author.mention}", inline=True)
+                embed_dm.add_field("Warning Count", f"{len(user_warnings)}", inline=True)
+                await dm_channel.send(embed=embed_dm)
+            except Exception:
+                pass  # DM failed, continue with warning
+
+            embed = self.create_embed(
+                title="✅ Member Warned",
+                description=f"{member.mention} has been warned.",
+                color=hikari.Color(0xFFAA00),
+            )
+            embed.add_field("Reason", reason, inline=False)
+            embed.add_field("Moderator", ctx.author.mention, inline=True)
+            embed.add_field("Total Warnings", f"{len(user_warnings)}", inline=True)
+            embed.add_field("Warning ID", f"#{warning_data['id']}", inline=True)
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "warn", True)
+
+        except Exception as e:
+            logger.error(f"Error in warn command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to warn member: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "warn", False, str(e))
+
+    @command(
+        name="warnings",
+        description="View warnings for a member",
+        aliases=["warns"],
+        permission_node="moderation.warn",
+        arguments=[
+            CommandArgument(
+                "member",
+                hikari.OptionType.USER,
+                "Member to view warnings for",
+                required=False,
+            ),
+        ],
+    )
+    async def view_warnings(self, ctx: lightbulb.Context, member: hikari.User = None) -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            target_member = member or ctx.author
+
+            # Get warnings
+            current_warnings = await self.get_setting(ctx.guild_id, "user_warnings", {})
+            user_warnings = current_warnings.get(str(target_member.id), [])
+
+            if not user_warnings:
+                embed = self.create_embed(
+                    title="📋 No Warnings",
+                    description=f"{target_member.mention} has no warnings.",
+                    color=hikari.Color(0x00FF00),
+                )
+            else:
+                embed = self.create_embed(
+                    title=f"⚠️ Warnings for {target_member.display_name}",
+                    description=f"Total warnings: **{len(user_warnings)}**",
+                    color=hikari.Color(0xFFAA00),
+                )
+
+                # Show recent warnings (max 5)
+                recent_warnings = user_warnings[-5:]
+                for warning in recent_warnings:
+                    moderator_id = warning.get("moderator", "Unknown")
+                    timestamp = warning.get("timestamp", 0)
+                    reason = warning.get("reason", "No reason provided")
+                    warning_id = warning.get("id", "Unknown")
+
+                    embed.add_field(
+                        f"Warning #{warning_id}",
+                        f"**Reason:** {reason}\n**Moderator:** <@{moderator_id}>\n**Date:** <t:{timestamp}:f>",
+                        inline=False
+                    )
+
+                if len(user_warnings) > 5:
+                    embed.set_footer(f"Showing 5 most recent warnings out of {len(user_warnings)} total")
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "warnings", True)
+
+        except Exception as e:
+            logger.error(f"Error in warnings command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to retrieve warnings: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "warnings", False, str(e))
+
+    @command(
+        name="modnote",
+        description="Add or view private moderator notes on users",
+        permission_node="moderation.warn",
+        arguments=[
+            CommandArgument(
+                "action",
+                hikari.OptionType.STRING,
+                "Action: add, view, or clear",
+            ),
+            CommandArgument(
+                "member",
+                hikari.OptionType.USER,
+                "Member to add note for",
+            ),
+            CommandArgument(
+                "note",
+                hikari.OptionType.STRING,
+                "Note content (required for 'add' action)",
+                required=False,
+            ),
+        ],
+    )
+    async def mod_note(self, ctx: lightbulb.Context, action: str, member: hikari.User, note: str = None) -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            action = action.lower().strip()
+
+            # Get current notes
+            current_notes = await self.get_setting(ctx.guild_id, "user_notes", {})
+            user_notes = current_notes.get(str(member.id), [])
+
+            if action == "add":
+                if not note:
+                    embed = self.create_embed(
+                        title="❌ Missing Note",
+                        description="Please provide a note to add.",
+                        color=hikari.Color(0xFF0000),
+                    )
+                    await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                    return
+
+                # Add new note
+                from datetime import datetime
+                note_data = {
+                    "note": note,
+                    "moderator": ctx.author.id,
+                    "timestamp": int(datetime.now().timestamp()),
+                    "id": len(user_notes) + 1
+                }
+                user_notes.append(note_data)
+                current_notes[str(member.id)] = user_notes
+
+                # Save notes
+                await self.set_setting(ctx.guild_id, "user_notes", current_notes)
+
+                embed = self.create_embed(
+                    title="✅ Note Added",
+                    description=f"Added moderator note for {member.mention}",
+                    color=hikari.Color(0x00FF00),
+                )
+                embed.add_field("Note", note, inline=False)
+                embed.add_field("Total Notes", f"{len(user_notes)}", inline=True)
+
+            elif action == "view":
+                if not user_notes:
+                    embed = self.create_embed(
+                        title="📋 No Notes",
+                        description=f"No moderator notes found for {member.mention}.",
+                        color=hikari.Color(0x7289DA),
+                    )
+                else:
+                    embed = self.create_embed(
+                        title=f"📝 Moderator Notes for {member.display_name}",
+                        description=f"Total notes: **{len(user_notes)}**",
+                        color=hikari.Color(0x7289DA),
+                    )
+
+                    # Show recent notes (max 5)
+                    recent_notes = user_notes[-5:]
+                    for note_data in recent_notes:
+                        moderator_id = note_data.get("moderator", "Unknown")
+                        timestamp = note_data.get("timestamp", 0)
+                        note_content = note_data.get("note", "No content")
+                        note_id = note_data.get("id", "Unknown")
+
+                        embed.add_field(
+                            f"Note #{note_id}",
+                            f"**Content:** {note_content}\n**By:** <@{moderator_id}>\n**Date:** <t:{timestamp}:f>",
+                            inline=False
+                        )
+
+                    if len(user_notes) > 5:
+                        embed.set_footer(f"Showing 5 most recent notes out of {len(user_notes)} total")
+
+            elif action == "clear":
+                if user_notes:
+                    current_notes[str(member.id)] = []
+                    await self.set_setting(ctx.guild_id, "user_notes", current_notes)
+
+                    embed = self.create_embed(
+                        title="✅ Notes Cleared",
+                        description=f"Cleared all moderator notes for {member.mention}",
+                        color=hikari.Color(0x00FF00),
+                    )
+                    embed.add_field("Notes Removed", f"{len(user_notes)}", inline=True)
+                else:
+                    embed = self.create_embed(
+                        title="📋 No Notes",
+                        description=f"No moderator notes found for {member.mention}.",
+                        color=hikari.Color(0x7289DA),
+                    )
+
+            else:
+                embed = self.create_embed(
+                    title="❌ Invalid Action",
+                    description="Valid actions are: `add`, `view`, `clear`",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "modnote", True)
+
+        except Exception as e:
+            logger.error(f"Error in modnote command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to manage moderator note: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "modnote", False, str(e))
+
+    @command(
+        name="lockdown",
+        description="Lock or unlock a channel temporarily",
+        aliases=["lock", "unlock"],
+        permission_node="moderation.slowmode",
+        arguments=[
+            CommandArgument(
+                "action",
+                hikari.OptionType.STRING,
+                "Action: lock or unlock",
+            ),
+            CommandArgument(
+                "channel",
+                hikari.OptionType.CHANNEL,
+                "Channel to lock/unlock (default: current channel)",
+                required=False,
+            ),
+            CommandArgument(
+                "reason",
+                hikari.OptionType.STRING,
+                "Reason for lockdown",
+                required=False,
+                default="No reason provided",
+            ),
+        ],
+    )
+    async def lockdown_channel(self, ctx: lightbulb.Context, action: str, channel=None, reason: str = "No reason provided") -> None:
+        try:
+            if not ctx.guild_id:
+                embed = self.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            action = action.lower().strip()
+            target_channel = channel or ctx.get_channel()
+
+            if action not in ["lock", "unlock"]:
+                embed = self.create_embed(
+                    title="❌ Invalid Action",
+                    description="Valid actions are: `lock`, `unlock`",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            # Check if it's a text channel
+            if target_channel.type not in [
+                hikari.ChannelType.GUILD_TEXT,
+                hikari.ChannelType.GUILD_NEWS,
+            ]:
+                embed = self.create_embed(
+                    title="❌ Invalid Channel",
+                    description="Lockdown can only be applied to text channels.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            guild = ctx.get_guild()
+            everyone_role = guild.get_role(ctx.guild_id)  # @everyone role has same ID as guild
+
+            if not everyone_role:
+                embed = self.create_embed(
+                    title="❌ Permission Error",
+                    description="Could not find @everyone role.",
+                    color=hikari.Color(0xFF0000),
+                )
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            if action == "lock":
+                # Remove send message permission from @everyone
+                await target_channel.edit_overwrite(
+                    everyone_role,
+                    deny=hikari.Permissions.SEND_MESSAGES,
+                    reason=f"Channel lockdown: {reason} (by {ctx.author})"
+                )
+
+                # Store lockdown info
+                lockdown_data = await self.get_setting(ctx.guild_id, "lockdowns", {})
+                lockdown_data[str(target_channel.id)] = {
+                    "moderator": ctx.author.id,
+                    "reason": reason,
+                    "timestamp": int(datetime.now().timestamp())
+                }
+                await self.set_setting(ctx.guild_id, "lockdowns", lockdown_data)
+
+                embed = self.create_embed(
+                    title="🔒 Channel Locked",
+                    description=f"{target_channel.mention} has been locked down.",
+                    color=hikari.Color(0xFF0000),
+                )
+                embed.add_field("Reason", reason, inline=False)
+                embed.add_field("Moderator", ctx.author.mention, inline=True)
+
+            else:  # unlock
+                # Restore send message permission to @everyone
+                await target_channel.edit_overwrite(
+                    everyone_role,
+                    allow=hikari.Permissions.SEND_MESSAGES,
+                    reason=f"Channel unlock: {reason} (by {ctx.author})"
+                )
+
+                # Remove lockdown info
+                lockdown_data = await self.get_setting(ctx.guild_id, "lockdowns", {})
+                if str(target_channel.id) in lockdown_data:
+                    del lockdown_data[str(target_channel.id)]
+                    await self.set_setting(ctx.guild_id, "lockdowns", lockdown_data)
+
+                embed = self.create_embed(
+                    title="🔓 Channel Unlocked",
+                    description=f"{target_channel.mention} has been unlocked.",
+                    color=hikari.Color(0x00FF00),
+                )
+                embed.add_field("Reason", reason, inline=False)
+                embed.add_field("Moderator", ctx.author.mention, inline=True)
+
+            await ctx.respond(embed=embed)
+            await self.log_command_usage(ctx, "lockdown", True)
+
+        except hikari.ForbiddenError:
+            embed = self.create_embed(
+                title="❌ Permission Error",
+                description="I don't have permission to manage channel permissions.",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "lockdown", False, "Permission denied")
+
+        except Exception as e:
+            logger.error(f"Error in lockdown command: {e}")
+            embed = self.create_embed(
+                title="❌ Error",
+                description=f"Failed to {action} channel: {str(e)}",
+                color=hikari.Color(0xFF0000),
+            )
+            await self.smart_respond(ctx, embed=embed, ephemeral=True)
+            await self.log_command_usage(ctx, "lockdown", False, str(e))

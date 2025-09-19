@@ -177,7 +177,38 @@ class BasePlugin:
     ) -> None:
         try:
             async with self.bot.db.session() as session:
-                from ..database.models import CommandUsage
+                from ..database.models import CommandUsage, User, Guild
+                from sqlalchemy import select
+
+                # Ensure user exists in database
+                user_result = await session.execute(select(User).where(User.id == ctx.author.id))
+                user = user_result.scalar_one_or_none()
+
+                if not user:
+                    # Create user if doesn't exist
+                    user = User(
+                        id=ctx.author.id,
+                        username=ctx.author.username,
+                        discriminator=getattr(ctx.author, 'discriminator', '0000'),
+                    )
+                    session.add(user)
+
+                # Ensure guild exists in database if guild_id is provided
+                if ctx.guild_id:
+                    guild_result = await session.execute(select(Guild).where(Guild.id == ctx.guild_id))
+                    guild = guild_result.scalar_one_or_none()
+
+                    if not guild:
+                        # Create guild if doesn't exist
+                        guild_obj = ctx.get_guild()
+                        guild = Guild(
+                            id=ctx.guild_id,
+                            name=guild_obj.name if guild_obj else "Unknown Guild",
+                        )
+                        session.add(guild)
+
+                # Flush to ensure user/guild are created before adding command usage
+                await session.flush()
 
                 usage = CommandUsage(
                     guild_id=ctx.guild_id or 0,

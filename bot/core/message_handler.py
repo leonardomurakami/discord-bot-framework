@@ -32,7 +32,6 @@ class MessageCommandHandler:
     def __init__(self, bot: Any):
         self.bot = bot
         self.commands: dict[str, PrefixCommand] = {}
-        self.prefix = settings.bot_prefix
 
     def add_command(self, command: PrefixCommand) -> None:
         self.commands[command.name] = command
@@ -59,12 +58,18 @@ class MessageCommandHandler:
         if event.author.is_bot:
             return False
 
+        # Get guild-specific prefix
+        if not event.guild_id:
+            return False  # Only handle guild messages
+
+        guild_prefix = await self.bot.get_guild_prefix(event.guild_id)
+
         # Check if message starts with prefix
-        if not event.content or not event.content.startswith(self.prefix):
+        if not event.content or not event.content.startswith(guild_prefix):
             return False
 
         # Parse command and arguments
-        content = event.content[len(self.prefix) :].strip()
+        content = event.content[len(guild_prefix) :].strip()
         if not content:
             return False
 
@@ -78,7 +83,7 @@ class MessageCommandHandler:
 
         command = self.commands[command_name]
 
-        logger.info(f"Prefix command called: {self.prefix}{command_name} by {event.author.username}")
+        logger.info(f"Prefix command called: {guild_prefix}{command_name} by {event.author.username}")
 
         try:
             # Create a context-like object for prefix commands

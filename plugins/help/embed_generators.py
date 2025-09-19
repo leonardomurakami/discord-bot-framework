@@ -12,7 +12,7 @@ class EmbedGenerators:
         self.help_plugin = help_plugin
         self.bot = help_plugin.bot
 
-    async def get_general_help(self) -> hikari.Embed:
+    async def get_general_help(self, guild_id: int = None) -> hikari.Embed:
         """Generate the main help embed with improved design."""
         from .command_info import CommandInfoManager
 
@@ -26,7 +26,7 @@ class EmbedGenerators:
 
         # Get basic statistics
         stats = info_manager.get_bot_statistics()
-        prefix = info_manager.get_prefix()
+        prefix = await info_manager.get_prefix(guild_id)
 
         # Main stats in a more visual way
         embed.add_field(
@@ -59,7 +59,7 @@ class EmbedGenerators:
             embed.add_field("🗂️ Plugin Categories", categories_text, inline=False)
 
         # Popular/essential commands section
-        essential_commands = info_manager.get_essential_commands()
+        essential_commands = await info_manager.get_essential_commands(guild_id)
         if essential_commands:
             embed.add_field("⭐ Essential Commands", "\n".join(essential_commands[:5]), inline=False)
 
@@ -71,12 +71,12 @@ class EmbedGenerators:
 
         return embed
 
-    async def get_command_help(self, command_name: str) -> Optional[hikari.Embed]:
+    async def get_command_help(self, command_name: str, guild_id: int = None) -> Optional[hikari.Embed]:
         """Get detailed help for a specific command."""
         from .command_info import CommandInfoManager
 
         info_manager = CommandInfoManager(self.help_plugin)
-        prefix = info_manager.get_prefix()
+        prefix = await info_manager.get_prefix(guild_id)
 
         # Check prefix commands first
         prefix_cmd = None
@@ -234,7 +234,7 @@ class EmbedGenerators:
         embed.set_footer("💡 Use 'help <plugin>' for detailed information about any plugin!")
         return embed
 
-    async def get_plugin_commands_embed(self, plugin_name: str) -> Optional[hikari.Embed]:
+    async def get_plugin_commands_embed(self, plugin_name: str, guild_id: int = None, page: int = 0) -> Optional[hikari.Embed]:
         """Generate a user-friendly embed showing all commands for a specific plugin."""
         from .command_info import CommandInfoManager
 
@@ -272,12 +272,23 @@ class EmbedGenerators:
             if hasattr(cmd, "plugin_name") and cmd.plugin_name and cmd.plugin_name.lower() == plugin_name.lower():
                 prefix_commands.append(cmd)
 
-        # Display commands in a user-friendly way
+        # Display commands in a user-friendly way with pagination
         if prefix_commands:
-            commands_text = ""
-            prefix = info_manager.get_prefix()
+            prefix = await info_manager.get_prefix(guild_id)
 
-            for cmd in sorted(prefix_commands, key=lambda x: x.name):
+            # Sort commands and paginate (5 commands per page)
+            sorted_commands = sorted(prefix_commands, key=lambda x: x.name)
+            commands_per_page = 5
+            total_pages = (len(sorted_commands) + commands_per_page - 1) // commands_per_page
+
+            # Calculate page bounds
+            start_idx = page * commands_per_page
+            end_idx = min(start_idx + commands_per_page, len(sorted_commands))
+            page_commands = sorted_commands[start_idx:end_idx]
+
+            commands_text = ""
+
+            for cmd in page_commands:
                 # Get command arguments if available
                 cmd_usage = f"`{prefix}{cmd.name}"
 
@@ -310,35 +321,28 @@ class EmbedGenerators:
                 commands_text += f"**{cmd_usage}**{alias_text}\n{description}\n\n"
 
             if commands_text:
-                # Split into multiple fields if too long
-                if len(commands_text) > 1024:
-                    # Split by commands (double newline separator)
-                    command_blocks = commands_text.strip().split("\n\n")
-                    current_field = ""
-                    field_num = 1
+                # Add pagination info to field title
+                field_title = f"📝 Commands (Page {page + 1}/{total_pages})"
+                embed.add_field(field_title, commands_text.strip(), inline=False)
 
-                    for block in command_blocks:
-                        if len(current_field + block + "\n\n") > 1024 and current_field:
-                            embed.add_field(
-                                f"📝 Commands (Part {field_num})",
-                                current_field.strip(),
-                                inline=False,
-                            )
-                            current_field = block + "\n\n"
-                            field_num += 1
-                        else:
-                            current_field += block + "\n\n"
+                # Add pagination info to embed footer
+                embed.set_footer(f"Showing {len(page_commands)} of {len(sorted_commands)} commands • Page {page + 1}/{total_pages}")
 
-                    if current_field.strip():
-                        embed.add_field(
-                            f"📝 Commands (Part {field_num})",
-                            current_field.strip(),
-                            inline=False,
-                        )
-                else:
-                    embed.add_field("📝 Commands", commands_text.strip(), inline=False)
+            # Return pagination info separately as a tuple
+            return embed, {
+                "current_page": page,
+                "total_pages": total_pages,
+                "plugin_name": plugin_name,
+                "guild_id": guild_id,
+                "total_commands": len(sorted_commands)
+            }
         else:
             embed.add_field("📝 Commands", "No commands available in this plugin.", inline=False)
-
-        embed.set_footer("💡 Use the dropdown below to view other plugins!")
-        return embed
+            # Return tuple for consistency
+            return embed, {
+                "current_page": 0,
+                "total_pages": 1,
+                "plugin_name": plugin_name,
+                "guild_id": guild_id,
+                "total_commands": 0
+            }

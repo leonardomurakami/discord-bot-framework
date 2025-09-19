@@ -6,7 +6,7 @@ import miru
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import CommandArgument, command
-from .views import PersistentPluginSelectView, PluginSelectView
+from .views import PersistentPluginSelectView, PluginSelectView, PluginSelectWithPaginationView
 from .embed_generators import EmbedGenerators
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class HelpPlugin(BasePlugin):
                 query = query.lower().strip()
 
                 # First, try to find a specific command
-                command_help = await embed_gen.get_command_help(query)
+                command_help = await embed_gen.get_command_help(query, ctx.guild_id)
                 if command_help:
                     await ctx.respond(embed=command_help)
                     await self.log_command_usage(ctx, "help", True)
@@ -79,9 +79,9 @@ class HelpPlugin(BasePlugin):
                 )
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
             else:
-                # Show general help with plugin dropdown
-                help_embed = await embed_gen.get_general_help()
-                view = PluginSelectView(self)
+                # Show general help with plugin dropdown and pagination
+                help_embed = await embed_gen.get_general_help(ctx.guild_id)
+                view = PluginSelectWithPaginationView(self)
 
                 # Check if miru client is available
                 miru_client = getattr(self.bot, "miru_client", None)

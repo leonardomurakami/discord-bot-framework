@@ -22,7 +22,8 @@
       "Bash(python:*)",
       "Bash(find:*)",
       "WebFetch(domain:discord.com)",
-      "WebFetch(domain:docs.authlib.org)"
+      "WebFetch(domain:docs.authlib.org)",
+      "Bash(DATABASE_URL=\"sqlite:///data/bot.db\" python -c \"import sys; print(''Testing with SQLite:''); from bot.core.bot import DiscordBot; print(''✅ Bot core imports successfully with SQLite'')\")"
     ],
     "deny": [],
     "ask": []
