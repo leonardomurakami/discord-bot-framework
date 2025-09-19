@@ -26,7 +26,7 @@ class BotSettings(BaseSettings):
     # Web interface
     web_port: int = Field(default=8080, description="Web interface port")
     web_host: str = Field(default="0.0.0.0", description="Web interface host")
-    web_secret_key: str = Field(default="your-secret-key-change-this", description="Secret key for sessions")
+    web_secret_key: str = Field(..., description="Secret key for sessions")
 
     # Redis configuration
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
