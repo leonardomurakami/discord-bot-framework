@@ -71,12 +71,18 @@ class DiscordAuth:
             # Get user guilds
             user_guilds = await self.get_user_guilds(token['access_token'])
 
-            # Filter guilds where the bot is also present
-            bot_guilds = {str(guild_id) for guild_id in self.bot.hikari_bot.cache.get_guilds_view().keys()}
+            # Get bot's guilds via Discord API instead of cache
+            bot_guilds = await self.get_bot_guilds()
+            bot_guild_ids = {str(guild['id']) for guild in bot_guilds}
+
+            logger.debug(f"Bot is in {len(bot_guild_ids)} guilds: {[guild['name'] for guild in bot_guilds]}")
+            logger.debug(f"User is in {len(user_guilds)} guilds: {[guild['name'] for guild in user_guilds]}")
+
             accessible_guilds = [
                 guild for guild in user_guilds
-                if str(guild['id']) in bot_guilds
+                if str(guild['id']) in bot_guild_ids
             ]
+            logger.debug(f"User has access to {len(accessible_guilds)} guilds: {[guild['name'] for guild in accessible_guilds]}")
 
             # Store in session
             session_data = {
@@ -115,6 +121,19 @@ class DiscordAuth:
                 else:
                     raise HTTPException(status_code=401, detail="Could not fetch guilds")
 
+    async def get_bot_guilds(self) -> list:
+        """Get bot's guilds from Discord API using bot token"""
+        async with aiohttp.ClientSession() as session:
+            headers = {'Authorization': f'Bot {settings.discord_token}'}
+            async with session.get('https://discord.com/api/users/@me/guilds', headers=headers) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    logger.error(f"Failed to fetch bot guilds: {resp.status}")
+                    # Fallback to cache if API fails
+                    cache_guilds = self.bot.hikari_bot.cache.get_guilds_view()
+                    return [{'id': guild_id, 'name': 'Unknown'} for guild_id in cache_guilds.keys()]
+
     def get_current_user(self, request: Request) -> Optional[Dict[str, Any]]:
         """Get current authenticated user from session"""
         if request.session.get('authenticated'):
@@ -142,8 +161,20 @@ class DiscordAuth:
             except Exception as e:
                 logger.warning(f"Failed to revoke Discord token: {e}")
 
-        # Clear session data
-        request.session.clear()
+        # Clear session data (handle both Redis and regular sessions)
+        if hasattr(request.session, 'clear') and callable(request.session.clear):
+            # For Redis sessions, call clear() which deletes from Redis
+            if hasattr(request.session, '_data'):
+                await request.session.clear()
+            else:
+                request.session.clear()
+        else:
+            # Fallback: manually clear all keys
+            keys_to_remove = list(request.session.keys())
+            for key in keys_to_remove:
+                del request.session[key]
+
+        logger.info("Session cleared successfully")
 
     async def revoke_token(self, access_token: str):
         """Revoke Discord access token"""

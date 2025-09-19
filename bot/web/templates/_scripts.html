@@ -33,18 +33,26 @@
             // Call logout endpoint which will revoke tokens
             const response = await fetch('/auth/logout', {
                 method: 'GET',
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-cache'
             });
+
+            console.log('Logout response status:', response.status);
 
             // Clear any local storage
             localStorage.clear();
 
-            // Redirect to home page
-            window.location.href = '/';
+            // Clear any session storage
+            sessionStorage.clear();
+
+            // Force reload to clear any cached authentication state
+            window.location.replace('/');
         } catch (error) {
             console.error('Logout error:', error);
-            // Still redirect even if revocation fails
-            window.location.href = '/';
+            // Clear storage and redirect even if endpoint fails
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.replace('/');
         }
     }
 

@@ -30,27 +30,12 @@
             </div>
         </div>
 
-        {% if current_user.guilds %}
-        <div class="guild-selector">
-            <label for="guild-select" class="guild-label">Server</label>
-            <div class="select-wrapper">
-                <select id="guild-select" class="guild-dropdown" onchange="handleGuildChange(this.value)">
-                    <option value="">Select a server...</option>
-                    {% for guild in current_user.guilds %}
-                    <option value="{{ guild.id }}" data-name="{{ guild.name }}">
-                        {{ guild.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        {% endif %}
     </div>
     <div class="nav-divider"></div>
     {% endif %}
 
     <div class="nav-section">
-        <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">
+        <a href="/panel" class="nav-link {% if request.url.path == '/panel' %}active{% endif %}">
             <span class="nav-icon">🏠</span>
             <span class="nav-label">Dashboard</span>
         </a>

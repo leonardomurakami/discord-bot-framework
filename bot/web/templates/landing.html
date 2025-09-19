@@ -1,0 +1,235 @@
+{% import "_hero_card.html" as hero %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bot_name }} - Discord Bot</title>
+
+    <!-- Shared styles -->
+    {% include "_styles.html" %}
+
+    <!-- Landing page specific styles -->
+    <style>
+        .features-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .features-header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--card-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+
+        .features-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .features-subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.75rem;
+        }
+
+        .feature-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: calc(var(--card-radius) - 6px);
+            padding: 1.8rem;
+            box-shadow: var(--shadow-sm);
+            color: var(--text-primary);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        [data-theme="dark"] .feature-card {
+            background: rgba(15, 23, 42, 0.92);
+        }
+
+        @media (max-width: 768px) {
+            .features-title {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar for consistent layout -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                {% if bot_avatar %}
+                <img src="{{ bot_avatar }}" alt="{{ bot_name }}" class="bot-avatar">
+                {% else %}
+                <div class="bot-avatar-placeholder">{{ bot_name[0]|upper }}</div>
+                {% endif %}
+                <div>
+                    <div class="sidebar-eyebrow">Welcome to</div>
+                    <div class="sidebar-title">{{ bot_name }}</div>
+                </div>
+            </div>
+
+            <div class="nav-divider"></div>
+
+            <div class="nav-section">
+                <div class="nav-heading">Navigation</div>
+                {% if auth_configured %}
+                <a href="/auth/login" class="nav-link">
+                    <span class="nav-icon">🔐</span>
+                    <span class="nav-label">Login</span>
+                </a>
+                {% endif %}
+                <a href="#features" class="nav-link">
+                    <span class="nav-icon">✨</span>
+                    <span class="nav-label">Features</span>
+                </a>
+            </div>
+
+            <div class="nav-footer">
+                <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleDarkMode()">
+                    🌙 Dark
+                </button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            {% call hero.hero_card(
+                bot_name=bot_name,
+                bot_avatar=bot_avatar,
+                is_ready=is_ready,
+                stats=[
+                    {
+                        'value': guild_count,
+                        'label': 'Servers'
+                    }
+                ],
+                stats_attrs={
+                    'hx-get': '/api/stats',
+                    'hx-trigger': 'every 30s',
+                    'hx-swap': 'innerHTML'
+                }
+            ) %}
+                {% if not auth_configured %}
+                <p>Authentication is not configured. Contact the administrator to enable login functionality.</p>
+                {% endif %}
+            {% endcall %}
+
+            <!-- Features Section -->
+            <div class="features-section" id="features">
+                <div class="features-header">
+                    <h2 class="features-title">Powerful Features</h2>
+                    <p class="features-subtitle">Everything you need to manage and enhance your Discord server</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <span class="feature-icon">🛡️</span>
+                        <h3 class="feature-title">Moderation Tools</h3>
+                        <p class="feature-description">
+                            Keep your server safe with advanced moderation commands, automated filtering, and comprehensive logging systems.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon">🎵</span>
+                        <h3 class="feature-title">Music & Entertainment</h3>
+                        <p class="feature-description">
+                            Play music from various sources, create playlists, and enjoy high-quality audio streaming for your community.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon">⚙️</span>
+                        <h3 class="feature-title">Easy Configuration</h3>
+                        <p class="feature-description">
+                            Configure all features through an intuitive web panel with real-time updates and instant previews.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon">🎯</span>
+                        <h3 class="feature-title">Custom Commands</h3>
+                        <p class="feature-description">
+                            Create custom commands, automate responses, and build interactive experiences for your server members.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon">📊</span>
+                        <h3 class="feature-title">Analytics & Insights</h3>
+                        <p class="feature-description">
+                            Track server activity, monitor command usage, and gain valuable insights into your community's engagement.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <span class="feature-icon">🔒</span>
+                        <h3 class="feature-title">Role Management</h3>
+                        <p class="feature-description">
+                            Fine-grained permission control, automatic role assignment, and secure access management systems.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Shared JavaScript -->
+    {% include "_scripts.html" %}
+
+    <!-- Landing page specific JavaScript -->
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

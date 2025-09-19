@@ -1,27 +1,26 @@
 {% extends "base.html" %}
+{% import "_hero_card.html" as hero %}
 
 {% block content %}
-<div class="bot-info">
-    <div class="bot-header">
-        {% if bot_avatar %}
-        <img src="{{ bot_avatar }}" alt="{{ bot_name }}" class="bot-avatar">
-        {% endif %}
-        <div>
-            <h1>{{ bot_name }}</h1>
-            <span class="status-badge {% if is_ready %}status-online{% else %}status-offline{% endif %}">
-                {% if is_ready %}Online{% else %}Offline{% endif %}
-            </span>
-        </div>
-    </div>
+{{ hero.hero_card(
+    bot_name=bot_name,
+    bot_avatar=bot_avatar,
+    is_ready=is_ready,
+    stats=[
+        {
+            'value': guild_count,
+            'label': 'Servers'
+        }
+    ],
+    stats_attrs={
+        'hx-get': '/api/stats',
+        'hx-trigger': 'every 30s',
+        'hx-swap': 'innerHTML'
+    }
+) }}
 
-    <div class="stats-grid" hx-get="/api/stats" hx-trigger="every 30s" hx-swap="innerHTML">
-        <div class="stat-card">
-            <div class="stat-value">{{ guild_count }}</div>
-            <div class="stat-label">Servers</div>
-        </div>
-        <!-- More stats will be loaded via HTMX -->
-    </div>
-</div>
+<!-- Include the guild selector component after bot info -->
+{% include "_guild_selector.html" %}
 
 <div id="plugin-panels">
     <!-- Plugin panels will be loaded here -->

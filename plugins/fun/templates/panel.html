@@ -4,18 +4,76 @@
 /* Fun plugin specific styling - extends the base template */
 .game-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.75rem;
 }
 
-/* Add subtle animation for game cards */
 .game-card {
-    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.game-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+.game-card p {
+    color: var(--text-secondary);
+    margin: -0.25rem 0 0.5rem 0;
+}
+
+.game-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    align-items: stretch;
+}
+
+.game-card form .input-group {
+    text-align: left;
+}
+
+.game-card .card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.game-card .card-actions .btn,
+.game-card > .card-actions .btn {
+    width: min(240px, 100%);
+}
+
+.game-card .card-actions .htmx-indicator {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.game-card .result {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 1rem 1.1rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--card-radius) - 6px);
+    text-align: left;
+    color: var(--text-primary);
+}
+
+.game-card .result.show {
+    display: block;
+    animation: fadeInUp 0.25s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 {% endblock %}
 
@@ -29,8 +87,10 @@
                 <label for="dice">Dice Notation:</label>
                 <input type="text" id="dice" name="dice" value="1d6" placeholder="e.g., 2d6, 3d20">
             </div>
-            <button type="submit" class="btn">🎲 Roll Dice</button>
-            <span id="roll-loading" class="htmx-indicator">Rolling...</span>
+            <div class="card-actions">
+                <button type="submit" class="btn">🎲 Roll Dice</button>
+                <span id="roll-loading" class="htmx-indicator">Rolling...</span>
+            </div>
         </form>
         <div id="roll-result" class="result"></div>
     </div>
@@ -38,10 +98,12 @@
     <div class="game-card">
         <div class="game-title">🪙 Coin Flip</div>
         <p>Flip a virtual coin and see if it lands on heads or tails</p>
-        <button class="btn" hx-post="/plugin/fun/api/coinflip" hx-target="#coinflip-result" hx-indicator="#coinflip-loading">
-            🪙 Flip Coin
-        </button>
-        <span id="coinflip-loading" class="htmx-indicator">Flipping...</span>
+        <div class="card-actions">
+            <button class="btn" hx-post="/plugin/fun/api/coinflip" hx-target="#coinflip-result" hx-indicator="#coinflip-loading">
+                🪙 Flip Coin
+            </button>
+            <span id="coinflip-loading" class="htmx-indicator">Flipping...</span>
+        </div>
         <div id="coinflip-result" class="result"></div>
     </div>
 
@@ -53,8 +115,10 @@
                 <label for="question">Your Question:</label>
                 <input type="text" id="question" name="question" placeholder="Ask anything...">
             </div>
-            <button type="submit" class="btn">🎱 Ask 8-Ball</button>
-            <span id="eightball-loading" class="htmx-indicator">Consulting the spirits...</span>
+            <div class="card-actions">
+                <button type="submit" class="btn">🎱 Ask 8-Ball</button>
+                <span id="eightball-loading" class="htmx-indicator">Consulting the spirits...</span>
+            </div>
         </form>
         <div id="eightball-result" class="result"></div>
     </div>
@@ -71,8 +135,10 @@
                 <label for="max">Maximum:</label>
                 <input type="number" id="max" name="max" value="100">
             </div>
-            <button type="submit" class="btn">🎯 Generate Number</button>
-            <span id="random-loading" class="htmx-indicator">Generating...</span>
+            <div class="card-actions">
+                <button type="submit" class="btn">🎯 Generate Number</button>
+                <span id="random-loading" class="htmx-indicator">Generating...</span>
+            </div>
         </form>
         <div id="random-result" class="result"></div>
     </div>
@@ -80,20 +146,24 @@
     <div class="game-card">
         <div class="game-title">😂 Random Joke</div>
         <p>Get a random joke to brighten your day</p>
-        <button class="btn" hx-post="/plugin/fun/api/joke" hx-target="#joke-result" hx-indicator="#joke-loading">
-            😂 Tell me a joke!
-        </button>
-        <span id="joke-loading" class="htmx-indicator">Finding a good one...</span>
+        <div class="card-actions">
+            <button class="btn" hx-post="/plugin/fun/api/joke" hx-target="#joke-result" hx-indicator="#joke-loading">
+                😂 Tell me a joke!
+            </button>
+            <span id="joke-loading" class="htmx-indicator">Finding a good one...</span>
+        </div>
         <div id="joke-result" class="result"></div>
     </div>
 
     <div class="game-card">
         <div class="game-title">💭 Inspirational Quote</div>
         <p>Get motivated with an inspirational quote</p>
-        <button class="btn btn-success" hx-post="/plugin/fun/api/quote" hx-target="#quote-result" hx-indicator="#quote-loading">
-            ✨ Inspire me!
-        </button>
-        <span id="quote-loading" class="htmx-indicator">Finding wisdom...</span>
+        <div class="card-actions">
+            <button class="btn btn-success" hx-post="/plugin/fun/api/quote" hx-target="#quote-result" hx-indicator="#quote-loading">
+                ✨ Inspire me!
+            </button>
+            <span id="quote-loading" class="htmx-indicator">Finding wisdom...</span>
+        </div>
         <div id="quote-result" class="result"></div>
     </div>
 </div>

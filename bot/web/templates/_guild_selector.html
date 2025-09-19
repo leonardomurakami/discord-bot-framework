@@ -1,0 +1,98 @@
+<!-- Guild Selector Component for Main Content Area -->
+{% if current_user and current_user.guilds %}
+<div class="main-guild-selector">
+    <div class="guild-selector-header">
+        <h3 class="guild-selector-title">Server Selection</h3>
+        <p class="guild-selector-description">Choose a server to manage settings and view data ({{ current_user.guilds|length }} available)</p>
+    </div>
+
+    <div class="main-select-wrapper">
+        <label for="main-guild-select" class="main-guild-label">
+            <span class="label-text">Select Server</span>
+            <span class="label-icon">🏰</span>
+        </label>
+        <select id="main-guild-select" class="main-guild-dropdown" onchange="handleGuildChange(this.value)">
+            <option value="">Choose a server...</option>
+            {% for guild in current_user.guilds %}
+            <option value="{{ guild.id }}" data-name="{{ guild.name }}">
+                {{ guild.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <!-- Debug info (remove in production) -->
+        <div style="display: none;" id="debug-guilds">
+            Guild data: {{ current_user.guilds|tojson }}
+        </div>
+        <div class="dropdown-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+    </div>
+
+    <div id="selected-guild-info" class="selected-guild-info" style="display: none;">
+        <div class="guild-card">
+            <div class="guild-icon">🏰</div>
+            <div class="guild-details">
+                <h4 id="selected-guild-name">Server Name</h4>
+                <p id="selected-guild-id">ID: 123456789</p>
+            </div>
+            <div class="guild-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connected</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enhanced guild change handler for main content dropdown
+function handleMainGuildChange(guildId) {
+    const select = document.getElementById('main-guild-select');
+    const sidebar = document.getElementById('guild-select');
+    const guildInfo = document.getElementById('selected-guild-info');
+
+    if (guildId) {
+        // Get guild name from option data
+        const selectedOption = select.options[select.selectedIndex];
+        const guildName = selectedOption.getAttribute('data-name');
+
+        // Update guild info display
+        document.getElementById('selected-guild-name').textContent = guildName;
+        document.getElementById('selected-guild-id').textContent = `ID: ${guildId}`;
+        guildInfo.style.display = 'block';
+
+        // Sync with sidebar dropdown if it exists
+        if (sidebar) {
+            sidebar.value = guildId;
+        }
+
+        // Call the original handler
+        handleGuildChange(guildId);
+    } else {
+        guildInfo.style.display = 'none';
+        if (sidebar) {
+            sidebar.value = '';
+        }
+        handleGuildChange('');
+    }
+}
+
+// Update the onchange handler
+document.addEventListener('DOMContentLoaded', function() {
+    const mainSelect = document.getElementById('main-guild-select');
+    if (mainSelect) {
+        mainSelect.onchange = function() {
+            handleMainGuildChange(this.value);
+        };
+
+        // Restore selection
+        const savedGuildId = localStorage.getItem('selectedGuildId');
+        if (savedGuildId) {
+            mainSelect.value = savedGuildId;
+            handleMainGuildChange(savedGuildId);
+        }
+    }
+});
+</script>
+{% endif %}

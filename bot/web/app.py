@@ -59,8 +59,24 @@ class WebApp:
 
     def _setup_routes(self) -> None:
         @self.app.get("/", response_class=HTMLResponse)
+        async def landing_page(request: Request):
+            """Landing page route for non-authenticated users"""
+            bot_user = self.bot.hikari_bot.get_me()
+
+            context = {
+                "request": request,
+                "bot_name": bot_user.username if bot_user else "Discord Bot",
+                "bot_avatar": str(bot_user.make_avatar_url()) if bot_user and bot_user.make_avatar_url() else None,
+                "guild_count": len(self.bot.hikari_bot.cache.get_guilds_view()),
+                "is_ready": self.bot.is_ready,
+                "auth_configured": self.auth.is_configured(),
+            }
+
+            return self.templates.TemplateResponse(request, "landing.html", context)
+
+        @self.app.get("/panel", response_class=HTMLResponse)
         async def dashboard(request: Request):
-            """Main dashboard route"""
+            """Main dashboard route - requires authentication"""
             # Check authentication if OAuth is configured
             if self.auth.is_configured():
                 if not self.auth.is_authenticated(request):
@@ -110,7 +126,7 @@ class WebApp:
                 raise HTTPException(status_code=500, detail="OAuth not configured")
 
             if self.auth.is_authenticated(request):
-                return RedirectResponse(url="/", status_code=302)
+                return RedirectResponse(url="/panel", status_code=302)
 
             # Check if there was an auth error to prevent infinite loops
             error = request.query_params.get('error')
@@ -127,7 +143,7 @@ class WebApp:
 
             try:
                 await self.auth.handle_callback(request)
-                return RedirectResponse(url="/", status_code=302)
+                return RedirectResponse(url="/panel", status_code=302)
             except Exception as e:
                 logger.error(f"Auth callback error: {e}")
                 return RedirectResponse(url="/auth/login?error=1", status_code=302)

@@ -1,0 +1,71 @@
+{% macro hero_card(
+    bot_name,
+    bot_avatar=None,
+    is_ready=False,
+    subtitle=None,
+    description=None,
+    stats=None,
+    stats_attrs=None,
+    status_label_online='Online',
+    status_label_offline='Offline',
+    ctas=None,
+    extra_classes=''
+) -%}
+    {%- set stats_attrs = stats_attrs or {} -%}
+    {%- set stats = stats or [] -%}
+    {%- set ctas = ctas or [] -%}
+    <div class="panel-hero bot-info{% if extra_classes %} {{ extra_classes }}{% endif %}">
+        <div class="bot-header">
+            {% if bot_avatar %}
+            <img src="{{ bot_avatar }}" alt="{{ bot_name }}" class="bot-avatar">
+            {% else %}
+            <div class="bot-avatar-placeholder">{{ bot_name[0]|upper }}</div>
+            {% endif %}
+            <div>
+                <h1 class="panel-hero__title">{{ bot_name }}</h1>
+                {% if subtitle %}
+                <p class="panel-hero__subtitle">{{ subtitle }}</p>
+                {% endif %}
+                <span class="status-badge {% if is_ready %}status-online{% else %}status-offline{% endif %}">
+                    <span>⚡</span>
+                    <span>{% if is_ready %}{{ status_label_online }}{% else %}{{ status_label_offline }}{% endif %}</span>
+                </span>
+            </div>
+        </div>
+
+        {% if description %}
+        <p class="hero-description">{{ description }}</p>
+        {% endif %}
+
+        {% if stats %}
+        <div class="stats-grid" {{ stats_attrs|xmlattr }}>
+            {% for stat in stats %}
+            <div class="stat-card">
+                <div class="stat-value">{{ stat.value }}</div>
+                <div class="stat-label">{{ stat.label }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if ctas %}
+        <div class="hero-actions">
+            {% for cta in ctas %}
+            <a href="{{ cta.href }}" class="hero-btn{% if cta.variant == 'secondary' %} hero-btn--secondary{% endif %}">
+                {% if cta.icon %}<span>{{ cta.icon }}</span>{% endif %}
+                <span>{{ cta.label }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if caller is defined %}
+            {% set extra = caller() %}
+            {% if extra.strip() %}
+            <div class="hero-extra">
+                {{ extra | safe }}
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+{%- endmacro %}
