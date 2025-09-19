@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import hikari
 import pytest
 
-from plugins.moderation.moderation import PLUGIN_METADATA, ModerationPlugin
+from plugins.moderation import PLUGIN_METADATA, ModerationPlugin
 
 
 class TestModerationPlugin:

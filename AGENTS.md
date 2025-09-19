@@ -71,5 +71,3 @@ Welcome! This repository houses a modular Discord bot built on top of Hikari (ga
 - Clean up external resources (aiohttp sessions, background tasks) inside `on_unload` to avoid resource leaks and ensure stable unloads.
 - Update documentation (`README.md`, plugin-specific READMEs) whenever commands, permissions, or environment variables change.
 - If new conventions emerge for a subdirectory, add a nested `AGENTS.md` with scoped instructions so future agents inherit the context.
-
-Happy building, and may your bots be ever responsive! 🤖

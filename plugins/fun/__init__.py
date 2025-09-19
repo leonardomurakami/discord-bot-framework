@@ -1,4 +1,4 @@
-from .fun import FunPlugin
+from .fun_plugin import FunPlugin
 
 PLUGIN_METADATA = {
     "name": "Fun",

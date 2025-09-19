@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from plugins.fun.fun import FunPlugin
+from plugins.fun.fun_plugin import FunPlugin
 from tests.conftest import AsyncContextManager
 
 

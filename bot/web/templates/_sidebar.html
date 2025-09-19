@@ -1,0 +1,71 @@
+<nav class="sidebar">
+    <div class="sidebar-header">
+        {% if bot_avatar %}
+        <img src="{{ bot_avatar }}" alt="{{ bot_name }}" class="bot-avatar">
+        {% else %}
+        <div class="bot-avatar-placeholder">{{ bot_name[0]|upper }}</div>
+        {% endif %}
+        <div>
+            <div class="sidebar-eyebrow">Control Panel</div>
+            <div class="sidebar-title">{{ bot_name }}</div>
+        </div>
+    </div>
+
+    {% if current_user %}
+    <div class="user-card">
+        <div class="user-header">
+            {% if current_user.user.avatar %}
+            <img src="https://cdn.discordapp.com/avatars/{{ current_user.user.id }}/{{ current_user.user.avatar }}.png?size=64"
+                 alt="{{ current_user.user.username }}" class="user-avatar">
+            {% else %}
+            <div class="user-avatar-placeholder">{{ current_user.user.username[0]|upper }}</div>
+            {% endif %}
+            <div class="user-details">
+                <div class="username">{{ current_user.user.username }}</div>
+                {% if current_user.user.discriminator and current_user.user.discriminator != "0" %}
+                <div class="discriminator">#{{ current_user.user.discriminator }}</div>
+                {% else %}
+                <div class="discriminator">Signed in</div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+    <div class="nav-divider"></div>
+    {% endif %}
+
+    <div class="nav-section">
+        <a href="/panel" class="nav-link {% if request.url.path == '/panel' %}active{% endif %}">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">Dashboard</span>
+        </a>
+    </div>
+
+    {% if plugin_panels %}
+    <div class="nav-section">
+        <div class="nav-heading">Plugin Panels</div>
+        {% for panel in plugin_panels %}
+        <a href="{{ panel.route }}"
+           class="nav-link {% if request.url.path.startswith(panel.route) %}active{% endif %}"
+           title="{{ panel.description }}">
+            <span class="nav-icon">{% if panel.icon %}{{ panel.icon }}{% else %}⬡{% endif %}</span>
+            <span class="nav-label">{{ panel.name }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block extra_nav %}{% endblock %}
+
+    <div class="nav-footer">
+        <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleDarkMode()">
+            🌙 Dark
+        </button>
+        {% if current_user %}
+        <button class="logout-btn" onclick="logout()">
+            <span>⎋</span>
+            <span>Logout</span>
+        </button>
+        {% endif %}
+    </div>
+</nav>

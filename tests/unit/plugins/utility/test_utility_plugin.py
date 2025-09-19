@@ -6,7 +6,7 @@ from unittest.mock import patch
 import hikari
 import pytest
 
-from plugins.utility.utility import UtilityPlugin
+from plugins.utility.utility_plugin import UtilityPlugin
 
 
 class TestUtilityPlugin:
@@ -99,7 +99,7 @@ class TestUtilityPlugin:
         """Test timestamp command with 'now'."""
         plugin = UtilityPlugin(mock_bot)
 
-        with patch("plugins.utility.utility.datetime") as mock_datetime:
+        with patch("plugins.utility.utils.datetime") as mock_datetime:
             mock_datetime.now.return_value.timestamp.return_value = 1640995200
 
             await plugin.timestamp(mock_context, "now")

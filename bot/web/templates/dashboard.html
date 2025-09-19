@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% import "_hero_card.html" as hero %}
+
+{% block content %}
+{{ hero.hero_card(
+    bot_name=bot_name,
+    bot_avatar=bot_avatar,
+    is_ready=is_ready,
+    stats=[
+        {
+            'value': guild_count,
+            'label': 'Servers'
+        }
+    ],
+    stats_attrs={
+        'hx-get': '/api/stats',
+        'hx-trigger': 'every 30s',
+        'hx-swap': 'innerHTML'
+    }
+) }}
+
+<!-- Include the guild selector component after bot info -->
+{% include "_guild_selector.html" %}
+
+<div id="plugin-panels">
+    <!-- Plugin panels will be loaded here -->
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Auto-refresh status indicator
+    setInterval(async () => {
+        try {
+            const response = await fetch('/health');
+            const data = await response.json();
+            const badge = document.querySelector('.status-badge');
+            if (data.bot_ready) {
+                badge.textContent = 'Online';
+                badge.className = 'status-badge status-online';
+            } else {
+                badge.textContent = 'Offline';
+                badge.className = 'status-badge status-offline';
+            }
+        } catch (e) {
+            console.error('Failed to update status:', e);
+        }
+    }, 10000); // Every 10 seconds
+</script>
+{% endblock %}

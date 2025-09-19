@@ -85,20 +85,25 @@ class PersistentPluginSelectView(miru.View):
             if selected_value == "__home__":
                 from .embed_generators import EmbedGenerators
                 embed_gen = EmbedGenerators(help_plugin_instance)
-                home_embed = await embed_gen.get_general_help()
+                home_embed = await embed_gen.get_general_help(ctx.guild_id)
                 # Update the view with current plugin options
-                new_view = PluginSelectView(help_plugin_instance)
+                new_view = PluginSelectWithPaginationView(help_plugin_instance)
                 await ctx.edit_response(embed=home_embed, components=new_view)
                 return
 
             # Generate plugin-specific embed
             from .embed_generators import EmbedGenerators
             embed_gen = EmbedGenerators(help_plugin_instance)
-            plugin_embed = await embed_gen.get_plugin_commands_embed(selected_value)
+            result = await embed_gen.get_plugin_commands_embed(selected_value, ctx.guild_id, 0)
+
+            if isinstance(result, tuple):
+                plugin_embed, pagination_info = result
+            else:
+                plugin_embed = result
 
             if plugin_embed:
-                # Update the view with current plugin options
-                new_view = PluginSelectView(help_plugin_instance)
+                # Update the view with current plugin options and pagination
+                new_view = PluginSelectWithPaginationView(help_plugin_instance)
                 await ctx.edit_response(embed=plugin_embed, components=new_view)
             else:
                 error_embed = help_plugin_instance.create_embed(
@@ -106,7 +111,7 @@ class PersistentPluginSelectView(miru.View):
                     description=f"Could not find information for plugin: {selected_value}",
                     color=hikari.Color(0xFF0000),
                 )
-                new_view = PluginSelectView(help_plugin_instance)
+                new_view = PluginSelectWithPaginationView(help_plugin_instance)
                 await ctx.edit_response(embed=error_embed, components=new_view)
 
         except Exception as e:
@@ -190,12 +195,17 @@ class PluginSelectView(miru.View):
 
         # Handle "Home" selection
         if selected_value == "__home__":
-            home_embed = await embed_gen.get_general_help()
+            home_embed = await embed_gen.get_general_help(ctx.guild_id)
             await ctx.edit_response(embed=home_embed, components=self)
             return
 
         # Generate plugin-specific embed with commands
-        plugin_embed = await embed_gen.get_plugin_commands_embed(selected_value)
+        result = await embed_gen.get_plugin_commands_embed(selected_value, ctx.guild_id, 0)
+
+        if isinstance(result, tuple):
+            plugin_embed, pagination_info = result
+        else:
+            plugin_embed = result
 
         if plugin_embed:
             # Update the original message with the new embed, keeping the dropdown
@@ -208,3 +218,198 @@ class PluginSelectView(miru.View):
                 color=hikari.Color(0xFF0000),
             )
             await ctx.edit_response(embed=error_embed, components=self)
+
+
+class PluginSelectWithPaginationView(miru.View):
+    """Plugin selection view with pagination buttons."""
+
+    def __init__(self, help_plugin: "HelpPlugin", *args, **kwargs) -> None:
+        super().__init__(timeout=300, *args, **kwargs)  # 5 minute timeout
+        self.help_plugin = help_plugin
+        self.pagination_info = None  # Store pagination info here
+        self._setup_components()
+
+    def _setup_components(self) -> None:
+        """Setup the plugin selection dropdown menu and pagination buttons."""
+        self._setup_select_menu()
+        self._setup_pagination_buttons()
+
+    def _setup_select_menu(self) -> None:
+        """Setup the plugin selection dropdown menu."""
+        try:
+            plugins = self.help_plugin.bot.plugin_loader.get_loaded_plugins()
+        except (AttributeError, TypeError):
+            return
+
+        if not plugins:
+            return
+
+        options = [
+            miru.SelectOption(
+                label="🏠 General Help",
+                value="__home__",
+                description="Return to the main help overview",
+                emoji="🏠",
+            )
+        ]
+
+        for plugin_name in sorted(plugins):
+            try:
+                plugin_info = self.help_plugin.bot.plugin_loader.get_plugin_info(plugin_name)
+                if plugin_info:
+                    description = plugin_info.description[:100] if plugin_info.description else "No description"
+                    options.append(
+                        miru.SelectOption(
+                            label=plugin_info.name,
+                            value=plugin_name,
+                            description=description,
+                            emoji="🔌",
+                        )
+                    )
+            except (AttributeError, TypeError):
+                continue
+
+        if len(options) > 1:
+            select = miru.TextSelect(
+                placeholder="Select a plugin to view commands...",
+                options=options[:25],
+                custom_id="help_plugin_select_paginated",
+            )
+            select.callback = self.on_plugin_select
+            self.add_item(select)
+
+    def _setup_pagination_buttons(self) -> None:
+        """Setup pagination buttons."""
+        # Previous page button
+        prev_button = miru.Button(
+            style=hikari.ButtonStyle.SECONDARY,
+            emoji="⬅️",
+            custom_id="help_prev_page",
+            row=1
+        )
+        prev_button.callback = self.on_previous_page
+        self.add_item(prev_button)
+
+        # Next page button
+        next_button = miru.Button(
+            style=hikari.ButtonStyle.SECONDARY,
+            emoji="➡️",
+            custom_id="help_next_page",
+            row=1
+        )
+        next_button.callback = self.on_next_page
+        self.add_item(next_button)
+
+    async def on_plugin_select(self, ctx: miru.ViewContext) -> None:
+        """Handle plugin selection from dropdown."""
+        select = None
+        for item in self.children:
+            if isinstance(item, miru.TextSelect) and item.custom_id == "help_plugin_select_paginated":
+                select = item
+                break
+
+        if not select or not select.values:
+            return
+
+        selected_value = select.values[0]
+
+        from .embed_generators import EmbedGenerators
+        embed_gen = EmbedGenerators(self.help_plugin)
+
+        # Handle "Home" selection
+        if selected_value == "__home__":
+            home_embed = await embed_gen.get_general_help(ctx.guild_id)
+            await ctx.edit_response(embed=home_embed, components=self)
+            return
+
+        # Generate plugin-specific embed with commands (page 0)
+        result = await embed_gen.get_plugin_commands_embed(selected_value, ctx.guild_id, 0)
+
+        if isinstance(result, tuple):
+            plugin_embed, pagination_info = result
+            self.pagination_info = pagination_info  # Store in view instance
+        else:
+            plugin_embed = result
+            self.pagination_info = None
+
+        if plugin_embed:
+            await ctx.edit_response(embed=plugin_embed, components=self)
+        else:
+            error_embed = self.help_plugin.create_embed(
+                title="❌ Plugin Not Found",
+                description=f"Could not find information for plugin: {selected_value}",
+                color=hikari.Color(0xFF0000),
+            )
+            await ctx.edit_response(embed=error_embed, components=self)
+
+    async def on_previous_page(self, ctx: miru.ViewContext) -> None:
+        """Handle previous page button click."""
+        try:
+            # Use pagination info stored in view instance
+            if not self.pagination_info:
+                await ctx.respond("No pagination available for this content.", flags=hikari.MessageFlag.EPHEMERAL)
+                return
+
+            pagination_info = self.pagination_info
+            current_page = pagination_info.get("current_page", 0)
+            total_pages = pagination_info.get("total_pages", 1)
+            plugin_name = pagination_info.get("plugin_name")
+            guild_id = pagination_info.get("guild_id")
+
+            if current_page <= 0:
+                await ctx.respond("Already on the first page.", flags=hikari.MessageFlag.EPHEMERAL)
+                return
+
+            # Generate new embed for previous page
+            from .embed_generators import EmbedGenerators
+            embed_gen = EmbedGenerators(self.help_plugin)
+            result = await embed_gen.get_plugin_commands_embed(plugin_name, guild_id, current_page - 1)
+
+            if isinstance(result, tuple):
+                new_embed, new_pagination_info = result
+                self.pagination_info = new_pagination_info  # Update stored pagination info
+            else:
+                new_embed = result
+
+            if new_embed:
+                await ctx.edit_response(embed=new_embed, components=self)
+
+        except Exception as e:
+            logger.error(f"Error in previous page callback: {e}")
+            await ctx.respond("An error occurred while navigating pages.", flags=hikari.MessageFlag.EPHEMERAL)
+
+    async def on_next_page(self, ctx: miru.ViewContext) -> None:
+        """Handle next page button click."""
+        try:
+            # Use pagination info stored in view instance
+            if not self.pagination_info:
+                await ctx.respond("No pagination available for this content.", flags=hikari.MessageFlag.EPHEMERAL)
+                return
+
+            pagination_info = self.pagination_info
+            current_page = pagination_info.get("current_page", 0)
+            total_pages = pagination_info.get("total_pages", 1)
+            plugin_name = pagination_info.get("plugin_name")
+            guild_id = pagination_info.get("guild_id")
+
+            if current_page >= total_pages - 1:
+                await ctx.respond("Already on the last page.", flags=hikari.MessageFlag.EPHEMERAL)
+                return
+
+            # Generate new embed for next page
+            from .embed_generators import EmbedGenerators
+            embed_gen = EmbedGenerators(self.help_plugin)
+            result = await embed_gen.get_plugin_commands_embed(plugin_name, guild_id, current_page + 1)
+
+            if isinstance(result, tuple):
+                new_embed, new_pagination_info = result
+                self.pagination_info = new_pagination_info  # Update stored pagination info
+            else:
+                new_embed = result
+
+            if new_embed:
+                await ctx.edit_response(embed=new_embed, components=self)
+
+        except Exception as e:
+            logger.error(f"Error in next page callback: {e}")
+            await ctx.respond("An error occurred while navigating pages.", flags=hikari.MessageFlag.EPHEMERAL)

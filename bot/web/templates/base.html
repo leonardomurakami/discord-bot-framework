@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ bot_name }} - Bot Panel{% endblock %}</title>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+
+    <!-- Shared styles -->
+    {% include "_styles.html" %}
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        {% include "_sidebar.html" %}
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+
+    <!-- Shared JavaScript -->
+    {% include "_scripts.html" %}
+</body>
+</html>

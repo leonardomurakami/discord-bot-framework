@@ -11,9 +11,41 @@ services:
       - ENVIRONMENT=production
     depends_on:
       - postgres
+      - redis
+    ports:
+      - "8080:8080"  # Web interface
     restart: unless-stopped
+    networks:
+      - postgres
+      - redis
+    profiles:
+      - production
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-discord_bot}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - postgres
+    profiles:
+      - production
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - redis
     profiles:
       - production
 
 volumes:
   postgres_data:
+  redis_data:

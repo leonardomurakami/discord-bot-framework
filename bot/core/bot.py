@@ -48,6 +48,10 @@ class DiscordBot:
         self.plugin_loader = PluginLoader(self)
         self.permission_manager = PermissionManager(self.db)
 
+        # Initialize web panel manager
+        from ..web import WebPanelManager
+        self.web_panel_manager = WebPanelManager(self)
+
         # Bot state
         self.is_ready = False
         self._startup_tasks: list = []
@@ -108,7 +112,8 @@ class DiscordBot:
             )
 
             # Log if it's a potential command
-            if event.content and (event.content.startswith("/") or event.content.startswith(settings.bot_prefix)):
+            potential_prefix = await self.get_guild_prefix(event.guild_id) if event.guild_id else settings.bot_prefix
+            if event.content and (event.content.startswith("/") or event.content.startswith(potential_prefix)):
                 logger.info(f"Potential command detected: '{event.content}' from {event.author.username}")
 
             # Handle prefix commands via our custom handler
@@ -129,6 +134,10 @@ class DiscordBot:
             # Load plugins
             await self._load_plugins()
             logger.info("Plugins loaded")
+
+            # Start web panel
+            await self.web_panel_manager.start()
+            logger.info("Web panel started")
 
             # Run startup tasks
             for task in self._startup_tasks:
@@ -162,6 +171,9 @@ class DiscordBot:
             # Emit cleanup event
             await self.event_system.emit("bot_stopping", self)
 
+            # Stop web panel
+            await self.web_panel_manager.stop()
+
             # Unload all plugins
             for plugin_name in list(self.plugin_loader.plugins.keys()):
                 await self.plugin_loader.unload_plugin(plugin_name)
@@ -178,8 +190,22 @@ class DiscordBot:
         self._startup_tasks.append(task)
 
     async def get_guild_prefix(self, guild_id: int) -> str:
-        # This will be implemented by the database/guild settings
-        # For now, return default prefix
+        """Get the prefix for a specific guild, falling back to default if not found."""
+        try:
+            async with self.db.session() as session:
+                from bot.database.models import Guild
+                from sqlalchemy import select
+
+                result = await session.execute(select(Guild).where(Guild.id == guild_id))
+                guild = result.scalar_one_or_none()
+
+                if guild and guild.prefix:
+                    return guild.prefix
+
+        except Exception as e:
+            logger.error(f"Error getting guild prefix for {guild_id}: {e}")
+
+        # Return default prefix if no guild found or error occurred
         return settings.bot_prefix
 
     def run(self) -> None:

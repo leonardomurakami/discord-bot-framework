@@ -100,13 +100,21 @@ class CommandInfoManager:
 
         return formatted_pages if formatted_pages else ["No commands available."]
 
-    def get_prefix(self) -> str:
-        """Get the bot's command prefix safely."""
+    async def get_prefix(self, guild_id: int = None) -> str:
+        """Get the guild-specific command prefix safely."""
         try:
-            if hasattr(self.bot, "message_handler") and self.bot.message_handler:
-                return getattr(self.bot.message_handler, "prefix", "!")
+            if guild_id and hasattr(self.bot, "get_guild_prefix"):
+                return await self.bot.get_guild_prefix(guild_id)
         except (AttributeError, TypeError):
             pass
+
+        # Fallback to default prefix
+        try:
+            from config.settings import settings
+            return settings.bot_prefix
+        except (AttributeError, ImportError):
+            pass
+
         return "!"
 
     def get_bot_statistics(self) -> dict:
@@ -147,7 +155,7 @@ class CommandInfoManager:
 
         return stats
 
-    def get_essential_commands(self) -> list[str]:
+    async def get_essential_commands(self, guild_id: int = None) -> list[str]:
         """Get a list of essential commands for the help overview."""
         essential_commands = []
         command_suggestions = [
@@ -160,7 +168,7 @@ class CommandInfoManager:
             ("plugins", "🔌", "Show loaded plugins"),
         ]
 
-        prefix = self.get_prefix()
+        prefix = await self.get_prefix(guild_id)
 
         try:
             if hasattr(self.bot, "message_handler") and self.bot.message_handler:
