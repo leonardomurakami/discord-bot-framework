@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from .config import music_settings
+
 if TYPE_CHECKING:
     from .music_plugin import MusicPlugin
 
@@ -143,7 +145,7 @@ async def clear_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> Non
 async def restore_all_queues(music_plugin: "MusicPlugin") -> None:
     """Restore all queues from database on bot startup."""
     try:
-        await asyncio.sleep(5)
+        await asyncio.sleep(music_settings.check_empty_interval_seconds)
 
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import select
@@ -250,7 +252,7 @@ async def start_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> 
     disconnect_seconds = disconnect_minutes * 60
 
     async def disconnect_after_delay():
-        await asyncio.sleep(disconnect_seconds)
+        await asyncio.sleep(music_settings.disconnect_timeout_seconds)
         try:
             player = music_plugin.lavalink_client.player_manager.get(guild_id)
             if player and player.is_connected:

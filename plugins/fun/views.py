@@ -10,6 +10,8 @@ from typing import Any
 import hikari
 import miru
 
+from .config import fun_settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class TriviaView(miru.View):
     """Interactive trivia view with answer buttons for multiple users."""
 
     def __init__(self, question_data: dict[str, Any], initial_embed: hikari.Embed, *args: Any, **kwargs: Any) -> None:
-        super().__init__(timeout=30, *args, **kwargs)
+        super().__init__(timeout=fun_settings.game_view_timeout_seconds, *args, **kwargs)
         self.question_data = question_data
         self.participants: dict[int, tuple[str, int, float]] = {}
         self.is_finished = False
@@ -234,7 +236,7 @@ class WouldYouRatherView(miru.View):
     """Interactive would you rather view with voting buttons."""
 
     def __init__(self, option_a: str, option_b: str, *args: Any, **kwargs: Any) -> None:
-        super().__init__(timeout=300, *args, **kwargs)
+        super().__init__(timeout=fun_settings.content_view_timeout_seconds, *args, **kwargs)
         self.option_a = option_a
         self.option_b = option_b
         self.votes_a: set[int] = set()

@@ -1,27 +1,105 @@
 from __future__ import annotations
 
-"""Static configuration, API endpoints, and fallback content for the fun plugin."""
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
-API_ENDPOINTS = {
-    "joke": (
-        "https://v2.jokeapi.dev/joke/Programming,Miscellaneous?"
-        "blacklistFlags=nsfw,religious,political,racist,sexist,explicit"
-    ),
-    "quote": "https://api.quotable.io/random?maxLength=150",
-    "meme_primary": "https://meme-api.com/gimme",
-    "meme_secondary": "https://api.imgflip.com/get_memes",
-    "fact": "https://uselessfacts.jsph.pl/random.json?language=en",
-    "trivia": "https://opentdb.com/api.php?amount=1&type=multiple",
-}
+"""Configuration, API endpoints, and fallback content for the fun plugin."""
 
-DICE_LIMITS = {
-    "min_dice": 1,
-    "max_dice": 20,
-    "min_sides": 2,
-    "max_sides": 1000,
-}
 
-RANDOM_NUMBER_LIMIT = 10_000_000
+class FunSettings(BaseSettings):
+    """Configuration for the Fun plugin."""
+
+    # API endpoints
+    joke_api_url: str = Field(
+        default="https://v2.jokeapi.dev/joke/Programming,Miscellaneous?blacklistFlags=nsfw,religious,political,racist,sexist,explicit",
+        description="API endpoint for jokes",
+    )
+    quote_api_url: str = Field(
+        default="https://api.quotable.io/random?maxLength=150",
+        description="API endpoint for quotes",
+    )
+    meme_primary_api_url: str = Field(
+        default="https://meme-api.com/gimme",
+        description="Primary meme API endpoint",
+    )
+    meme_secondary_api_url: str = Field(
+        default="https://api.imgflip.com/get_memes",
+        description="Secondary meme API endpoint",
+    )
+    fact_api_url: str = Field(
+        default="https://uselessfacts.jsph.pl/random.json?language=en",
+        description="API endpoint for facts",
+    )
+    trivia_api_url: str = Field(
+        default="https://opentdb.com/api.php?amount=1&type=multiple",
+        description="API endpoint for trivia questions",
+    )
+
+    # Dice game limits
+    min_dice: int = Field(default=1, description="Minimum number of dice")
+    max_dice: int = Field(default=20, description="Maximum number of dice")
+    min_sides: int = Field(default=2, description="Minimum sides per die")
+    max_sides: int = Field(default=1000, description="Maximum sides per die")
+
+    # Random number limit
+    random_number_limit: int = Field(
+        default=10_000_000,
+        description="Maximum value for random number generation",
+    )
+
+    # UI timeouts
+    game_view_timeout_seconds: int = Field(
+        default=30,
+        description="Timeout for game views in seconds",
+    )
+    content_view_timeout_seconds: int = Field(
+        default=300,  # 5 minutes
+        description="Timeout for content views in seconds",
+    )
+
+    # HTTP request timeout
+    api_request_timeout_seconds: int = Field(
+        default=10,
+        description="Timeout for API requests in seconds",
+    )
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        env_prefix = "FUN_"
+        case_sensitive = False
+        extra = "ignore"
+
+    @property
+    def api_endpoints(self) -> dict[str, str]:
+        """Get API endpoints as a dictionary for backwards compatibility."""
+        return {
+            "joke": self.joke_api_url,
+            "quote": self.quote_api_url,
+            "meme_primary": self.meme_primary_api_url,
+            "meme_secondary": self.meme_secondary_api_url,
+            "fact": self.fact_api_url,
+            "trivia": self.trivia_api_url,
+        }
+
+    @property
+    def dice_limits(self) -> dict[str, int]:
+        """Get dice limits as a dictionary for backwards compatibility."""
+        return {
+            "min_dice": self.min_dice,
+            "max_dice": self.max_dice,
+            "min_sides": self.min_sides,
+            "max_sides": self.max_sides,
+        }
+
+
+# Plugin settings instance
+fun_settings = FunSettings()
+
+# Legacy constants for backwards compatibility
+API_ENDPOINTS = fun_settings.api_endpoints
+DICE_LIMITS = fun_settings.dice_limits
+RANDOM_NUMBER_LIMIT = fun_settings.random_number_limit
 
 DEFAULT_JOKES = [
     "Why don't scientists trust atoms? Because they make up everything!",

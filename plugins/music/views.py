@@ -3,9 +3,13 @@ import random
 import hikari
 import miru
 
+from .config import music_settings
+
 
 class MusicControlView(miru.View):
-    def __init__(self, music_plugin, guild_id: int, *, timeout: float = 300) -> None:
+    def __init__(self, music_plugin, guild_id: int, *, timeout: float = None) -> None:
+        if timeout is None:
+            timeout = music_settings.control_view_timeout_seconds
         super().__init__(timeout=timeout)
         self.music_plugin = music_plugin
         self.guild_id = guild_id
@@ -90,7 +94,9 @@ class MusicControlView(miru.View):
 
 
 class SearchResultView(miru.View):
-    def __init__(self, music_plugin, guild_id: int, tracks: list, user_id: int, *, timeout: float = 60) -> None:
+    def __init__(self, music_plugin, guild_id: int, tracks: list, user_id: int, *, timeout: float = None) -> None:
+        if timeout is None:
+            timeout = music_settings.queue_view_timeout_seconds
         super().__init__(timeout=timeout)
         self.music_plugin = music_plugin
         self.guild_id = guild_id

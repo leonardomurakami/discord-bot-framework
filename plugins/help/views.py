@@ -2,6 +2,8 @@ import logging
 import hikari
 import miru
 
+from .config import help_settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -224,7 +226,7 @@ class PluginSelectWithPaginationView(miru.View):
     """Plugin selection view with pagination buttons."""
 
     def __init__(self, help_plugin: "HelpPlugin", *args, **kwargs) -> None:
-        super().__init__(timeout=300, *args, **kwargs)  # 5 minute timeout
+        super().__init__(timeout=help_settings.pagination_timeout_seconds, *args, **kwargs)
         self.help_plugin = help_plugin
         self.pagination_info = None  # Store pagination info here
         self._setup_components()
