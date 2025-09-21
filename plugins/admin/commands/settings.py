@@ -34,11 +34,29 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
         name="permission",
         description="Manage role permissions",
         permission_node="admin.permissions",
+        arguments=[
+            CommandArgument(
+                "action",
+                hikari.OptionType.STRING,
+                "Action: grant, revoke, or list",
+                required=False,
+                default="list",
+            ),
+            CommandArgument(
+                "role",
+                hikari.OptionType.ROLE,
+                "Role to manage permissions for",
+                required=False,
+            ),
+            CommandArgument(
+                "permission",
+                hikari.OptionType.STRING,
+                "Permission node to grant/revoke",
+                required=False,
+            ),
+        ],
     )
-    async def manage_permissions(ctx: lightbulb.Context) -> None:
-        action = "list"
-        role = None
-        permission = None
+    async def manage_permissions(ctx: lightbulb.Context, action: str = "list", role: hikari.Role | None = None, permission: str | None = None) -> None:
 
         try:
             if action == "list":
