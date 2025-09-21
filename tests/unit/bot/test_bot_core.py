@@ -82,11 +82,13 @@ class TestDiscordBot:
 
         bot = DiscordBot()
         bot.permission_manager.initialize = AsyncMock()
+        bot.permission_manager.refresh_permissions = AsyncMock()
 
         await bot._initialize_systems()
 
         mock_db.create_tables.assert_called_once()
         bot.permission_manager.initialize.assert_called_once()
+        bot.permission_manager.refresh_permissions.assert_called_once()
 
     @patch("bot.core.bot.settings")
     @patch("bot.core.bot.hikari.GatewayBot")

@@ -117,6 +117,7 @@ def mock_bot(
     bot.plugin_loader = mock_plugin_loader
     bot.event_system = mock_event_system
     bot.miru_client = MagicMock()
+    bot.get_guild_prefix = AsyncMock(return_value="!")
     return bot
 
 

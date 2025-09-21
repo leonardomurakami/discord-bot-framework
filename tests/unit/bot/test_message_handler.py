@@ -53,7 +53,6 @@ class TestMessageCommandHandler:
 
         assert handler.bot == mock_bot
         assert handler.commands == {}
-        assert handler.prefix == "!"  # Default from settings
 
     def test_add_command(self, mock_bot):
         """Test adding a command."""

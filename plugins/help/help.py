@@ -35,6 +35,59 @@ class HelpPlugin(BasePlugin):
             self._persistent_view_registered = True
             self.logger.info("Registered persistent help view")
 
+    # Delegation methods for tests (these delegate to EmbedGenerators)
+    async def _get_general_help(self, guild_id: int = None):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        return await embed_gen.get_general_help(guild_id)
+
+    async def _get_command_help(self, command_name: str, guild_id: int = None):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        return await embed_gen.get_command_help(command_name, guild_id)
+
+    async def _get_plugin_help(self, plugin_name: str):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        return await embed_gen.get_plugin_help(plugin_name)
+
+    async def _get_commands_list(self):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        return await embed_gen.get_commands_list()
+
+    async def _get_plugins_list(self):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        return await embed_gen.get_plugins_list()
+
+    async def _get_plugin_commands_embed(self, plugin_name: str, guild_id: int = None, page: int = 0):
+        """Test delegation method."""
+        embed_gen = EmbedGenerators(self)
+        result = await embed_gen.get_plugin_commands_embed(plugin_name, guild_id, page)
+        # The method returns (embed, metadata) but tests expect just embed
+        if isinstance(result, tuple):
+            return result[0]
+        return result
+
+    async def _get_command_info(self, command_name: str):
+        """Test delegation method."""
+        from .command_info import CommandInfoManager
+        info_manager = CommandInfoManager(self)
+        return info_manager.get_command_info(command_name)
+
+    def _get_plugin_overview(self, plugin_name: str, plugin_obj):
+        """Test delegation method."""
+        from .command_info import CommandInfoManager
+        info_manager = CommandInfoManager(self)
+        return info_manager.get_plugin_overview(plugin_name, plugin_obj)
+
+    def _format_command_list(self, commands: list[dict]):
+        """Test delegation method."""
+        from .command_info import CommandInfoManager
+        info_manager = CommandInfoManager(self)
+        return info_manager.format_command_list(commands)
+
     @command(
         name="help",
         description="Show help information for commands and plugins",

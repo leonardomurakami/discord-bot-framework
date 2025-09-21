@@ -6,8 +6,6 @@ from typing import Any
 import hikari
 import lightbulb
 
-from ..core.utils import get_bot_user_id
-
 logger = logging.getLogger(__name__)
 
 # Global bot instance registry (set by bot.py during initialization)
@@ -118,6 +116,7 @@ def requires_bot_permissions(*permissions: hikari.Permissions) -> Callable:
             if not guild:
                 return await func(ctx, *args, **kwargs)
 
+            from ..core.utils import get_bot_user_id
             bot_member = guild.get_member(get_bot_user_id(ctx))
             if not bot_member:
                 await ctx.respond(

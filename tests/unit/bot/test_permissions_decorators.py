@@ -467,21 +467,24 @@ class TestRequiresBotPermissionsDecorator:
         # Setup guild and bot member without required permissions
         guild = MagicMock()
         bot_member = MagicMock()
-        bot_member.permissions = hikari.Permissions.SEND_MESSAGES  # Missing MANAGE_MESSAGES
         guild.get_member.return_value = bot_member
         mock_guild_context.get_guild.return_value = guild
 
-        @requires_bot_permissions(hikari.Permissions.MANAGE_MESSAGES)
-        async def test_command(ctx):
-            return "success"
+        # Mock calculate_member_permissions to return limited permissions
+        with patch("bot.core.utils.calculate_member_permissions") as mock_calc_perms:
+            mock_calc_perms.return_value = hikari.Permissions.SEND_MESSAGES  # Missing MANAGE_MESSAGES
 
-        result = await test_command(mock_guild_context)
+            @requires_bot_permissions(hikari.Permissions.MANAGE_MESSAGES)
+            async def test_command(ctx):
+                return "success"
 
-        assert result is None
-        mock_guild_context.respond.assert_called_once()
-        call_args = mock_guild_context.respond.call_args[0][0]
-        assert "I'm missing the following permissions:" in call_args
-        assert "MANAGE_MESSAGES" in call_args
+            result = await test_command(mock_guild_context)
+
+            assert result is None
+            mock_guild_context.respond.assert_called_once()
+            call_args = mock_guild_context.respond.call_args[0][0]
+            assert "I'm missing the following permissions:" in call_args
+            assert "MANAGE_MESSAGES" in call_args
 
     @pytest.mark.asyncio
     async def test_bot_multiple_missing_permissions(self, mock_guild_context):
@@ -489,19 +492,22 @@ class TestRequiresBotPermissionsDecorator:
         # Setup guild and bot member with limited permissions
         guild = MagicMock()
         bot_member = MagicMock()
-        bot_member.permissions = hikari.Permissions.SEND_MESSAGES
         guild.get_member.return_value = bot_member
         mock_guild_context.get_guild.return_value = guild
 
-        @requires_bot_permissions(hikari.Permissions.MANAGE_MESSAGES, hikari.Permissions.MANAGE_CHANNELS)
-        async def test_command(ctx):
-            return "success"
+        # Mock calculate_member_permissions to return limited permissions
+        with patch("bot.core.utils.calculate_member_permissions") as mock_calc_perms:
+            mock_calc_perms.return_value = hikari.Permissions.SEND_MESSAGES
 
-        await test_command(mock_guild_context)
+            @requires_bot_permissions(hikari.Permissions.MANAGE_MESSAGES, hikari.Permissions.MANAGE_CHANNELS)
+            async def test_command(ctx):
+                return "success"
 
-        call_args = mock_guild_context.respond.call_args[0][0]
-        assert "MANAGE_MESSAGES" in call_args
-        assert "MANAGE_CHANNELS" in call_args
+            await test_command(mock_guild_context)
+
+            call_args = mock_guild_context.respond.call_args[0][0]
+            assert "MANAGE_MESSAGES" in call_args
+            assert "MANAGE_CHANNELS" in call_args
 
     @pytest.mark.asyncio
     async def test_dm_bypasses_check(self, mock_dm_context):

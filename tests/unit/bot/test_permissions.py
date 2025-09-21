@@ -42,22 +42,32 @@ class TestPermissionManager:
         """Test grant_permission API contract."""
         manager = PermissionManager(mock_db_manager)
 
-        # Test that the API accepts the expected parameters and returns a boolean
+        # Test that the API accepts the expected parameters and returns a tuple
         result = await manager.grant_permission(123, 456, "test.permission")
 
-        # Should return a boolean
-        assert isinstance(result, bool)
+        # Should return a tuple (success, granted_permissions, failed_permissions)
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        success, granted_permissions, failed_permissions = result
+        assert isinstance(success, bool)
+        assert isinstance(granted_permissions, list)
+        assert isinstance(failed_permissions, list)
 
     @pytest.mark.asyncio
     async def test_revoke_permission_api_contract(self, mock_db_manager):
         """Test revoke_permission API contract."""
         manager = PermissionManager(mock_db_manager)
 
-        # Test that the API accepts the expected parameters and returns a boolean
+        # Test that the API accepts the expected parameters and returns a tuple
         result = await manager.revoke_permission(123, 456, "test.permission")
 
-        # Should return a boolean
-        assert isinstance(result, bool)
+        # Should return a tuple (success, revoked_permissions, failed_permissions)
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        success, revoked_permissions, failed_permissions = result
+        assert isinstance(success, bool)
+        assert isinstance(revoked_permissions, list)
+        assert isinstance(failed_permissions, list)
 
     @pytest.mark.asyncio
     async def test_get_role_permissions_api_contract(self, mock_db_manager):
