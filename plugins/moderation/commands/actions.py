@@ -458,16 +458,9 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
                 "New nickname (leave empty to remove nickname)",
                 required=False,
             ),
-            CommandArgument(
-                "reason",
-                hikari.OptionType.STRING,
-                "Reason for nickname change",
-                required=False,
-                default="No reason provided",
-            ),
         ],
     )
-    async def change_nickname(ctx: lightbulb.Context, member: hikari.User, nickname: str | None = None, reason: str = "No reason provided") -> None:
+    async def change_nickname(ctx: lightbulb.Context, member: hikari.User, nickname: str | None = None) -> None:
         try:
             if not ctx.guild_id:
                 embed = plugin.create_embed(
@@ -504,7 +497,6 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
 
             await guild_member.edit(
                 nickname=new_nickname,
-                reason=f"{reason} (by {ctx.author})",
             )
 
             if new_nickname:
@@ -519,7 +511,6 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
             )
             embed.add_field("Previous Nickname", old_nickname, inline=True)
             embed.add_field("New Nickname", new_nickname or "None", inline=True)
-            embed.add_field("Reason", reason, inline=False)
             embed.add_field("Moderator", ctx.author.mention, inline=True)
 
             await ctx.respond(embed=embed)

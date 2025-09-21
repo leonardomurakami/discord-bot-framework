@@ -24,6 +24,18 @@ class PermissionsPaginationView(miru.View):
         self.total_pages = (len(permissions) + page_size - 1) // page_size if permissions else 1
         self._setup_buttons()
 
+        # Start the view with the miru client
+        self._start_view()
+
+    def _start_view(self) -> None:
+        """Start the view with the miru client."""
+        try:
+            # Get miru client from bot
+            if hasattr(self.admin_plugin, 'bot') and hasattr(self.admin_plugin.bot, 'miru_client'):
+                self.admin_plugin.bot.miru_client.start_view(self)
+        except Exception as e:
+            logger.error(f"Failed to start miru view: {e}")
+
     def _setup_buttons(self) -> None:
         """Setup pagination buttons."""
         # Previous page button
@@ -147,6 +159,18 @@ class RolePermissionsPaginationView(miru.View):
         self.current_page = initial_page
         self.total_pages = (len(permissions) + page_size - 1) // page_size if permissions else 1
         self._setup_buttons()
+
+        # Start the view with the miru client
+        self._start_view()
+
+    def _start_view(self) -> None:
+        """Start the view with the miru client."""
+        try:
+            # Get miru client from bot
+            if hasattr(self.admin_plugin, 'bot') and hasattr(self.admin_plugin.bot, 'miru_client'):
+                self.admin_plugin.bot.miru_client.start_view(self)
+        except Exception as e:
+            logger.error(f"Failed to start miru view: {e}")
 
     def _setup_buttons(self) -> None:
         """Setup pagination buttons."""
