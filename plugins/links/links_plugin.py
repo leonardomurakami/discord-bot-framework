@@ -50,7 +50,7 @@ class LinksPlugin(BasePlugin):
                 await self.smart_respond(ctx, "This command can only be used in a server!")
                 return
 
-            async with self.bot.db_manager.session() as session:
+            async with self.bot.db.session() as session:
                 # First check custom links
                 stmt = select(Link).where(
                     Link.guild_id == ctx.guild_id,
@@ -113,7 +113,7 @@ class LinksPlugin(BasePlugin):
 
             # Add custom links if in a guild
             if ctx.guild_id:
-                async with self.bot.db_manager.session() as session:
+                async with self.bot.db.session() as session:
                     stmt = select(Link).where(Link.guild_id == ctx.guild_id).order_by(Link.name)
                     result = await session.execute(stmt)
                     custom_links = result.scalars().all()
@@ -177,7 +177,7 @@ class LinksPlugin(BasePlugin):
                 )
                 return
 
-            async with self.bot.db_manager.session() as session:
+            async with self.bot.db.session() as session:
                 new_link = Link(
                     guild_id=ctx.guild_id,
                     name=name.lower(),
@@ -240,7 +240,7 @@ class LinksPlugin(BasePlugin):
                 )
                 return
 
-            async with self.bot.db_manager.session() as session:
+            async with self.bot.db.session() as session:
                 stmt = select(Link).where(
                     Link.guild_id == ctx.guild_id,
                     Link.name == name.lower()
