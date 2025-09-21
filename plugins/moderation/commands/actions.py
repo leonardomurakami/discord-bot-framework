@@ -8,6 +8,7 @@ import hikari
 import lightbulb
 
 from bot.plugins.commands import CommandArgument, command
+from bot.core.utils import get_bot_user_id
 
 from ..config import (
     BAN_DM_COLOR,
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from ..moderation_plugin import ModerationPlugin
 
 logger = logging.getLogger(__name__)
+
+
 
 
 def _extract_member_from_context(ctx: lightbulb.Context) -> tuple[hikari.Member | None, str]:
@@ -102,7 +105,7 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            if member.id == ctx.client.get_me().id:
+            if member.id == get_bot_user_id(ctx):
                 embed = plugin.create_embed(
                     title="❌ Invalid Target",
                     description="I cannot kick myself!",
@@ -189,7 +192,7 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            if user.id == ctx.client.get_me().id:
+            if user.id == get_bot_user_id(ctx):
                 embed = plugin.create_embed(
                     title="❌ Invalid Target",
                     description="I cannot ban myself!",
@@ -293,7 +296,7 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            if member.id == ctx.client.get_me().id:
+            if member.id == get_bot_user_id(ctx):
                 embed = plugin.create_embed(
                     title="❌ Invalid Target",
                     description="I cannot timeout myself!",
@@ -481,7 +484,7 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            if member.id == ctx.client.get_me().id:
+            if member.id == get_bot_user_id(ctx):
                 embed = plugin.create_embed(
                     title="❌ Invalid Target",
                     description="I cannot change my own nickname through this command!",

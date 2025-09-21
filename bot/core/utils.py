@@ -1,6 +1,25 @@
 """Utility functions for the Discord bot framework."""
 
 import hikari
+import lightbulb
+
+
+def get_bot_user_id(ctx: lightbulb.Context) -> int:
+    """
+    Get the bot's user ID, handling both lightbulb.Context and PrefixContext.
+
+    Args:
+        ctx: The command context (lightbulb.Context or PrefixContext)
+
+    Returns:
+        The bot's user ID
+    """
+    if hasattr(ctx, "client"):
+        # lightbulb.Context
+        return ctx.client.get_me().id
+    else:
+        # PrefixContext
+        return ctx.bot.hikari_bot.get_me().id
 
 
 def calculate_member_permissions(

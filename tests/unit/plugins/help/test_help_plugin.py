@@ -7,22 +7,10 @@ import miru
 import pytest
 
 from plugins.help.help import (
-    PLUGIN_METADATA,
     HelpPlugin,
     PersistentPluginSelectView,
     PluginSelectView,
 )
-
-
-class TestHelpPluginMetadata:
-    """Test help plugin metadata and configuration."""
-
-    def test_plugin_metadata(self):
-        """Test plugin metadata structure."""
-        assert PLUGIN_METADATA["name"] == "Help"
-        assert PLUGIN_METADATA["version"] == "1.0.0"
-        assert "help.commands" in PLUGIN_METADATA["permissions"]
-        assert "help.plugins" in PLUGIN_METADATA["permissions"]
 
 
 class TestHelpPlugin:

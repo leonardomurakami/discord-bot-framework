@@ -8,6 +8,7 @@ import hikari
 import lightbulb
 
 from bot.plugins.commands import CommandArgument, command
+from bot.core.utils import get_bot_user_id
 
 from ..config import (
     ERROR_COLOR,
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
     from ..moderation_plugin import ModerationPlugin
 
 logger = logging.getLogger(__name__)
+
+
 
 
 def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]]:
@@ -59,7 +62,7 @@ def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., 
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            if member.id in {ctx.author.id, ctx.client.get_me().id}:
+            if member.id in {ctx.author.id, get_bot_user_id(ctx)}:
                 embed = plugin.create_embed(
                     title="❌ Invalid Target",
                     description="You cannot warn that member.",
