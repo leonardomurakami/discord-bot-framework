@@ -24,7 +24,7 @@ class BotSettings(BaseSettings):
     debug: bool = Field(default=False, description="Enable debug mode")
 
     # Web interface
-    web_port: int = Field(default=8080, description="Web interface port")
+    web_port: int = Field(default=7000, description="Web interface port")
     web_host: str = Field(default="0.0.0.0", description="Web interface host")
     web_secret_key: str = Field(..., description="Secret key for sessions")
 

@@ -21,4 +21,5 @@ COPY . .
 RUN useradd --create-home --shell /bin/bash bot && \
     chown -R bot:bot /app
 USER bot
+EXPOSE 7000
 CMD ["python", "-O", "-m", "bot"]
