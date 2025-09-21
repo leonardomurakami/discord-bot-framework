@@ -442,4 +442,106 @@ def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
             await plugin.log_command_usage(ctx, "unban", False, str(exc))
 
-    return [kick_member, ban_member, timeout_member, unban_user]
+    @command(
+        name="nickname",
+        description="Change a member's server nickname",
+        permission_node="moderation.nickname",
+        arguments=[
+            CommandArgument(
+                "member",
+                hikari.OptionType.USER,
+                "Member to change nickname for",
+            ),
+            CommandArgument(
+                "nickname",
+                hikari.OptionType.STRING,
+                "New nickname (leave empty to remove nickname)",
+                required=False,
+            ),
+            CommandArgument(
+                "reason",
+                hikari.OptionType.STRING,
+                "Reason for nickname change",
+                required=False,
+                default="No reason provided",
+            ),
+        ],
+    )
+    async def change_nickname(ctx: lightbulb.Context, member: hikari.User, nickname: str | None = None, reason: str = "No reason provided") -> None:
+        try:
+            if not ctx.guild_id:
+                embed = plugin.create_embed(
+                    title="❌ Server Only",
+                    description="This command can only be used in a server.",
+                    color=ERROR_COLOR,
+                )
+                await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            guild_member = ctx.get_guild().get_member(member.id)
+            if not guild_member:
+                embed = plugin.create_embed(
+                    title="❌ Member Not Found",
+                    description="The specified member is not in this server.",
+                    color=ERROR_COLOR,
+                )
+                await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            if member.id == ctx.client.get_me().id:
+                embed = plugin.create_embed(
+                    title="❌ Invalid Target",
+                    description="I cannot change my own nickname through this command!",
+                    color=ERROR_COLOR,
+                )
+                await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
+                return
+
+            old_nickname = guild_member.display_name
+
+            # If nickname is None or empty string, we're removing the nickname
+            new_nickname = nickname.strip() if nickname else None
+
+            await guild_member.edit(
+                nickname=new_nickname,
+                reason=f"{reason} (by {ctx.author})",
+            )
+
+            if new_nickname:
+                title = "✅ Nickname Changed"
+            else:
+                title = "✅ Nickname Removed"
+
+            embed = plugin.create_embed(
+                title=title,
+                description=f"{member.mention}'s nickname has been updated.",
+                color=SUCCESS_COLOR,
+            )
+            embed.add_field("Previous Nickname", old_nickname, inline=True)
+            embed.add_field("New Nickname", new_nickname or "None", inline=True)
+            embed.add_field("Reason", reason, inline=False)
+            embed.add_field("Moderator", ctx.author.mention, inline=True)
+
+            await ctx.respond(embed=embed)
+            await plugin.log_command_usage(ctx, "nickname", True)
+
+        except hikari.ForbiddenError:
+            embed = plugin.create_embed(
+                title="❌ Permission Error",
+                description="I don't have permission to change this member's nickname. They might have higher roles than me.",
+                color=ERROR_COLOR,
+            )
+            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
+            await plugin.log_command_usage(ctx, "nickname", False, "Permission denied")
+
+        except Exception as exc:
+            logger.error("Error in nickname command: %s", exc)
+            embed = plugin.create_embed(
+                title="❌ Error",
+                description=f"Failed to change nickname: {exc}",
+                color=ERROR_COLOR,
+            )
+            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
+            await plugin.log_command_usage(ctx, "nickname", False, str(exc))
+
+    return [kick_member, ban_member, timeout_member, unban_user, change_nickname]
