@@ -127,13 +127,18 @@ class DiscordBot:
             await self.db.create_tables()
             logger.info("Database initialized")
 
-            # Initialize permissions
+            # Initialize permissions (without plugin discovery first)
+            self.permission_manager.set_bot(self)
             await self.permission_manager.initialize()
             logger.info("Permission system initialized")
 
             # Load plugins
             await self._load_plugins()
             logger.info("Plugins loaded")
+
+            # Refresh permissions to discover plugin-defined permissions
+            await self.permission_manager.refresh_permissions()
+            logger.info("Permissions discovered from plugins")
 
             # Start web panel
             await self.web_panel_manager.start()

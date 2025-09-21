@@ -13,42 +13,26 @@ class PermissionManager:
     def __init__(self, db: DatabaseManager) -> None:
         self.db = db
         self._permission_cache: dict[int, dict[int, set[str]]] = {}
-        self._default_permissions = {
-            # Admin permissions
-            "admin.config": "Configure bot settings",
-            "admin.plugins": "Manage plugins",
-            "admin.permissions": "Manage permissions",
-            # Moderation permissions
-            "moderation.kick": "Kick members",
-            "moderation.ban": "Ban members",
-            "moderation.mute": "Mute members",
-            "moderation.warn": "Warn members",
-            "moderation.purge": "Delete messages",
-            "moderation.timeout": "Timeout members",
-            # Utility permissions
-            "utility.info": "View info commands",
-            "utility.stats": "View statistics",
-            # Fun permissions
-            "fun.games": "Use fun games",
-            "fun.images": "Use image commands",
-            # Music permissions
-            "music.play": "Play music",
-            "music.skip": "Skip songs",
-            "music.queue": "Manage queue",
-            "music.volume": "Change volume",
-        }
+        self._bot = None  # Will be set by the bot during initialization
+
+    def set_bot(self, bot) -> None:
+        """Set the bot instance for dynamic permission discovery."""
+        self._bot = bot
 
     async def initialize(self) -> None:
         await self._create_default_permissions()
         logger.info("Permission system initialized")
 
     async def _create_default_permissions(self) -> None:
+        """Discover permissions dynamically from loaded plugins and create them in database."""
+        discovered_permissions = await self._discover_plugin_permissions()
+
         async with self.db.session() as session:
             existing_permissions = await session.execute(select(Permission))
             existing_nodes = {perm.node for perm in existing_permissions.scalars()}
 
             new_permissions = []
-            for node, description in self._default_permissions.items():
+            for node, description in discovered_permissions.items():
                 if node not in existing_nodes:
                     category = node.split(".")[0]
                     new_permissions.append(Permission(node=node, description=description, category=category))
@@ -58,92 +42,244 @@ class PermissionManager:
                 await session.commit()
                 logger.info(f"Created {len(new_permissions)} new permissions")
 
-    async def grant_permission(self, guild_id: int, role_id: int, permission_node: str) -> bool:
+    async def _discover_plugin_permissions(self) -> dict[str, str]:
+        """Dynamically discover permissions from all loaded plugins."""
+        permissions = {}
+
+        if not self._bot or not hasattr(self._bot, 'plugin_loader'):
+            logger.warning("Bot or plugin loader not available for permission discovery")
+            return permissions
+
+        # Iterate through all loaded plugins
+        for plugin_name, plugin in self._bot.plugin_loader.plugins.items():
+            try:
+                # Look for methods with _unified_command metadata
+                for attr_name in dir(plugin):
+                    if attr_name.startswith('_'):
+                        continue
+
+                    attr = getattr(plugin, attr_name)
+                    if hasattr(attr, '_unified_command'):
+                        cmd_meta = attr._unified_command
+                        permission_node = cmd_meta.get('permission_node')
+
+                        if permission_node:
+                            # Generate description from command info
+                            cmd_name = cmd_meta.get('name', attr_name)
+                            cmd_desc = cmd_meta.get('description', '')
+
+                            if cmd_desc:
+                                description = f"{cmd_desc}"
+                            else:
+                                # Generate description from permission node
+                                action = permission_node.split('.')[-1]
+                                description = f"{action.replace('_', ' ').title()} command"
+
+                            permissions[permission_node] = description
+                            logger.debug(f"Discovered permission: {permission_node} - {description}")
+
+            except Exception as e:
+                logger.error(f"Error discovering permissions from plugin {plugin_name}: {e}")
+
+        logger.info(f"Discovered {len(permissions)} permissions from plugins")
+        return permissions
+
+    async def refresh_permissions(self) -> None:
+        """Refresh permissions by re-discovering them from plugins."""
+        await self._create_default_permissions()
+        self.clear_cache()
+        logger.info("Permissions refreshed from plugins")
+
+    def _match_wildcard_pattern(self, pattern: str, permission_node: str) -> bool:
+        """Check if a permission node matches a wildcard pattern."""
+        if '*' not in pattern:
+            return pattern == permission_node
+
+        # Handle different wildcard patterns
+        if pattern.endswith('.*'):
+            # Pattern like "moderation.*" matches "moderation.kick", "moderation.ban", etc.
+            prefix = pattern[:-2]
+            return permission_node.startswith(prefix + '.')
+        elif pattern.startswith('*.'):
+            # Pattern like "*.play" matches "music.play", "audio.play", etc.
+            suffix = pattern[2:]
+            return permission_node.endswith('.' + suffix)
+        elif pattern == '*':
+            # Pattern "*" matches everything
+            return True
+        else:
+            # More complex patterns could be added here if needed
+            # For now, treat as exact match if no standard wildcard pattern
+            return pattern == permission_node
+
+    async def _resolve_wildcard_permissions(self, pattern: str) -> list[str]:
+        """Resolve a wildcard pattern to a list of actual permission nodes."""
+        if '*' not in pattern:
+            # Not a wildcard, return as-is
+            return [pattern]
+
+        # Get all available permissions
+        all_permissions = await self.get_all_permissions()
+
+        # Filter permissions that match the pattern
+        matching_nodes = []
+        for perm in all_permissions:
+            if self._match_wildcard_pattern(pattern, perm.node):
+                matching_nodes.append(perm.node)
+
+        return matching_nodes
+
+    async def grant_permission(self, guild_id: int, role_id: int, permission_pattern: str) -> tuple[bool, list[str], list[str]]:
+        """
+        Grant permission(s) to a role. Supports wildcard patterns.
+
+        Returns:
+            tuple: (success, granted_permissions, failed_permissions)
+        """
         try:
+            # Resolve wildcard pattern to actual permission nodes
+            permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
+
+            if not permission_nodes:
+                logger.error(f"No permissions found matching pattern: {permission_pattern}")
+                return False, [], [permission_pattern]
+
+            granted_permissions = []
+            failed_permissions = []
+
+            # Use a single transaction for all operations (atomic)
             async with self.db.session() as session:
-                # Get permission
-                permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
-                permission = permission_result.scalar_one_or_none()
+                for permission_node in permission_nodes:
+                    try:
+                        # Get permission
+                        permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
+                        permission = permission_result.scalar_one_or_none()
 
-                if not permission:
-                    logger.error(f"Permission {permission_node} not found")
-                    return False
+                        if not permission:
+                            failed_permissions.append(permission_node)
+                            continue
 
-                # Check if role permission already exists
-                existing = await session.execute(
-                    select(RolePermission).where(
-                        RolePermission.guild_id == guild_id,
-                        RolePermission.role_id == role_id,
-                        RolePermission.permission_id == permission.id,
-                    )
-                )
+                        # Check if role permission already exists
+                        existing = await session.execute(
+                            select(RolePermission).where(
+                                RolePermission.guild_id == guild_id,
+                                RolePermission.role_id == role_id,
+                                RolePermission.permission_id == permission.id,
+                            )
+                        )
 
-                role_perm = existing.scalar_one_or_none()
-                if role_perm:
-                    role_perm.granted = True
-                else:
-                    role_perm = RolePermission(
-                        guild_id=guild_id,
-                        role_id=role_id,
-                        permission_id=permission.id,
-                        granted=True,
-                    )
-                    session.add(role_perm)
+                        role_perm = existing.scalar_one_or_none()
+                        if role_perm:
+                            if not role_perm.granted:
+                                role_perm.granted = True
+                                granted_permissions.append(permission_node)
+                            # If already granted, don't add to granted list
+                        else:
+                            role_perm = RolePermission(
+                                guild_id=guild_id,
+                                role_id=role_id,
+                                permission_id=permission.id,
+                                granted=True,
+                            )
+                            session.add(role_perm)
+                            granted_permissions.append(permission_node)
 
+                    except Exception as e:
+                        logger.error(f"Error processing permission {permission_node}: {e}")
+                        failed_permissions.append(permission_node)
+
+                # Commit all changes atomically
                 await session.commit()
 
                 # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                logger.info(f"Granted {permission_node} to role {role_id} in guild {guild_id}")
-                return True
+                success = len(granted_permissions) > 0
+                logger.info(f"Granted {len(granted_permissions)} permissions to role {role_id} in guild {guild_id}: {granted_permissions}")
+                if failed_permissions:
+                    logger.warning(f"Failed to grant {len(failed_permissions)} permissions: {failed_permissions}")
+
+                return success, granted_permissions, failed_permissions
 
         except Exception as e:
-            logger.error(f"Error granting permission: {e}")
-            return False
+            logger.error(f"Error in grant_permission: {e}")
+            return False, [], permission_nodes if 'permission_nodes' in locals() else [permission_pattern]
 
-    async def revoke_permission(self, guild_id: int, role_id: int, permission_node: str) -> bool:
+    async def revoke_permission(self, guild_id: int, role_id: int, permission_pattern: str) -> tuple[bool, list[str], list[str]]:
+        """
+        Revoke permission(s) from a role. Supports wildcard patterns.
+
+        Returns:
+            tuple: (success, revoked_permissions, failed_permissions)
+        """
         try:
+            # Resolve wildcard pattern to actual permission nodes
+            permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
+
+            if not permission_nodes:
+                logger.error(f"No permissions found matching pattern: {permission_pattern}")
+                return False, [], [permission_pattern]
+
+            revoked_permissions = []
+            failed_permissions = []
+
+            # Use a single transaction for all operations (atomic)
             async with self.db.session() as session:
-                # Get permission
-                permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
-                permission = permission_result.scalar_one_or_none()
+                for permission_node in permission_nodes:
+                    try:
+                        # Get permission
+                        permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
+                        permission = permission_result.scalar_one_or_none()
 
-                if not permission:
-                    return False
+                        if not permission:
+                            failed_permissions.append(permission_node)
+                            continue
 
-                # Update or create role permission as denied
-                existing = await session.execute(
-                    select(RolePermission).where(
-                        RolePermission.guild_id == guild_id,
-                        RolePermission.role_id == role_id,
-                        RolePermission.permission_id == permission.id,
-                    )
-                )
+                        # Update or create role permission as denied
+                        existing = await session.execute(
+                            select(RolePermission).where(
+                                RolePermission.guild_id == guild_id,
+                                RolePermission.role_id == role_id,
+                                RolePermission.permission_id == permission.id,
+                            )
+                        )
 
-                role_perm = existing.scalar_one_or_none()
-                if role_perm:
-                    role_perm.granted = False
-                else:
-                    role_perm = RolePermission(
-                        guild_id=guild_id,
-                        role_id=role_id,
-                        permission_id=permission.id,
-                        granted=False,
-                    )
-                    session.add(role_perm)
+                        role_perm = existing.scalar_one_or_none()
+                        if role_perm:
+                            if role_perm.granted:
+                                role_perm.granted = False
+                                revoked_permissions.append(permission_node)
+                            # If already revoked, don't add to revoked list
+                        else:
+                            role_perm = RolePermission(
+                                guild_id=guild_id,
+                                role_id=role_id,
+                                permission_id=permission.id,
+                                granted=False,
+                            )
+                            session.add(role_perm)
+                            revoked_permissions.append(permission_node)
 
+                    except Exception as e:
+                        logger.error(f"Error processing permission {permission_node}: {e}")
+                        failed_permissions.append(permission_node)
+
+                # Commit all changes atomically
                 await session.commit()
 
                 # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                logger.info(f"Revoked {permission_node} from role {role_id} in guild {guild_id}")
-                return True
+                success = len(revoked_permissions) > 0
+                logger.info(f"Revoked {len(revoked_permissions)} permissions from role {role_id} in guild {guild_id}: {revoked_permissions}")
+                if failed_permissions:
+                    logger.warning(f"Failed to revoke {len(failed_permissions)} permissions: {failed_permissions}")
+
+                return success, revoked_permissions, failed_permissions
 
         except Exception as e:
-            logger.error(f"Error revoking permission: {e}")
-            return False
+            logger.error(f"Error in revoke_permission: {e}")
+            return False, [], permission_nodes if 'permission_nodes' in locals() else [permission_pattern]
 
     async def has_permission(self, guild_id: int, user: hikari.Member, permission_node: str) -> bool:
         logger.debug(f"Checking permission '{permission_node}' for user {user.username} ({user.id}) in guild {guild_id}")

@@ -51,7 +51,7 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
             CommandArgument(
                 "permission",
                 hikari.OptionType.STRING,
-                "Permission node to grant/revoke",
+                "Permission node to grant/revoke (supports wildcards: moderation.*, *.play)",
                 required=False,
             ),
         ],
@@ -63,12 +63,24 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
                 if role:
                     permissions = await plugin.bot.permission_manager.get_role_permissions(ctx.guild_id, role.id)
                     if permissions:
-                        perm_list = "\n".join(f"• {perm}" for perm in permissions)
-                        embed = plugin.create_embed(
-                            title=f"🔑 Permissions for @{role.name}",
-                            description=perm_list,
-                            color=SERVER_INFO_COLOR,
-                        )
+                        # Use pagination for role permissions if there are many
+                        if len(permissions) > 10:
+                            from ..views import RolePermissionsPaginationView
+
+                            view = RolePermissionsPaginationView(plugin, role, permissions, page_size=10)
+                            embed = view.get_current_page_embed()
+
+                            await ctx.respond(embed=embed, components=view)
+                            await plugin.log_command_usage(ctx, "permission", True)
+                            return
+                        else:
+                            # For small lists, show without pagination
+                            perm_list = "\n".join(f"• {perm}" for perm in permissions)
+                            embed = plugin.create_embed(
+                                title=f"🔑 Permissions for @{role.name}",
+                                description=perm_list,
+                                color=SERVER_INFO_COLOR,
+                            )
                     else:
                         embed = plugin.create_embed(
                             title=f"🔑 Permissions for @{role.name}",
@@ -78,16 +90,16 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
                 else:
                     all_perms = await plugin.bot.permission_manager.get_all_permissions()
                     if all_perms:
-                        perm_list = "\n".join(
-                            f"• `{perm.node}` - {perm.description}" for perm in all_perms[:PERMISSION_LIST_LIMIT]
-                        )
-                        if len(all_perms) > PERMISSION_LIST_LIMIT:
-                            perm_list += f"\n... and {len(all_perms) - PERMISSION_LIST_LIMIT} more"
-                        embed = plugin.create_embed(
-                            title="🔑 Available Permissions",
-                            description=perm_list,
-                            color=SERVER_INFO_COLOR,
-                        )
+                        # Use pagination for permissions list
+                        from ..views import PermissionsPaginationView
+
+                        # Create pagination view
+                        view = PermissionsPaginationView(plugin, all_perms, page_size=10)
+                        embed = view.get_current_page_embed()
+
+                        await ctx.respond(embed=embed, components=view)
+                        await plugin.log_command_usage(ctx, "permission", True)
+                        return
                     else:
                         embed = plugin.create_embed(
                             title="🔑 Available Permissions",
@@ -104,24 +116,54 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
                     )
                 else:
                     if action == "grant":
-                        success = await plugin.bot.permission_manager.grant_permission(ctx.guild_id, role.id, permission)
+                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.grant_permission(ctx.guild_id, role.id, permission)
                         action_text = "granted to"
                     else:
-                        success = await plugin.bot.permission_manager.revoke_permission(ctx.guild_id, role.id, permission)
+                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.revoke_permission(ctx.guild_id, role.id, permission)
                         action_text = "revoked from"
+                        granted_perms = granted_perms  # For consistency, rename to processed_perms
+
+                    processed_perms = granted_perms  # Permissions that were actually processed
 
                     if success:
-                        embed = plugin.create_embed(
-                            title="✅ Permission Updated",
-                            description=f"Permission `{permission}` has been {action_text} @{role.name}",
-                            color=SUCCESS_COLOR,
-                        )
+                        if len(processed_perms) == 1:
+                            # Single permission
+                            embed = plugin.create_embed(
+                                title="✅ Permission Updated",
+                                description=f"Permission `{processed_perms[0]}` has been {action_text} @{role.name}",
+                                color=SUCCESS_COLOR,
+                            )
+                        else:
+                            # Multiple permissions (wildcard)
+                            perm_list = "\n".join(f"• `{perm}`" for perm in processed_perms[:10])
+                            if len(processed_perms) > 10:
+                                perm_list += f"\n... and {len(processed_perms) - 10} more"
+
+                            embed = plugin.create_embed(
+                                title="✅ Permissions Updated",
+                                description=f"**{len(processed_perms)}** permissions have been {action_text} @{role.name}:\n\n{perm_list}",
+                                color=SUCCESS_COLOR,
+                            )
+
+                        if failed_perms:
+                            embed.add_field(
+                                "⚠️ Failed",
+                                f"{len(failed_perms)} permissions could not be processed",
+                                inline=True
+                            )
                     else:
-                        embed = plugin.create_embed(
-                            title="❌ Permission Update Failed",
-                            description="Failed to update permission. Check if permission exists.",
-                            color=ERROR_COLOR,
-                        )
+                        if '*' in permission:
+                            embed = plugin.create_embed(
+                                title="❌ Pattern Update Failed",
+                                description=f"No permissions found matching pattern `{permission}` or all failed to process.",
+                                color=ERROR_COLOR,
+                            )
+                        else:
+                            embed = plugin.create_embed(
+                                title="❌ Permission Update Failed",
+                                description="Failed to update permission. Check if permission exists.",
+                                color=ERROR_COLOR,
+                            )
             else:
                 embed = plugin.create_embed(
                     title="❌ Invalid Action",
