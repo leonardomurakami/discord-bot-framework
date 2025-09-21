@@ -32,26 +32,26 @@ class LinksPlugin(BasePlugin):
 
     @command(
         name="link",
-        description="Display a stored link",
+        description="Display a custom server link",
         arguments=[
             CommandArgument(
                 name="name",
                 arg_type=hikari.OptionType.STRING,
-                description="Name of the link to display",
+                description="Name of the custom link to display",
                 required=True,
             )
         ],
         permission_node="links.view",
     )
     async def show_link(self, ctx, name: str) -> None:
-        """Display a link by name."""
+        """Display a custom link by name."""
         try:
             if not ctx.guild_id:
                 await self.smart_respond(ctx, "This command can only be used in a server!")
                 return
 
             async with self.bot.db.session() as session:
-                # First check custom links
+                # Check custom links only
                 stmt = select(Link).where(
                     Link.guild_id == ctx.guild_id,
                     Link.name == name.lower()
@@ -62,54 +62,158 @@ class LinksPlugin(BasePlugin):
                 if link_record:
                     embed = self.create_embed(
                         title=f"🔗 {link_record.name.title()}",
-                        description=link_record.description or "No description provided",
+                        description=link_record.description or "Custom server link",
                         color=hikari.Color(0x00ff00)
                     )
                     embed.add_field("URL", link_record.url, inline=False)
+                    embed.add_field("📅 Added",
+                                  f"{link_record.created_at.strftime('%Y-%m-%d %H:%M')} UTC",
+                                  inline=True)
                     embed.set_footer(f"Created by {await self._get_username(link_record.created_by)}")
                     await self.smart_respond(ctx, embed=embed)
                     return
 
-                # Check default links
+                # Check if it's a default link and suggest the specific command
                 if name.lower() in self._default_links:
-                    url = self._default_links[name.lower()]
                     embed = self.create_embed(
-                        title=f"🔗 {name.title()}",
-                        description="Default system link",
-                        color=hikari.Color(0x0099ff)
+                        title="💡 Use Dedicated Command",
+                        description=f"For **{name}**, use the dedicated command for better information:",
+                        color=hikari.Color(0xFFAA00)
                     )
-                    embed.add_field("URL", url, inline=False)
+                    embed.add_field("Recommended Command", f"`!{name.lower()}`", inline=False)
+                    embed.add_field("Why?",
+                                  "Dedicated commands provide enhanced information, "
+                                  "better styling, and contextual help!",
+                                  inline=False)
                     await self.smart_respond(ctx, embed=embed)
                     return
 
                 # Link not found
-                await self.smart_respond(
-                    ctx,
-                    f"❌ Link '{name}' not found. Use `!links` to see available links.",
-                    ephemeral=True
+                embed = self.create_embed(
+                    title="❌ Custom Link Not Found",
+                    description=f"No custom link named '{name}' found in this server.",
+                    color=hikari.Color(0xFF0000)
                 )
+                embed.add_field("📋 View Available Links", "Use `!links` to see all custom links", inline=False)
+                embed.add_field("🌟 Default Commands",
+                              "`!github` • `!panel` • `!docs` • `!support`",
+                              inline=False)
+                await self.smart_respond(ctx, embed=embed, ephemeral=True)
 
         except Exception as e:
             logger.error(f"Error displaying link {name}: {e}")
             await self.smart_respond(ctx, "❌ An error occurred while fetching the link.", ephemeral=True)
 
     @command(
+        name="github",
+        aliases=["gh", "source"],
+        description="Show the GitHub repository link",
+        permission_node="links.view",
+    )
+    async def github_link(self, ctx) -> None:
+        """Display the GitHub repository link with enhanced styling."""
+        try:
+            embed = self.create_embed(
+                title="🐙 GitHub Repository",
+                description="Access the source code and contribute to the project",
+                color=hikari.Color(0x24292f)  # GitHub dark color
+            )
+            embed.add_field("Repository", self._default_links["github"], inline=False)
+            embed.add_field("📝 What you can do",
+                          "• View source code\n• Report issues\n• Submit pull requests\n• Star the project",
+                          inline=False)
+            embed.set_thumbnail("https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png")
+            await self.smart_respond(ctx, embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error displaying GitHub link: {e}")
+            await self.smart_respond(ctx, "❌ An error occurred while fetching the GitHub link.", ephemeral=True)
+
+    @command(
+        name="panel",
+        description="Show the web control panel link",
+        permission_node="links.view",
+    )
+    async def panel_link(self, ctx) -> None:
+        """Display the web control panel link with enhanced styling."""
+        try:
+            embed = self.create_embed(
+                title="🎛️ Web Control Panel",
+                description="Manage bot settings through the web interface",
+                color=hikari.Color(0x5865F2)  # Discord blurple
+            )
+            embed.add_field("Panel URL", self._default_links["panel"], inline=False)
+            embed.add_field("🛠️ Features",
+                          "• Configure plugins\n• Manage permissions\n• View analytics\n• Server settings",
+                          inline=False)
+            embed.add_field("🔐 Access", "Login with your Discord account", inline=False)
+            await self.smart_respond(ctx, embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error displaying panel link: {e}")
+            await self.smart_respond(ctx, "❌ An error occurred while fetching the panel link.", ephemeral=True)
+
+    @command(
+        name="docs",
+        description="Show the documentation link",
+        permission_node="links.view",
+    )
+    async def docs_link(self, ctx) -> None:
+        """Display the documentation link with enhanced styling."""
+        try:
+            embed = self.create_embed(
+                title="📚 Documentation",
+                description="Learn how to use and configure the bot",
+                color=hikari.Color(0x00D4AA)  # Docs green
+            )
+            embed.add_field("Documentation", self._default_links["docs"], inline=False)
+            embed.add_field("📖 What you'll find",
+                          "• Setup guides\n• Command reference\n• Configuration options\n• Plugin development",
+                          inline=False)
+            embed.add_field("💡 Getting Started", "Perfect for new users and developers", inline=False)
+            await self.smart_respond(ctx, embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error displaying docs link: {e}")
+            await self.smart_respond(ctx, "❌ An error occurred while fetching the docs link.", ephemeral=True)
+
+    @command(
+        name="support",
+        description="Show the support Discord server link",
+        permission_node="links.view",
+    )
+    async def support_link(self, ctx) -> None:
+        """Display the support Discord server link with enhanced styling."""
+        try:
+            embed = self.create_embed(
+                title="💬 Support Server",
+                description="Get help and connect with the community",
+                color=hikari.Color(0x7289DA)  # Discord classic color
+            )
+            embed.add_field("Discord Server", self._default_links["support"], inline=False)
+            embed.add_field("🤝 Community Support",
+                          "• Ask questions\n• Get help with setup\n• Share feedback\n• Connect with other users",
+                          inline=False)
+            embed.add_field("⚡ Quick Response", "Active community and developers", inline=False)
+            await self.smart_respond(ctx, embed=embed)
+
+        except Exception as e:
+            logger.error(f"Error displaying support link: {e}")
+            await self.smart_respond(ctx, "❌ An error occurred while fetching the support link.", ephemeral=True)
+
+    @command(
         name="links",
-        description="List all available links",
+        description="List all custom links for this server",
         permission_node="links.view",
     )
     async def list_links(self, ctx) -> None:
-        """List all available links."""
+        """List custom server links."""
         try:
             embed = self.create_embed(
-                title="📋 Available Links",
-                description="Here are all the available links:",
+                title="🔗 Custom Server Links",
+                description="Links specific to this server",
                 color=hikari.Color(0x0099ff)
             )
-
-            # Add default links
-            default_list = "\n".join([f"• {name}" for name in self._default_links.keys()])
-            embed.add_field("Default Links", default_list or "None", inline=True)
 
             # Add custom links if in a guild
             if ctx.guild_id:
@@ -119,12 +223,27 @@ class LinksPlugin(BasePlugin):
                     custom_links = result.scalars().all()
 
                     if custom_links:
-                        custom_list = "\n".join([f"• {link.name}" for link in custom_links])
-                        embed.add_field("Custom Links", custom_list, inline=True)
-                    else:
-                        embed.add_field("Custom Links", "None", inline=True)
+                        link_list = []
+                        for link in custom_links:
+                            desc = f" - {link.description}" if link.description else ""
+                            link_list.append(f"• **{link.name}**{desc}")
 
-            embed.set_footer("Use !link <name> to display a specific link")
+                        embed.add_field("Available Links", "\n".join(link_list), inline=False)
+                        embed.set_footer("Use !link <name> to display a specific link")
+                    else:
+                        embed.add_field("No Custom Links",
+                                      "No custom links have been added to this server yet.\n"
+                                      "Use `!addlink <name> <url>` to add one!",
+                                      inline=False)
+            else:
+                embed.add_field("Server Only", "Custom links are only available in servers.", inline=False)
+
+            # Add info about default commands
+            embed.add_field("🌟 Default Commands",
+                          "`!github` • `!panel` • `!docs` • `!support`\n"
+                          "These are always available with enhanced information!",
+                          inline=False)
+
             await self.smart_respond(ctx, embed=embed)
 
         except Exception as e:
@@ -168,11 +287,12 @@ class LinksPlugin(BasePlugin):
                 await self.smart_respond(ctx, "❌ URL must start with http:// or https://", ephemeral=True)
                 return
 
-            # Check if name conflicts with default links
-            if name.lower() in self._default_links:
+            # Check if name conflicts with default commands
+            reserved_names = {"github", "docs", "panel", "support", "links", "link", "addlink", "removelink"}
+            if name.lower() in reserved_names:
                 await self.smart_respond(
                     ctx,
-                    f"❌ Cannot override default link '{name}'. Choose a different name.",
+                    f"❌ '{name}' is a reserved command name. Please choose a different name.",
                     ephemeral=True
                 )
                 return
@@ -231,11 +351,12 @@ class LinksPlugin(BasePlugin):
                 await self.smart_respond(ctx, "This command can only be used in a server!", ephemeral=True)
                 return
 
-            # Prevent removal of default links
-            if name.lower() in self._default_links:
+            # Prevent removal of reserved command names
+            reserved_names = {"github", "docs", "panel", "support", "links", "link", "addlink", "removelink"}
+            if name.lower() in reserved_names:
                 await self.smart_respond(
                     ctx,
-                    f"❌ Cannot remove default link '{name}'.",
+                    f"❌ '{name}' is a reserved command name and cannot be removed.",
                     ephemeral=True
                 )
                 return
