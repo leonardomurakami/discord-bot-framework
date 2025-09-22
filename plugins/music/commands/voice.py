@@ -6,6 +6,17 @@ from bot.plugins.commands import CommandArgument, command
 from ..utils import cancel_disconnect_timer
 
 
+async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
+    """Broadcast music update to WebSocket clients."""
+    try:
+        from ..web_panel import broadcast_music_update
+        await broadcast_music_update(guild_id, plugin, update_type)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
+
+
 def setup_voice_commands(plugin):
     """Setup voice-related commands on the plugin."""
 
@@ -112,6 +123,9 @@ def setup_voice_commands(plugin):
             return
 
         await player.set_volume(level)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "volume_update")
 
         if level == 0:
             emoji = "🔇"

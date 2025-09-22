@@ -1,12 +1,195 @@
+import asyncio
+import json
 import logging
+from typing import Dict, Set
 
-from fastapi import FastAPI, Form, HTTPException, Query, Request
+from fastapi import FastAPI, Form, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from bot.database.manager import db_manager
 from bot.database.models import MusicQueue, MusicSession
 
 logger = logging.getLogger(__name__)
+
+# WebSocket connection manager
+class MusicWebSocketManager:
+    def __init__(self):
+        # guild_id -> set of websocket connections
+        self.connections: Dict[int, Set[WebSocket]] = {}
+        self.lock = asyncio.Lock()
+
+    async def connect(self, websocket: WebSocket, guild_id: int):
+        await websocket.accept()
+        async with self.lock:
+            if guild_id not in self.connections:
+                self.connections[guild_id] = set()
+            self.connections[guild_id].add(websocket)
+        logger.debug(f"WebSocket connected for guild {guild_id}, total: {len(self.connections[guild_id])}")
+
+    async def disconnect(self, websocket: WebSocket, guild_id: int):
+        async with self.lock:
+            if guild_id in self.connections:
+                self.connections[guild_id].discard(websocket)
+                if not self.connections[guild_id]:
+                    del self.connections[guild_id]
+        logger.debug(f"WebSocket disconnected for guild {guild_id}")
+
+    async def broadcast_to_guild(self, guild_id: int, message: dict):
+        if guild_id not in self.connections:
+            return
+
+        # Create a copy of connections to avoid modification during iteration
+        async with self.lock:
+            connections_copy = self.connections[guild_id].copy()
+
+        disconnected = set()
+        for websocket in connections_copy:
+            try:
+                await websocket.send_text(json.dumps(message))
+            except Exception as e:
+                logger.debug(f"Failed to send WebSocket message: {e}")
+                disconnected.add(websocket)
+
+        # Remove disconnected websockets
+        if disconnected:
+            async with self.lock:
+                if guild_id in self.connections:
+                    self.connections[guild_id] -= disconnected
+                    if not self.connections[guild_id]:
+                        del self.connections[guild_id]
+
+# Global WebSocket manager instance
+music_ws_manager = MusicWebSocketManager()
+
+
+async def get_music_status_data(guild_id: int, plugin) -> dict:
+    """Get music status data for a guild. Used by both REST API and WebSocket."""
+    try:
+        # Check if lavalink client is available
+        if not plugin.lavalink_client:
+            return {
+                "connected": False,
+                "playing": False,
+                "paused": False,
+                "position": 0,
+                "volume": 50,
+                "repeat_mode": "off",
+                "shuffle_enabled": False,
+                "current_track": None,
+                "queue": [],
+                "queue_duration": 0,
+                "error": "Lavalink client not connected"
+            }
+
+        player = plugin.lavalink_client.player_manager.get(guild_id)
+
+        # If no player exists, return disconnected state
+        if not player:
+            return {
+                "connected": False,
+                "playing": False,
+                "paused": False,
+                "position": 0,
+                "volume": 50,
+                "repeat_mode": "off",
+                "shuffle_enabled": False,
+                "current_track": None,
+                "queue": [],
+                "queue_duration": 0,
+            }
+
+        # Get repeat mode from plugin state
+        repeat_mode = "off"
+        if guild_id in plugin.repeat_modes:
+            repeat_value = plugin.repeat_modes[guild_id]
+            if repeat_value == 1:
+                repeat_mode = "track"
+            elif repeat_value == 2:
+                repeat_mode = "queue"
+
+        # Get shuffle setting from database (only place we store this)
+        shuffle_enabled = False
+        try:
+            async with db_manager.session() as session:
+                from sqlalchemy import select
+                session_result = await session.execute(select(MusicSession).filter_by(guild_id=guild_id))
+                music_session = session_result.scalar_one_or_none()
+                if music_session:
+                    shuffle_enabled = music_session.shuffle_enabled
+        except Exception:
+            # If database query fails, default to False
+            pass
+
+        # Build status entirely from Lavalink player state
+        status = {
+            "connected": player.is_connected,
+            "playing": player.is_playing,
+            "paused": player.paused,
+            "position": player.position,
+            "volume": player.volume,
+            "repeat_mode": repeat_mode,
+            "shuffle_enabled": shuffle_enabled,
+            "current_track": None,
+            "queue": [],
+            "queue_duration": 0,
+        }
+
+        # Get current track from Lavalink
+        if player.current:
+            track = player.current
+            status["current_track"] = {
+                "title": track.title,
+                "author": track.author,
+                "duration": track.duration,
+                "position": player.position,
+                "uri": track.uri,
+                "requester_id": getattr(track, 'requester', 0),
+            }
+
+        # Get queue from Lavalink (this is the live, authoritative queue)
+        queue_duration = 0
+        if player.queue:
+            for i, queue_track in enumerate(player.queue):
+                queue_duration += queue_track.duration
+                status["queue"].append({
+                    "position": i,
+                    "title": queue_track.title,
+                    "author": queue_track.author,
+                    "duration": queue_track.duration,
+                    "uri": queue_track.uri,
+                    "requester_id": getattr(queue_track, 'requester', 0),
+                })
+
+        status["queue_duration"] = queue_duration
+        return status
+
+    except Exception as e:
+        logger.error(f"Error getting music status for guild {guild_id}: {e}")
+        return {
+            "connected": False,
+            "playing": False,
+            "paused": False,
+            "position": 0,
+            "volume": 50,
+            "repeat_mode": "off",
+            "shuffle_enabled": False,
+            "current_track": None,
+            "queue": [],
+            "queue_duration": 0,
+            "error": str(e)
+        }
+
+
+async def broadcast_music_update(guild_id: int, plugin, update_type: str = "status_update"):
+    """Broadcast music status update to all connected WebSocket clients for a guild."""
+    try:
+        status = await get_music_status_data(guild_id, plugin)
+        await music_ws_manager.broadcast_to_guild(guild_id, {
+            "type": update_type,
+            "data": status
+        })
+    except Exception as e:
+        logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
 
 
 def register_music_routes(app: FastAPI, plugin) -> None:
@@ -17,68 +200,55 @@ def register_music_routes(app: FastAPI, plugin) -> None:
         """Main music panel interface."""
         return plugin.render_plugin_template(request, "panel.html")
 
+    @app.websocket("/ws/music/{guild_id}")
+    async def music_websocket(websocket: WebSocket, guild_id: int):
+        """WebSocket endpoint for real-time music updates."""
+        await music_ws_manager.connect(websocket, guild_id)
+        try:
+            # Send initial status
+            try:
+                status = await get_music_status_data(guild_id, plugin)
+                await websocket.send_text(json.dumps({
+                    "type": "status_update",
+                    "data": status
+                }))
+            except Exception as e:
+                logger.error(f"Error sending initial status: {e}")
+
+            # Keep connection alive and handle incoming messages
+            while True:
+                try:
+                    data = await websocket.receive_text()
+                    message = json.loads(data)
+
+                    # Handle ping/pong for keepalive
+                    if message.get("type") == "ping":
+                        await websocket.send_text(json.dumps({"type": "pong"}))
+
+                except WebSocketDisconnect:
+                    break
+                except Exception as e:
+                    logger.error(f"WebSocket error: {e}")
+                    break
+
+        except WebSocketDisconnect:
+            pass
+        finally:
+            await music_ws_manager.disconnect(websocket, guild_id)
+
     @app.get("/api/music/status/{guild_id}")
     async def get_music_status(guild_id: int):
         """Get current music status for a guild."""
         try:
-            # Check if lavalink client is available
-            if not plugin.lavalink_client:
-                raise HTTPException(status_code=503, detail="Lavalink client not connected")
-
-            player = plugin.lavalink_client.player_manager.get(guild_id)
-
-            # Get queue from database
-            async with db_manager.session() as session:
-                from sqlalchemy import select
-
-                queue_result = await session.execute(select(MusicQueue).filter_by(guild_id=guild_id).order_by(MusicQueue.position))
-                queue_tracks = queue_result.scalars().all()
-
-                session_result = await session.execute(select(MusicSession).filter_by(guild_id=guild_id))
-                music_session = session_result.scalar_one_or_none()
-
-            status = {
-                "connected": player is not None and player.is_connected,
-                "playing": player.is_playing if player else False,
-                "paused": player.paused if player else False,
-                "position": player.position if player else 0,
-                "volume": player.volume if player else 50,
-                "repeat_mode": music_session.repeat_mode if music_session else "off",
-                "shuffle_enabled": music_session.shuffle_enabled if music_session else False,
-                "current_track": None,
-                "queue": [],
-                "queue_duration": 0,
-            }
-
-            if player and player.current:
-                track = player.current
-                status["current_track"] = {
-                    "title": track.title,
-                    "author": track.author,
-                    "duration": track.duration,
-                    "position": player.position,
-                    "uri": track.uri,
-                }
-
-            # Convert queue tracks to dict format
-            queue_duration = 0
-            for track in queue_tracks:
-                queue_duration += track.track_duration
-                status["queue"].append(
-                    {
-                        "position": track.position,
-                        "title": track.track_title,
-                        "author": track.track_author,
-                        "duration": track.track_duration,
-                        "uri": track.track_uri,
-                        "requester_id": track.requester_id,
-                    }
-                )
-
-            status["queue_duration"] = queue_duration
-
+            status = await get_music_status_data(guild_id, plugin)
+            if "error" in status:
+                if status["error"] == "Lavalink client not connected":
+                    raise HTTPException(status_code=503, detail=status["error"])
+                else:
+                    raise HTTPException(status_code=500, detail=status["error"])
             return JSONResponse(status)
-
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error getting music status for guild {guild_id}: {e}")
             raise HTTPException(status_code=500, detail=str(e)) from e
@@ -114,6 +284,9 @@ def register_music_routes(app: FastAPI, plugin) -> None:
             # Save queue to database
             await plugin._save_queue_to_db(guild_id)
 
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "queue_update")
+
             return HTMLResponse(f"✅ <strong>Added:</strong> {track.title} by {track.author}")
 
         except Exception as e:
@@ -133,43 +306,57 @@ def register_music_routes(app: FastAPI, plugin) -> None:
             if not player:
                 return HTMLResponse("❌ <strong>No player found</strong>")
 
+            response_html = ""
+            should_broadcast = False
+
             if action == "play":
                 if player.paused:
                     await player.set_pause(False)
-                    return HTMLResponse("▶️ <strong>Resumed playback</strong>")
+                    response_html = "▶️ <strong>Resumed playback</strong>"
+                    should_broadcast = True
                 elif not player.is_playing and player.queue:
                     await player.play()
-                    return HTMLResponse("▶️ <strong>Started playback</strong>")
+                    response_html = "▶️ <strong>Started playback</strong>"
+                    should_broadcast = True
                 else:
-                    return HTMLResponse("ℹ️ <strong>Already playing</strong>")
+                    response_html = "ℹ️ <strong>Already playing</strong>"
 
             elif action == "pause":
                 if player.is_playing:
                     await player.set_pause(True)
-                    return HTMLResponse("⏸️ <strong>Paused playback</strong>")
+                    response_html = "⏸️ <strong>Paused playback</strong>"
+                    should_broadcast = True
                 else:
-                    return HTMLResponse("ℹ️ <strong>Not currently playing</strong>")
+                    response_html = "ℹ️ <strong>Not currently playing</strong>"
 
             elif action == "stop":
                 await player.stop()
                 player.queue.clear()
                 await plugin._save_queue_to_db(guild_id)
-                return HTMLResponse("⏹️ <strong>Stopped and cleared queue</strong>")
+                response_html = "⏹️ <strong>Stopped and cleared queue</strong>"
+                should_broadcast = True
 
             elif action == "skip":
                 if player.current:
                     await player.skip()
                     await plugin._save_queue_to_db(guild_id)
-                    return HTMLResponse("⏭️ <strong>Skipped track</strong>")
+                    response_html = "⏭️ <strong>Skipped track</strong>"
+                    should_broadcast = True
                 else:
-                    return HTMLResponse("ℹ️ <strong>No track to skip</strong>")
+                    response_html = "ℹ️ <strong>No track to skip</strong>"
 
             elif action == "previous":
                 # This would require implementing a history system
-                return HTMLResponse("ℹ️ <strong>Previous track not available</strong>")
+                response_html = "ℹ️ <strong>Previous track not available</strong>"
 
             else:
-                return HTMLResponse("❌ <strong>Unknown action</strong>")
+                response_html = "❌ <strong>Unknown action</strong>"
+
+            # Broadcast update to WebSocket clients if state changed
+            if should_broadcast:
+                await broadcast_music_update(guild_id, plugin, "playback_update")
+
+            return HTMLResponse(response_html)
 
         except Exception as e:
             logger.error(f"Error with playback control {action}: {e}")
@@ -202,6 +389,9 @@ def register_music_routes(app: FastAPI, plugin) -> None:
                 if music_session:
                     music_session.volume = volume
                     await session.commit()
+
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "volume_update")
 
             return HTMLResponse(f"🔊 <strong>Volume set to {volume}%</strong>")
 
@@ -244,6 +434,10 @@ def register_music_routes(app: FastAPI, plugin) -> None:
                 plugin.repeat_modes[guild_id] = 2
 
             mode_text = {"off": "Off", "track": "Track", "queue": "Queue"}[mode]
+
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "repeat_update")
+
             return HTMLResponse(f"🔁 <strong>Repeat mode set to {mode_text}</strong>")
 
         except Exception as e:
@@ -274,6 +468,10 @@ def register_music_routes(app: FastAPI, plugin) -> None:
                 await session.commit()
 
             status = "enabled" if enabled else "disabled"
+
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "shuffle_update")
+
             return HTMLResponse(f"🔀 <strong>Shuffle {status}</strong>")
 
         except Exception as e:
@@ -300,6 +498,9 @@ def register_music_routes(app: FastAPI, plugin) -> None:
             del player.queue[position]
 
             await plugin._save_queue_to_db(guild_id)
+
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "queue_update")
 
             return HTMLResponse(f"🗑️ <strong>Removed:</strong> {removed_track.title}")
 

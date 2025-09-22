@@ -6,6 +6,17 @@ from bot.plugins.commands import CommandArgument, command
 from ..utils import handle_playlist_add, save_queue_to_db
 
 
+async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
+    """Broadcast music update to WebSocket clients."""
+    try:
+        from ..web_panel import broadcast_music_update
+        await broadcast_music_update(guild_id, plugin, update_type)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
+
+
 def setup_playback_commands(plugin):
     """Setup playback-related commands on the plugin."""
 
@@ -59,6 +70,9 @@ def setup_playback_commands(plugin):
             await player.play()
 
         await save_queue_to_db(plugin, ctx.guild_id)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
 
         duration_minutes = track.duration // 60000
         duration_seconds = (track.duration % 60000) // 1000
@@ -137,6 +151,10 @@ def setup_playback_commands(plugin):
             return
 
         await player.set_pause(True)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
+
         embed = plugin.create_embed(title="⏸️ Paused", description=f"Paused: **{player.current.title}**", color=hikari.Color(0xFFFF00))
         await plugin.smart_respond(ctx, embed=embed)
 
@@ -161,6 +179,10 @@ def setup_playback_commands(plugin):
             return
 
         await player.set_pause(False)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
+
         embed = plugin.create_embed(
             title="▶️ Resumed", description=f"Resumed: **{player.current.title}**", color=hikari.Color(0x00FF00)
         )
@@ -189,6 +211,9 @@ def setup_playback_commands(plugin):
         from ..utils import clear_queue_from_db
 
         await clear_queue_from_db(plugin, ctx.guild_id)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
 
         embed = plugin.create_embed(
             title="⏹️ Stopped", description="Stopped the music and cleared the queue.", color=hikari.Color(0xFF0000)
@@ -220,6 +245,9 @@ def setup_playback_commands(plugin):
 
         await player.skip()
         await save_queue_to_db(plugin, ctx.guild_id)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
 
         embed = plugin.create_embed(title="⏭️ Track Skipped", color=hikari.Color(0x00FF00))
 

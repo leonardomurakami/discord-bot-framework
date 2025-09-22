@@ -8,6 +8,17 @@ from bot.plugins.commands import CommandArgument, command
 from ..utils import save_queue_to_db
 
 
+async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
+    """Broadcast music update to WebSocket clients."""
+    try:
+        from ..web_panel import broadcast_music_update
+        await broadcast_music_update(guild_id, plugin, update_type)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
+
+
 def setup_queue_commands(plugin):
     """Setup queue management commands on the plugin."""
 
@@ -152,6 +163,9 @@ def setup_queue_commands(plugin):
 
         await save_queue_to_db(plugin, ctx.guild_id)
 
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
+
         embed = plugin.create_embed(
             title="🔀 Queue Shuffled", description=f"Shuffled **{len(queue_list)}** tracks in the queue", color=hikari.Color(0x00FF00)
         )
@@ -186,6 +200,9 @@ def setup_queue_commands(plugin):
                 return
 
         plugin.repeat_modes[ctx.guild_id] = new_mode
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "repeat_update")
 
         if new_mode == 0:
             embed = plugin.create_embed(title="🔁 Loop Off", description="Loop mode disabled", color=hikari.Color(0xFF0000))
@@ -224,6 +241,9 @@ def setup_queue_commands(plugin):
 
         removed_track = player.queue.pop(position - 1)
         await save_queue_to_db(plugin, ctx.guild_id)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
 
         try:
             user = await ctx.bot.hikari_bot.rest.fetch_user(removed_track.requester)
@@ -288,6 +308,9 @@ def setup_queue_commands(plugin):
 
         await save_queue_to_db(plugin, ctx.guild_id)
 
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
+
         embed = plugin.create_embed(
             title="🔄 Track Moved",
             description=f"Moved **[{track.title}]({track.uri})**\n" f"From position #{from_position} to #{to_position}",
@@ -320,6 +343,9 @@ def setup_queue_commands(plugin):
         player.queue.clear()
 
         await save_queue_to_db(plugin, ctx.guild_id)
+
+        # Broadcast update to WebSocket clients
+        await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
 
         embed = plugin.create_embed(
             title="🧹 Queue Cleared", description=f"Removed **{tracks_removed}** tracks from the queue", color=hikari.Color(0xFF9800)
