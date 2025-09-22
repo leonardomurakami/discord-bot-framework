@@ -27,7 +27,7 @@
                 <p class="panel-hero__subtitle">{{ subtitle }}</p>
                 {% endif %}
                 <span class="status-badge {% if is_ready %}status-online{% else %}status-offline{% endif %}">
-                    <span>⚡</span>
+                    <i class="fa-solid fa-bolt icon icon-sm" aria-hidden="true"></i>
                     <span>{% if is_ready %}{{ status_label_online }}{% else %}{{ status_label_offline }}{% endif %}</span>
                 </span>
             </div>
@@ -52,7 +52,7 @@
         <div class="hero-actions">
             {% for cta in ctas %}
             <a href="{{ cta.href }}" class="hero-btn{% if cta.variant == 'secondary' %} hero-btn--secondary{% endif %}">
-                {% if cta.icon %}<span>{{ cta.icon }}</span>{% endif %}
+                {% if cta.icon %}<i class="{{ cta.icon }} icon icon-sm" aria-hidden="true"></i>{% endif %}
                 <span>{{ cta.label }}</span>
             </a>
             {% endfor %}

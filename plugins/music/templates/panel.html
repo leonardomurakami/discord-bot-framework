@@ -1,10 +1,5 @@
 {% extends "plugin_base.html" %}
 
-{% block extra_head %}
-<!-- Font Awesome Icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
-{% endblock %}
-
 {% block extra_styles %}
 /* Music plugin specific styling */
 .music-grid {
@@ -281,6 +276,7 @@
     background: rgba(248, 250, 252, 0.5);
     border-radius: 16px;
     border: 1px solid rgba(226, 232, 240, 0.6);
+    position: relative;
 }
 
 [data-theme="dark"] .volume-control {
@@ -348,6 +344,27 @@
     transform: scale(1.1);
 }
 
+/* Volume visualization */
+.volume-visualization {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        rgba(99, 102, 241, 0.1) 0%,
+        rgba(139, 92, 246, 0.1) 50%,
+        rgba(236, 72, 153, 0.1) 100%);
+    border-radius: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.volume-visualization.active {
+    opacity: 1;
+}
+
 #volume-display {
     font-weight: 600;
     font-size: 0.9rem;
@@ -361,33 +378,239 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    position: relative;
 }
 
 .add-track form {
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    position: relative;
 }
 
-.add-track input {
+.search-input-container {
     flex: 1;
-    padding: 0.75rem;
+    position: relative;
+}
+
+.search-input-container input {
+    width: 100%;
+    padding: 0.75rem 60px 0.75rem 0.75rem; /* Extra padding on right for dropdown */
     border: 1px solid var(--input-border);
     border-radius: 8px;
     background: var(--bg-primary);
     color: var(--text-primary);
     font-size: 0.95rem;
+    position: relative;
 }
+
+.search-input-container input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Text fade effect near dropdown */
+.search-input-container::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    right: 50px;
+    bottom: 1px;
+    width: 20px;
+    background: linear-gradient(to right, transparent, var(--bg-primary));
+    pointer-events: none;
+    border-radius: 0 7px 7px 0;
+}
+
+.source-dropdown {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
+    width: 48px;
+    background: var(--bg-secondary);
+    border: none;
+    border-radius: 0 7px 7px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.source-dropdown:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--text-primary);
+}
+
+.source-dropdown i {
+    font-size: 1.1rem;
+}
+
+.source-options {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    display: none;
+    min-width: 160px;
+    margin-top: 4px;
+}
+
+[data-theme="dark"] .source-options {
+    background: var(--bg-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.source-options.show {
+    display: block;
+}
+
+.source-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    color: var(--text-primary);
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.source-option:last-child {
+    border-bottom: none;
+}
+
+.source-option:hover {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.source-option.active {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-color);
+}
+
+.source-option i {
+    font-size: 1.1rem;
+    width: 20px;
+    text-align: center;
+}
+
+.source-option .source-label {
+    font-weight: 500;
+}
+
 
 .add-track .btn {
     padding: 0.75rem 1.25rem;
     white-space: nowrap;
 }
 
-.add-track input:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px var(--focus-ring);
+/* Search autocomplete styling */
+.search-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 80px; /* Leave space for the button */
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+[data-theme="dark"] .search-autocomplete {
+    background: var(--bg-secondary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.search-suggestion {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.search-suggestion:last-child {
+    border-bottom: none;
+}
+
+.search-suggestion:hover,
+.search-suggestion.highlighted {
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.search-suggestion-thumbnail {
+    width: 48px;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: linear-gradient(145deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-suggestion-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.search-suggestion-thumbnail i {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    opacity: 0.6;
+}
+
+.search-suggestion-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-suggestion-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.search-suggestion-author {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-suggestion-duration {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+    flex-shrink: 0;
 }
 
 .btn[disabled] {
@@ -414,7 +637,9 @@
     gap: 1rem;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border-color);
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
+    cursor: move;
+    position: relative;
 }
 
 .queue-item:hover {
@@ -423,6 +648,60 @@
 
 .queue-item:last-child {
     border-bottom: none;
+}
+
+/* Drag and drop styles */
+.queue-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    z-index: 1000;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.queue-item.drag-over {
+    background: rgba(99, 102, 241, 0.1);
+    border: 2px dashed #6366f1;
+    transform: scale(1.02);
+}
+
+.queue-item.drop-target-above::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 2px;
+    z-index: 100;
+}
+
+.queue-item.drop-target-below::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 2px;
+    z-index: 100;
+}
+
+.queue-item .drag-handle {
+    opacity: 0.3;
+    font-size: 1rem;
+    cursor: move;
+    padding: 0.25rem;
+    transition: opacity 0.2s ease;
+}
+
+.queue-item:hover .drag-handle {
+    opacity: 0.7;
+}
+
+.queue-item .drag-handle:hover {
+    opacity: 1;
 }
 
 .queue-item-info {
@@ -461,11 +740,20 @@
     cursor: pointer;
     font-size: 0.8rem;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    line-height: 1;
 }
 
 .btn-remove:hover {
     background: #dc2626;
     transform: scale(1.05);
+}
+
+.btn-remove i {
+    font-size: 0.85rem;
 }
 
 /* Modern Mode Controls */
@@ -548,6 +836,32 @@
 
 .mode-btn.active i {
     opacity: 1;
+}
+
+/* Toast notification styles for control messages */
+.result {
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+.result.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+}
+
+.result.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hide empty result containers completely */
+.result:empty {
+    display: none;
 }
 
 .status-indicator {
@@ -723,6 +1037,7 @@
         </div>
 
         <div class="volume-control">
+            <div class="volume-visualization" id="volume-visualization"></div>
             <i class="fas fa-volume-up"></i>
             <input type="range" id="volume-slider" class="volume-slider"
                    min="0" max="150" value="50" disabled>
@@ -769,9 +1084,23 @@
         <div class="add-track">
             <form hx-post="/api/music/play" hx-target="#add-result">
                 <input type="hidden" name="guild_id" value="" id="guild-id-input">
-                <input type="text" name="query" id="add-track-input" placeholder="Enter song name, artist, or YouTube URL..." required>
+                <input type="hidden" name="source" value="ytsearch" id="search-source-input">
+
+                <div class="search-input-container">
+                    <input type="text" name="query" id="add-track-input" placeholder="Search YouTube..." required autocomplete="off">
+
+                    <div class="source-dropdown" id="source-dropdown">
+                        <i class="fab fa-youtube" id="current-source-icon"></i>
+                    </div>
+
+                    <div class="source-options" id="source-options">
+                        <!-- Options will be populated dynamically -->
+                    </div>
+                </div>
+
                 <button type="submit" class="btn" id="add-track-button"><i class="fas fa-plus"></i> Add to Queue</button>
             </form>
+            <div class="search-autocomplete" id="search-autocomplete"></div>
         </div>
 
         <div id="add-result" class="result"></div>
@@ -872,10 +1201,18 @@ function connectWebSocket(guildId) {
     musicWebSocket.onmessage = function(event) {
         try {
             const message = JSON.parse(event.data);
-            if (message.type === 'status_update' || message.type.endsWith('_update') || message.type.startsWith('track_') || message.type === 'queue_end') {
+            if (message.type === 'status_update' || message.type.endsWith('_update') || message.type.startsWith('track_') || message.type === 'queue_end' || message.type === 'queue_reorder') {
                 latestStatus = message.data;
                 updateUIFromStatus(message.data);
-                refreshQueue();
+
+                // For queue reorder, add a small delay to show the reorder operation
+                if (message.type === 'queue_reorder') {
+                    setTimeout(() => {
+                        refreshQueue();
+                    }, 100);
+                } else {
+                    refreshQueue();
+                }
             }
         } catch (error) {
             console.error('Error parsing WebSocket message:', error);
@@ -976,14 +1313,6 @@ function updateUIFromStatus(status) {
         // Check if music is actively playing (not paused)
         const isActivelyPlaying = status.playing && !status.paused;
 
-        // Debug logging
-        console.log('Play/Pause Button Update:', {
-            playing: status.playing,
-            paused: status.paused,
-            isActivelyPlaying: isActivelyPlaying,
-            current_track: !!status.current_track
-        });
-
         if (isActivelyPlaying) {
             // Music is actively playing - show pause button in purple
             playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -1058,12 +1387,177 @@ async function refreshQueue(showLoading = false) {
     if (window.htmx) {
         htmx.process(queueContainer);
     }
+
+    // Initialize drag and drop after queue is rendered with a slight delay
+    setTimeout(() => {
+        initializeDragAndDrop();
+    }, 50);
+
     updateQueueTimestamp();
+}
+
+// Drag and drop functionality - Global state
+let draggedElement = null;
+let draggedFromPosition = null;
+let isDragAndDropInitialized = false;
+
+function initializeDragAndDrop() {
+    if (isDragAndDropInitialized) return;
+
+    const queueContainer = document.getElementById('queue-container');
+    if (!queueContainer) return;
+
+    isDragAndDropInitialized = true;
+
+    queueContainer.addEventListener('dragstart', function(e) {
+        const queueItem = e.target.closest('.queue-item');
+        if (!queueItem) return;
+
+        draggedElement = queueItem;
+        draggedFromPosition = parseInt(queueItem.dataset.position);
+        queueItem.classList.add('dragging');
+
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', queueItem.outerHTML);
+    });
+
+    queueContainer.addEventListener('dragend', function(e) {
+        const queueItem = e.target.closest('.queue-item');
+        if (queueItem && draggedElement) {
+            queueItem.classList.remove('dragging');
+            // Remove all drop indicators
+            document.querySelectorAll('.queue-item').forEach(item => {
+                item.classList.remove('drag-over', 'drop-target-above', 'drop-target-below');
+            });
+            draggedElement = null;
+            draggedFromPosition = null;
+        }
+    });
+
+    queueContainer.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+
+        const queueItem = e.target.closest('.queue-item');
+        if (!queueItem || queueItem === draggedElement) return;
+
+        // Remove previous indicators
+        document.querySelectorAll('.queue-item').forEach(item => {
+            item.classList.remove('drag-over', 'drop-target-above', 'drop-target-below');
+        });
+
+        const rect = queueItem.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+
+        if (e.clientY < midpoint) {
+            queueItem.classList.add('drop-target-above');
+        } else {
+            queueItem.classList.add('drop-target-below');
+        }
+    });
+
+    queueContainer.addEventListener('drop', function(e) {
+        e.preventDefault();
+
+        const targetItem = e.target.closest('.queue-item');
+        if (!targetItem || !draggedElement || targetItem === draggedElement) return;
+
+        const targetPosition = parseInt(targetItem.dataset.position);
+        const rect = targetItem.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+
+        let dropToPosition;
+        if (e.clientY < midpoint) {
+            // Drop above target
+            dropToPosition = targetPosition;
+        } else {
+            // Drop below target
+            dropToPosition = targetPosition + 1;
+        }
+
+        // Adjust for removed element
+        if (draggedFromPosition < dropToPosition) {
+            dropToPosition--;
+        }
+
+        if (draggedFromPosition !== dropToPosition) {
+            // Add visual feedback during reordering
+            const queueList = document.querySelector('.queue-list');
+            if (queueList) {
+                queueList.style.opacity = '0.7';
+                queueList.style.pointerEvents = 'none';
+            }
+
+            reorderQueueTrack(draggedFromPosition, dropToPosition).then(() => {
+                // Restore interactivity after a brief moment
+                setTimeout(() => {
+                    if (queueList) {
+                        queueList.style.opacity = '1';
+                        queueList.style.pointerEvents = 'auto';
+                    }
+                }, 200);
+            }).catch((error) => {
+                console.error('Reorder failed:', error);
+                // Restore interactivity immediately on error
+                if (queueList) {
+                    queueList.style.opacity = '1';
+                    queueList.style.pointerEvents = 'auto';
+                }
+            });
+        }
+
+        // Clean up
+        document.querySelectorAll('.queue-item').forEach(item => {
+            item.classList.remove('drag-over', 'drop-target-above', 'drop-target-below');
+        });
+    });
+}
+
+async function reorderQueueTrack(fromPosition, toPosition) {
+    if (!currentGuildId) return;
+
+    try {
+        const formData = new FormData();
+        formData.append('guild_id', currentGuildId);
+        formData.append('from_position', fromPosition);
+        formData.append('to_position', toPosition);
+
+        const response = await fetch('/api/music/queue/reorder', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            console.error('Failed to reorder queue:', result.error);
+        }
+    } catch (error) {
+        console.error('Error reordering queue:', error);
+    }
+}
+
+// Volume visualization functionality
+let volumeVisualizationTimeout;
+
+function showVolumeVisualization() {
+    const visualization = document.getElementById('volume-visualization');
+    if (visualization) {
+        visualization.classList.add('active');
+
+        clearTimeout(volumeVisualizationTimeout);
+        volumeVisualizationTimeout = setTimeout(() => {
+            visualization.classList.remove('active');
+        }, 1500);
+    }
 }
 
 document.getElementById('volume-slider').addEventListener('input', function(e) {
     const volume = e.target.value;
     document.getElementById('volume-display').textContent = `${volume}%`;
+
+    // Show volume visualization
+    showVolumeVisualization();
 
     clearTimeout(this.volumeTimeout);
     this.volumeTimeout = setTimeout(() => {
@@ -1110,7 +1604,7 @@ function renderConnectedQueue(status) {
 
     const rawGuildId = String(currentGuildId ?? '');
     const guildId = rawGuildId.replace(/[^0-9]/g, '') || rawGuildId;
-    let html = '<div class="queue-list">';
+    let html = '<div class="queue-list" id="sortable-queue">';
     queue.forEach((track, index) => {
         const title = escapeHtml(track.title ?? track.track_title ?? `Track ${index + 1}`);
         const author = escapeHtml(track.author ?? track.track_author ?? 'Unknown artist');
@@ -1119,7 +1613,10 @@ function renderConnectedQueue(status) {
         const hxVals = `{"guild_id": "${guildId}", "position": ${position}}`;
 
         html += `
-            <div class="queue-item" data-position="${position}">
+            <div class="queue-item" data-position="${position}" draggable="true">
+                <div class="drag-handle">
+                    <i class="fas fa-grip-vertical"></i>
+                </div>
                 <div class="queue-item-info">
                     <div class="queue-item-title">${title}</div>
                     <div class="queue-item-author">${author}</div>
@@ -1129,8 +1626,9 @@ function renderConnectedQueue(status) {
                         class="btn-remove"
                         hx-post="/api/music/queue/remove"
                         hx-vals='${hxVals}'
-                        hx-target="#queue-result">
-                    🗑️
+                        hx-target="#queue-result"
+                        aria-label="Remove track">
+                    <i class="fa-solid fa-trash-can icon icon-sm" aria-hidden="true"></i>
                 </button>
             </div>
         `;
@@ -1281,6 +1779,13 @@ function handleMusicGuildChange(guildId) {
         // Connect to WebSocket for real-time updates
         connectWebSocket(currentGuildId);
 
+        // Initialize drag and drop
+        initializeDragAndDrop();
+
+        // Initialize search autocomplete and source selector
+        initializeSearchAutocomplete();
+        initializeSourceSelector();
+
         // Start progress updates for current track
         startProgressUpdates();
     } else {
@@ -1309,6 +1814,396 @@ window.addEventListener('beforeunload', () => {
         clearTimeout(reconnectTimeout);
     }
 });
+
+// Search autocomplete functionality
+let searchTimeout;
+let currentHighlightedIndex = -1;
+let suggestions = [];
+
+function initializeSearchAutocomplete() {
+    const searchInput = document.getElementById('add-track-input');
+    const autocompleteDiv = document.getElementById('search-autocomplete');
+
+    if (!searchInput || !autocompleteDiv) return;
+
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+
+        clearTimeout(searchTimeout);
+
+        if (query.length < 2) {
+            hideAutocomplete();
+            return;
+        }
+
+        // Don't show suggestions for URLs
+        if (query.startsWith('http://') || query.startsWith('https://') || query.startsWith('www.')) {
+            hideAutocomplete();
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+        const autocompleteDiv = document.getElementById('search-autocomplete');
+        if (autocompleteDiv.style.display === 'none') return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                currentHighlightedIndex = Math.min(currentHighlightedIndex + 1, suggestions.length - 1);
+                updateHighlight();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                currentHighlightedIndex = Math.max(currentHighlightedIndex - 1, -1);
+                updateHighlight();
+                break;
+            case 'Enter':
+                if (currentHighlightedIndex >= 0 && currentHighlightedIndex < suggestions.length) {
+                    e.preventDefault();
+                    selectSuggestion(suggestions[currentHighlightedIndex]);
+                }
+                break;
+            case 'Escape':
+                hideAutocomplete();
+                break;
+        }
+    });
+
+    searchInput.addEventListener('blur', function() {
+        // Small delay to allow clicking on suggestions
+        setTimeout(() => {
+            hideAutocomplete();
+        }, 150);
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (suggestions.length > 0 && this.value.trim().length >= 2) {
+            showAutocomplete();
+        }
+    });
+}
+
+async function fetchSuggestions(query) {
+    try {
+        const sourceInput = document.getElementById('search-source-input');
+        const source = sourceInput ? sourceInput.value : 'ytsearch';
+
+        const response = await fetch(`/api/music/search/suggestions?query=${encodeURIComponent(query)}&source=${encodeURIComponent(source)}`);
+        const data = await response.json();
+
+        suggestions = data;
+        displaySuggestions(data);
+    } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        hideAutocomplete();
+    }
+}
+
+function displaySuggestions(suggestions) {
+    const autocompleteDiv = document.getElementById('search-autocomplete');
+
+    if (!suggestions || suggestions.length === 0) {
+        hideAutocomplete();
+        return;
+    }
+
+    let html = '';
+    suggestions.forEach((suggestion, index) => {
+        // Determine fallback icon based on source
+        const sourceIcons = {
+            'ytsearch': 'fab fa-youtube',
+            'ytmsearch': 'fab fa-youtube',
+            'spsearch': 'fab fa-spotify',
+            'amsearch': 'fab fa-apple',
+            'scsearch': 'fab fa-soundcloud',
+            'dzsearch': 'fas fa-music'
+        };
+
+        const fallbackIcon = sourceIcons[suggestion.source] || 'fas fa-music';
+
+        const thumbnailHtml = suggestion.thumbnail
+            ? `<img src="${suggestion.thumbnail}" alt="Track thumbnail" loading="lazy" onerror="this.parentElement.innerHTML='<i class=\\"${fallbackIcon}\\"></i>'">`
+            : `<i class="${fallbackIcon}"></i>`;
+
+        html += `
+            <div class="search-suggestion" data-index="${index}" onclick="selectSuggestion(${JSON.stringify(suggestion).replace(/"/g, '&quot;')})">
+                <div class="search-suggestion-thumbnail">
+                    ${thumbnailHtml}
+                </div>
+                <div class="search-suggestion-info">
+                    <div class="search-suggestion-title">${escapeHtml(suggestion.title)}</div>
+                    <div class="search-suggestion-author">${escapeHtml(suggestion.author)}</div>
+                </div>
+                <div class="search-suggestion-duration">${suggestion.duration}</div>
+            </div>
+        `;
+    });
+
+    autocompleteDiv.innerHTML = html;
+    showAutocomplete();
+    currentHighlightedIndex = -1;
+}
+
+function selectSuggestion(suggestion) {
+    const searchInput = document.getElementById('add-track-input');
+    searchInput.value = suggestion.display;
+    hideAutocomplete();
+
+    // Optionally trigger the form submission
+    // searchInput.closest('form').querySelector('button[type="submit"]').click();
+}
+
+function updateHighlight() {
+    const suggestionElements = document.querySelectorAll('.search-suggestion');
+
+    suggestionElements.forEach((element, index) => {
+        element.classList.toggle('highlighted', index === currentHighlightedIndex);
+    });
+
+    // Scroll highlighted element into view
+    if (currentHighlightedIndex >= 0 && currentHighlightedIndex < suggestionElements.length) {
+        suggestionElements[currentHighlightedIndex].scrollIntoView({
+            block: 'nearest'
+        });
+    }
+}
+
+function showAutocomplete() {
+    const autocompleteDiv = document.getElementById('search-autocomplete');
+    autocompleteDiv.style.display = 'block';
+}
+
+function hideAutocomplete() {
+    const autocompleteDiv = document.getElementById('search-autocomplete');
+    autocompleteDiv.style.display = 'none';
+    currentHighlightedIndex = -1;
+    suggestions = [];
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', function(e) {
+    const addTrackDiv = e.target.closest('.add-track');
+    if (!addTrackDiv) {
+        hideAutocomplete();
+    }
+});
+
+// Source dropdown functionality
+let availableSources = [];
+
+async function loadAvailableSources() {
+    try {
+        const response = await fetch('/api/music/sources');
+        const sources = await response.json();
+        availableSources = sources;
+        populateSourceOptions(sources);
+    } catch (error) {
+        console.error('Error loading sources:', error);
+        // Fallback to YouTube only
+        availableSources = [{
+            id: 'ytsearch',
+            name: 'YouTube',
+            icon: 'fab fa-youtube',
+            available: true
+        }];
+        populateSourceOptions(availableSources);
+    }
+}
+
+function populateSourceOptions(sources) {
+    const optionsContainer = document.getElementById('source-options');
+    if (!optionsContainer) return;
+
+    let html = '';
+    const firstSource = sources[0]; // All sources are available now
+
+    sources.forEach((source, index) => {
+        const isFirst = index === 0;
+        const activeClass = isFirst ? ' active' : '';
+
+        html += `
+            <button type="button"
+                    class="source-option${activeClass}"
+                    data-source="${source.id}"
+                    data-icon="${source.icon}">
+                <i class="${source.icon}"></i>
+                <span class="source-label">${source.name}</span>
+            </button>
+        `;
+    });
+
+    optionsContainer.innerHTML = html;
+
+    // Set default source to first available
+    if (firstSource) {
+        const sourceInput = document.getElementById('search-source-input');
+        const currentIcon = document.getElementById('current-source-icon');
+        const searchInput = document.getElementById('add-track-input');
+
+        if (sourceInput) {
+            sourceInput.value = firstSource.id;
+        }
+
+        if (currentIcon) {
+            currentIcon.className = firstSource.icon;
+        }
+
+        if (searchInput) {
+            searchInput.placeholder = `Search ${firstSource.name}...`;
+        }
+    }
+
+    // Re-initialize event handlers
+    initializeSourceDropdownEvents();
+}
+
+function initializeSourceDropdownEvents() {
+    const dropdown = document.getElementById('source-dropdown');
+    const options = document.getElementById('source-options');
+    const sourceInput = document.getElementById('search-source-input');
+    const currentIcon = document.getElementById('current-source-icon');
+
+    // Toggle dropdown on click
+    if (dropdown) {
+        dropdown.removeEventListener('click', toggleDropdown); // Remove existing listener
+        dropdown.addEventListener('click', toggleDropdown);
+    }
+
+    // Handle option selection
+    const sourceOptions = document.querySelectorAll('.source-option');
+    sourceOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.stopPropagation();
+
+            // Remove active class from all options
+            document.querySelectorAll('.source-option').forEach(opt => opt.classList.remove('active'));
+
+            // Add active class to clicked option
+            this.classList.add('active');
+
+            // Update hidden input value
+            const source = this.dataset.source;
+            const icon = this.dataset.icon;
+
+            if (sourceInput) {
+                sourceInput.value = source;
+            }
+
+            // Update dropdown icon
+            if (currentIcon && icon) {
+                currentIcon.className = icon;
+            }
+
+            // Update placeholder text based on source
+            const searchInput = document.getElementById('add-track-input');
+            const selectedSource = availableSources.find(s => s.id === source);
+            if (searchInput && selectedSource) {
+                searchInput.placeholder = `Search ${selectedSource.name}...`;
+            }
+
+            // Hide dropdown
+            options.classList.remove('show');
+
+            // Clear current suggestions since source changed
+            hideAutocomplete();
+        });
+    });
+}
+
+function toggleDropdown(e) {
+    e.stopPropagation();
+    const options = document.getElementById('source-options');
+    options.classList.toggle('show');
+}
+
+function initializeSourceSelector() {
+    // Load sources from server
+    loadAvailableSources();
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const options = document.getElementById('source-options');
+        if (options && !e.target.closest('.search-input-container')) {
+            options.classList.remove('show');
+        }
+    });
+}
+
+// Initialize autocomplete when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSearchAutocomplete();
+    initializeSourceSelector();
+    initializeToastNotifications();
+});
+
+// Toast notification fade-out functionality
+function initializeToastNotifications() {
+    // Create a MutationObserver to watch for changes in control result divs
+    const observeControlResults = (selector) => {
+        const targetElement = document.querySelector(selector);
+        if (!targetElement) return;
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    // Check if any added nodes contain text content (indicating a new message)
+                    const hasTextContent = Array.from(mutation.addedNodes).some(node =>
+                        (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) ||
+                        (node.nodeType === Node.ELEMENT_NODE && node.textContent.trim())
+                    );
+
+                    if (hasTextContent) {
+                        fadeInAndScheduleFadeOut(targetElement);
+                    }
+                }
+            });
+        });
+
+        observer.observe(targetElement, {
+            childList: true,
+            subtree: true
+        });
+    };
+
+    // Observe both control result areas
+    observeControlResults('#control-result');
+    observeControlResults('#add-result');
+    observeControlResults('#queue-result');
+}
+
+function fadeInAndScheduleFadeOut(element) {
+    // Clear any existing fade-out timeout
+    if (element.fadeTimeout) {
+        clearTimeout(element.fadeTimeout);
+    }
+
+    // Remove any existing fade classes
+    element.classList.remove('fade-out');
+    element.classList.add('fade-in');
+
+    // Schedule fade-out after 3 seconds
+    element.fadeTimeout = setTimeout(() => {
+        element.classList.remove('fade-in');
+        element.classList.add('fade-out');
+
+        // After fade-out animation completes, clear the content
+        setTimeout(() => {
+            if (element.classList.contains('fade-out')) {
+                element.innerHTML = '';
+                element.classList.remove('fade-out');
+                element.classList.remove('show');
+                element.style.display = 'none';
+            }
+        }, 300); // Match the CSS transition duration
+
+        element.fadeTimeout = null;
+    }, 3000);
+}
 
 // HTMX requests will trigger WebSocket broadcasts automatically from the server
 </script>

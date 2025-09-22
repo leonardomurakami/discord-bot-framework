@@ -136,7 +136,7 @@ class MusicPlugin(BasePlugin, WebPanelMixin):
             "name": "Music Player",
             "description": "Music queue management and playback controls",
             "route": "/plugin/music",
-            "icon": "🎵",
+            "icon": "fa-solid fa-music",
             "nav_order": 5,
         }
 

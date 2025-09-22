@@ -51,7 +51,7 @@ class FunPlugin(BasePlugin, WebPanelMixin):
             "name": "Fun & Games",
             "description": "Interactive fun commands and games panel",
             "route": "/plugin/fun",
-            "icon": "🎮",
+            "icon": "fa-solid fa-gamepad",
             "nav_order": 10,
         }
 

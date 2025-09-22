@@ -1,5 +1,10 @@
 <!-- Shared JavaScript for sidebar functionality -->
 <script>
+    const themeToggleContent = {
+        light: '<i class="fa-solid fa-moon icon icon-md" aria-hidden="true"></i><span>Dark</span>',
+        dark: '<i class="fa-solid fa-sun icon icon-md" aria-hidden="true"></i><span>Light</span>'
+    };
+
     // Global guild selection handler
     function handleGlobalGuildChange(guildId) {
         const globalSelect = document.getElementById('global-guild-select');
@@ -88,7 +93,7 @@
         // Update toggle button text
         const toggleBtn = document.getElementById('theme-toggle');
         if (toggleBtn) {
-            toggleBtn.innerHTML = newTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+            toggleBtn.innerHTML = themeToggleContent[newTheme];
         }
     }
 
@@ -111,7 +116,8 @@
         // Update toggle button if it exists
         const toggleBtn = document.getElementById('theme-toggle');
         if (toggleBtn) {
-            toggleBtn.innerHTML = savedTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+            toggleBtn.innerHTML = themeToggleContent[savedTheme];
         }
     });
 </script>
+

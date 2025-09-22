@@ -80,7 +80,10 @@
 {% block content %}
 <div class="game-grid">
     <div class="game-card">
-        <div class="game-title">🎲 Dice Roller</div>
+        <div class="game-title">
+            <i class="fa-solid fa-dice icon icon-md" aria-hidden="true"></i>
+            <span>Dice Roller</span>
+        </div>
         <p>Roll dice using standard notation (e.g., 2d6, 3d20)</p>
         <form hx-post="/plugin/fun/api/roll" hx-target="#roll-result" hx-indicator="#roll-loading">
             <div class="input-group">
@@ -88,7 +91,10 @@
                 <input type="text" id="dice" name="dice" value="1d6" placeholder="e.g., 2d6, 3d20">
             </div>
             <div class="card-actions">
-                <button type="submit" class="btn">🎲 Roll Dice</button>
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-dice icon icon-sm" aria-hidden="true"></i>
+                    <span>Roll Dice</span>
+                </button>
                 <span id="roll-loading" class="htmx-indicator">Rolling...</span>
             </div>
         </form>
@@ -96,11 +102,15 @@
     </div>
 
     <div class="game-card">
-        <div class="game-title">🪙 Coin Flip</div>
+        <div class="game-title">
+            <i class="fa-solid fa-coins icon icon-md" aria-hidden="true"></i>
+            <span>Coin Flip</span>
+        </div>
         <p>Flip a virtual coin and see if it lands on heads or tails</p>
         <div class="card-actions">
             <button class="btn" hx-post="/plugin/fun/api/coinflip" hx-target="#coinflip-result" hx-indicator="#coinflip-loading">
-                🪙 Flip Coin
+                <i class="fa-solid fa-coins icon icon-sm" aria-hidden="true"></i>
+                <span>Flip Coin</span>
             </button>
             <span id="coinflip-loading" class="htmx-indicator">Flipping...</span>
         </div>
@@ -108,7 +118,10 @@
     </div>
 
     <div class="game-card">
-        <div class="game-title">🎱 Magic 8-Ball</div>
+        <div class="game-title">
+            <i class="fa-solid fa-circle-question icon icon-md" aria-hidden="true"></i>
+            <span>Magic 8-Ball</span>
+        </div>
         <p>Ask the magic 8-ball a question and get a mystical answer</p>
         <form hx-post="/plugin/fun/api/8ball" hx-target="#eightball-result" hx-indicator="#eightball-loading">
             <div class="input-group">
@@ -116,7 +129,10 @@
                 <input type="text" id="question" name="question" placeholder="Ask anything...">
             </div>
             <div class="card-actions">
-                <button type="submit" class="btn">🎱 Ask 8-Ball</button>
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-circle-question icon icon-sm" aria-hidden="true"></i>
+                    <span>Ask 8-Ball</span>
+                </button>
                 <span id="eightball-loading" class="htmx-indicator">Consulting the spirits...</span>
             </div>
         </form>
@@ -124,7 +140,10 @@
     </div>
 
     <div class="game-card">
-        <div class="game-title">🎲 Random Number</div>
+        <div class="game-title">
+            <i class="fa-solid fa-shuffle icon icon-md" aria-hidden="true"></i>
+            <span>Random Number</span>
+        </div>
         <p>Generate a random number within your specified range</p>
         <form hx-post="/plugin/fun/api/random" hx-target="#random-result" hx-indicator="#random-loading">
             <div class="input-group">
@@ -136,7 +155,10 @@
                 <input type="number" id="max" name="max" value="100">
             </div>
             <div class="card-actions">
-                <button type="submit" class="btn">🎯 Generate Number</button>
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-shuffle icon icon-sm" aria-hidden="true"></i>
+                    <span>Generate Number</span>
+                </button>
                 <span id="random-loading" class="htmx-indicator">Generating...</span>
             </div>
         </form>
@@ -144,11 +166,15 @@
     </div>
 
     <div class="game-card">
-        <div class="game-title">😂 Random Joke</div>
+        <div class="game-title">
+            <i class="fa-solid fa-face-laugh icon icon-md" aria-hidden="true"></i>
+            <span>Random Joke</span>
+        </div>
         <p>Get a random joke to brighten your day</p>
         <div class="card-actions">
             <button class="btn" hx-post="/plugin/fun/api/joke" hx-target="#joke-result" hx-indicator="#joke-loading">
-                😂 Tell me a joke!
+                <i class="fa-solid fa-face-laugh icon icon-sm" aria-hidden="true"></i>
+                <span>Tell me a joke!</span>
             </button>
             <span id="joke-loading" class="htmx-indicator">Finding a good one...</span>
         </div>
@@ -156,11 +182,15 @@
     </div>
 
     <div class="game-card">
-        <div class="game-title">💭 Inspirational Quote</div>
+        <div class="game-title">
+            <i class="fa-solid fa-comment-dots icon icon-md" aria-hidden="true"></i>
+            <span>Inspirational Quote</span>
+        </div>
         <p>Get motivated with an inspirational quote</p>
         <div class="card-actions">
             <button class="btn btn-success" hx-post="/plugin/fun/api/quote" hx-target="#quote-result" hx-indicator="#quote-loading">
-                ✨ Inspire me!
+                <i class="fa-solid fa-wand-magic-sparkles icon icon-sm" aria-hidden="true"></i>
+                <span>Inspire me!</span>
             </button>
             <span id="quote-loading" class="htmx-indicator">Finding wisdom...</span>
         </div>

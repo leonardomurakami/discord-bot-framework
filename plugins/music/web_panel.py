@@ -254,7 +254,7 @@ def register_music_routes(app: FastAPI, plugin) -> None:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.post("/api/music/play")
-    async def add_track(request: Request, query: str = Form(...), guild_id: int = Form(...)):
+    async def add_track(request: Request, query: str = Form(...), guild_id: int = Form(...), source: str = Form(default="ytsearch")):
         """Add a track to the queue."""
         try:
             # Check if lavalink client is available
@@ -268,7 +268,11 @@ def register_music_routes(app: FastAPI, plugin) -> None:
 
             # Search for tracks
             if not query.startswith(("http://", "https://")):
-                query = f"ytsearch:{query}"
+                # Validate source
+                valid_sources = ["ytsearch", "ytmsearch", "spsearch", "amsearch", "scsearch", "dzsearch"]
+                if source not in valid_sources:
+                    source = "ytsearch"
+                query = f"{source}:{query}"
 
             results = await plugin.lavalink_client.get_tracks(query)
 
@@ -338,7 +342,24 @@ def register_music_routes(app: FastAPI, plugin) -> None:
 
             elif action == "skip":
                 if player.current:
+                    # Check repeat mode before skipping
+                    repeat_mode = plugin.repeat_modes.get(guild_id, 0)
+
+                    # Handle repeat track mode explicitly
+                    if repeat_mode == 1:
+                        # Add the current track back to the front of the queue for repeat track
+                        player.add(track=player.current, index=0)
+
                     await player.skip()
+
+                    # Small delay to ensure skip is processed
+                    import asyncio
+                    await asyncio.sleep(0.1)
+
+                    # Ensure playback continues if we have tracks in queue
+                    if not player.is_playing and player.queue:
+                        await player.play()
+
                     await plugin._save_queue_to_db(guild_id)
                     response_html = "⏭️ <strong>Skipped track</strong>"
                     should_broadcast = True
@@ -508,6 +529,50 @@ def register_music_routes(app: FastAPI, plugin) -> None:
             logger.error(f"Error removing from queue: {e}")
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
+    @app.post("/api/music/queue/reorder")
+    async def reorder_queue(guild_id: int = Form(...), from_position: int = Form(...), to_position: int = Form(...)):
+        """Reorder a track in the queue by moving it from one position to another."""
+        try:
+            # Check if lavalink client is available
+            if not plugin.lavalink_client:
+                return JSONResponse({"success": False, "error": "Lavalink client not connected"}, status_code=503)
+
+            player = plugin.lavalink_client.player_manager.get(guild_id)
+
+            if not player or not player.is_connected:
+                return JSONResponse({"success": False, "error": "Bot not connected to voice channel"}, status_code=400)
+
+            queue_length = len(player.queue)
+            if from_position < 0 or from_position >= queue_length:
+                return JSONResponse({"success": False, "error": "Invalid source position"}, status_code=400)
+
+            if to_position < 0 or to_position >= queue_length:
+                return JSONResponse({"success": False, "error": "Invalid target position"}, status_code=400)
+
+            if from_position == to_position:
+                return JSONResponse({"success": True, "message": "No change needed"})
+
+            # Remove track from original position
+            track = player.queue.pop(from_position)
+
+            # Insert track at new position
+            player.queue.insert(to_position, track)
+
+            # Save queue to database
+            await plugin._save_queue_to_db(guild_id)
+
+            # Broadcast update to WebSocket clients
+            await broadcast_music_update(guild_id, plugin, "queue_reorder")
+
+            return JSONResponse({
+                "success": True,
+                "message": f"Moved '{track.title}' from position {from_position + 1} to {to_position + 1}"
+            })
+
+        except Exception as e:
+            logger.error(f"Error reordering queue: {e}")
+            return JSONResponse({"success": False, "error": str(e)}, status_code=500)
+
     async def _render_queue_html(guild_id: int) -> HTMLResponse:
         try:
             if not plugin.lavalink_client:
@@ -575,3 +640,161 @@ def register_music_routes(app: FastAPI, plugin) -> None:
     @app.get("/api/music/queue")
     async def get_queue_html_query(guild_id: int = Query(...)):
         return await _render_queue_html(guild_id)
+
+    @app.get("/api/music/search/suggestions")
+    async def get_search_suggestions(query: str = Query(..., min_length=2), source: str = Query(default="ytsearch")):
+        """Get search suggestions for track search."""
+        try:
+            if len(query.strip()) < 2:
+                return JSONResponse([])
+
+            # Check if it's a URL - don't provide suggestions for URLs
+            if query.startswith(("http://", "https://", "www.")):
+                return JSONResponse([])
+
+            # Check if lavalink client is available
+            if not plugin.lavalink_client:
+                return JSONResponse([])
+
+            # Validate source
+            valid_sources = ["ytsearch", "ytmsearch", "spsearch", "amsearch", "scsearch", "dzsearch"]
+            if source not in valid_sources:
+                source = "ytsearch"
+
+            # Search for tracks using specified source
+            search_query = f"{source}:{query}"
+            results = await plugin.lavalink_client.get_tracks(search_query)
+
+            if not results.tracks:
+                return JSONResponse([])
+
+            # Format suggestions - limit to top 8 results
+            suggestions = []
+            for track in results.tracks[:8]:
+                duration_mins = track.duration // 60000
+                duration_secs = (track.duration % 60000) // 1000
+
+                # Extract thumbnail URL based on source
+                thumbnail_url = None
+                if track.uri:
+                    import re
+                    if "youtube" in track.uri:
+                        youtube_id_match = re.search(r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})', track.uri)
+                        if youtube_id_match:
+                            video_id = youtube_id_match.group(1)
+                            thumbnail_url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+                    elif "soundcloud" in track.uri:
+                        # SoundCloud tracks might have artwork_url in track metadata
+                        thumbnail_url = getattr(track, 'artwork_url', None)
+                    # For other sources (Spotify, Apple Music, etc.), we'll use a default icon
+
+                suggestions.append({
+                    "title": track.title,
+                    "author": track.author,
+                    "duration": f"{duration_mins:02d}:{duration_secs:02d}",
+                    "uri": track.uri,
+                    "thumbnail": thumbnail_url,
+                    "source": source,
+                    "display": f"{track.title} - {track.author}"
+                })
+
+            return JSONResponse(suggestions)
+
+        except Exception as e:
+            logger.error(f"Error getting search suggestions: {e}")
+            return JSONResponse([])
+
+    @app.get("/api/music/sources")
+    async def get_available_sources():
+        """Get available music sources from Lavalink."""
+        try:
+            # Check if lavalink client is available
+            if not plugin.lavalink_client:
+                # Return default sources if Lavalink is not connected
+                return JSONResponse([{
+                    "id": "ytsearch",
+                    "name": "YouTube",
+                    "icon": "fab fa-youtube",
+                    "available": False
+                }])
+
+            # Get available sources from Lavalink client
+            available_sources = []
+
+            # Define all possible sources with their metadata
+            source_definitions = [
+                {
+                    "id": "ytsearch",
+                    "name": "YouTube",
+                    "icon": "fab fa-youtube",
+                    "description": "YouTube videos"
+                },
+                {
+                    "id": "ytmsearch",
+                    "name": "YouTube Music",
+                    "icon": "fab fa-youtube",
+                    "description": "YouTube Music tracks"
+                },
+                {
+                    "id": "spsearch",
+                    "name": "Spotify",
+                    "icon": "fab fa-spotify",
+                    "description": "Spotify tracks"
+                },
+                {
+                    "id": "amsearch",
+                    "name": "Apple Music",
+                    "icon": "fab fa-apple",
+                    "description": "Apple Music tracks"
+                },
+                {
+                    "id": "scsearch",
+                    "name": "SoundCloud",
+                    "icon": "fab fa-soundcloud",
+                    "description": "SoundCloud tracks"
+                },
+                {
+                    "id": "dzsearch",
+                    "name": "Deezer",
+                    "icon": "fas fa-music",
+                    "description": "Deezer tracks"
+                }
+            ]
+
+            # Test each source with a simple query to check availability
+            for source_def in source_definitions:
+                try:
+                    # Test with a simple query to see if source responds
+                    test_query = f"{source_def['id']}:test"
+                    test_result = await plugin.lavalink_client.get_tracks(test_query)
+
+                    # If we get a result (even empty), the source is available
+                    source_def["available"] = True
+                    logger.debug(f"Source {source_def['id']} is available")
+                except Exception as e:
+                    source_def["available"] = False
+                    logger.debug(f"Source {source_def['id']} is not available: {e}")
+
+                # Only include available sources
+                if source_def["available"]:
+                    available_sources.append(source_def)
+
+            # Always include at least YouTube as a fallback if nothing else works
+            if not available_sources:
+                youtube_source = next((s for s in source_definitions if s["id"] == "ytsearch"), None)
+                if youtube_source:
+                    youtube_source["available"] = True
+                    available_sources.append(youtube_source)
+
+            return JSONResponse(available_sources)
+
+        except Exception as e:
+            logger.error(f"Error getting available sources: {e}")
+            # Return YouTube as fallback
+            return JSONResponse([{
+                "id": "ytsearch",
+                "name": "YouTube",
+                "icon": "fab fa-youtube",
+                "description": "YouTube videos",
+                "available": True
+            }])

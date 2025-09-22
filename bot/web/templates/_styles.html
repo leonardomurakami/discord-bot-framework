@@ -1,4 +1,5 @@
 <!-- Shared styles for both base and plugin templates -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" referrerpolicy="no-referrer">
 <style>
     * {
         margin: 0;
@@ -63,6 +64,29 @@
         --focus-ring: rgba(139, 92, 246, 0.45);
         --panel-card-gradient: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(17, 24, 39, 0.88) 45%, rgba(30, 41, 59, 0.85) 100%);
         --panel-card-overlay: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 70%);
+    }
+
+    .icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .icon-sm {
+        font-size: 0.9rem;
+    }
+
+    .icon-md {
+        font-size: 1.1rem;
+    }
+
+    .icon-lg {
+        font-size: 1.5rem;
+    }
+
+    .icon-xl {
+        font-size: 2.5rem;
     }
 
     body {
@@ -297,6 +321,9 @@
     .selected-guild-indicator .guild-icon {
         font-size: 0.9rem;
         opacity: 0.8;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .selected-guild-indicator .guild-name {
@@ -386,6 +413,11 @@
         z-index: 1;
     }
 
+    .nav-icon i,
+    .guild-icon i {
+        font-size: inherit;
+    }
+
     .nav-label {
         font-size: 0.95rem;
         font-weight: 500;
@@ -432,6 +464,11 @@
         font-weight: 500;
         cursor: pointer;
         transition: background 0.2s ease, transform 0.2s ease, border 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        line-height: 1;
     }
 
     .theme-toggle-btn:hover,
@@ -442,10 +479,6 @@
     }
 
     .logout-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.45rem;
         background: rgba(239, 68, 68, 0.16);
         border-color: rgba(239, 68, 68, 0.22);
         color: #fee2e2;
@@ -454,6 +487,11 @@
     .logout-btn:hover {
         background: rgba(239, 68, 68, 0.24);
         border-color: rgba(239, 68, 68, 0.38);
+    }
+
+    .theme-toggle-btn i,
+    .logout-btn i {
+        font-size: 1rem;
     }
 
     .main-content {
@@ -559,6 +597,10 @@
         font-size: 0.85rem;
         font-weight: 600;
         box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    .status-badge i {
+        font-size: 0.85rem;
     }
 
     .status-online {

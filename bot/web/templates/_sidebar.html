@@ -45,7 +45,9 @@
                 {% endfor %}
             </select>
             <div class="selected-guild-indicator" id="global-guild-indicator" style="display: none;">
-                <span class="guild-icon">🏰</span>
+                <span class="guild-icon">
+                    <i class="fa-solid fa-server icon icon-sm" aria-hidden="true"></i>
+                </span>
                 <span class="guild-name" id="global-guild-name"></span>
             </div>
         </div>
@@ -56,7 +58,9 @@
 
     <div class="nav-section">
         <a href="/panel" class="nav-link {% if request.url.path == '/panel' %}active{% endif %}">
-            <span class="nav-icon">🏠</span>
+            <span class="nav-icon">
+                <i class="fa-solid fa-house icon icon-md" aria-hidden="true"></i>
+            </span>
             <span class="nav-label">Dashboard</span>
         </a>
     </div>
@@ -68,7 +72,13 @@
         <a href="{{ panel.route }}"
            class="nav-link {% if request.url.path.startswith(panel.route) %}active{% endif %}"
            title="{{ panel.description }}">
-            <span class="nav-icon">{% if panel.icon %}{{ panel.icon }}{% else %}⬡{% endif %}</span>
+            <span class="nav-icon">
+                {% if panel.icon %}
+                <i class="{{ panel.icon }} icon icon-md" aria-hidden="true"></i>
+                {% else %}
+                <i class="fa-solid fa-puzzle-piece icon icon-md" aria-hidden="true"></i>
+                {% endif %}
+            </span>
             <span class="nav-label">{{ panel.name }}</span>
         </a>
         {% endfor %}
@@ -79,11 +89,12 @@
 
     <div class="nav-footer">
         <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleDarkMode()">
-            🌙 Dark
+            <i class="fa-solid fa-moon icon icon-md" aria-hidden="true"></i>
+            <span>Dark</span>
         </button>
         {% if current_user %}
         <button class="logout-btn" onclick="logout()">
-            <span>⎋</span>
+            <i class="fa-solid fa-right-from-bracket icon icon-md" aria-hidden="true"></i>
             <span>Logout</span>
         </button>
         {% endif %}

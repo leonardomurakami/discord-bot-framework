@@ -239,11 +239,28 @@ def setup_playback_commands(plugin):
         current_track = player.current
         current_title = current_track.title if current_track else "Unknown Track"
 
+        # Check repeat mode before skipping
+        repeat_mode = plugin.repeat_modes.get(ctx.guild_id, 0)
+
+        # Handle repeat track mode explicitly
+        if repeat_mode == 1 and current_track:
+            # Add the current track back to the front of the queue for repeat track
+            player.add(track=current_track, index=0)
+
         next_track = None
         if len(player.queue) > 0:
             next_track = player.queue[0]
 
         await player.skip()
+
+        # Small delay to ensure skip is processed
+        import asyncio
+        await asyncio.sleep(0.1)
+
+        # Ensure playback continues if we have tracks in queue
+        if not player.is_playing and player.queue:
+            await player.play()
+
         await save_queue_to_db(plugin, ctx.guild_id)
 
         # Broadcast update to WebSocket clients

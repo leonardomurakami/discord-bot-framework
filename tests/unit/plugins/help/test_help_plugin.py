@@ -7,7 +7,10 @@ import miru
 import pytest
 
 from plugins.help.help import (
-    HelpPlugin,
+    HelpPlugin
+)
+
+from plugins.help.views import (
     PersistentPluginSelectView,
     PluginSelectView,
 )

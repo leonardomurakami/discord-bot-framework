@@ -26,11 +26,14 @@ class MusicEventHandler:
         guild_id = event.player.guild_id
         repeat_mode = self.music_plugin.repeat_modes.get(guild_id, 0)
 
-        if repeat_mode == 1:
-            if event.track:
-                event.player.add(track=event.track, index=0)
-        elif repeat_mode == 2 and event.track:
-            event.player.add(track=event.track)
+        # Only handle repeat if the track ended naturally (not manually skipped)
+        # reason = FINISHED means natural end, REPLACED means skipped
+        if event.reason == "FINISHED":
+            if repeat_mode == 1:
+                if event.track:
+                    event.player.add(track=event.track, index=0)
+            elif repeat_mode == 2 and event.track:
+                event.player.add(track=event.track)
 
         # Save queue state and broadcast track end to WebSocket clients
         await self.music_plugin._save_queue_to_db(guild_id)
