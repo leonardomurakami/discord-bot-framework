@@ -1,24 +1,25 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
 
-from bot.plugins.commands import CommandArgument, command
 from bot.core.utils import get_bot_user_id
+from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
     ERROR_COLOR,
     MODNOTE_ACTIONS,
-    NOTICE_COLOR,
     NOTE_DISPLAY_LIMIT,
+    NOTICE_COLOR,
     SUCCESS_COLOR,
+    WARN_DISPLAY_LIMIT,
     WARN_DM_COLOR,
     WARNING_COLOR,
-    WARN_DISPLAY_LIMIT,
 )
 
 if TYPE_CHECKING:
@@ -27,9 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-
-
-def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]]:
+def setup_discipline_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     """Register warning and moderator note commands."""
 
     @command(
@@ -177,9 +176,7 @@ def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., 
                     )
 
                 if len(user_warnings) > WARN_DISPLAY_LIMIT:
-                    embed.set_footer(
-                        f"Showing {WARN_DISPLAY_LIMIT} most recent warnings out of {len(user_warnings)} total"
-                    )
+                    embed.set_footer(f"Showing {WARN_DISPLAY_LIMIT} most recent warnings out of {len(user_warnings)} total")
 
             await ctx.respond(embed=embed)
             await plugin.log_command_usage(ctx, "warnings", True)
@@ -297,9 +294,7 @@ def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., 
                         )
 
                     if len(user_notes) > NOTE_DISPLAY_LIMIT:
-                        embed.set_footer(
-                            f"Showing {NOTE_DISPLAY_LIMIT} most recent notes out of {len(user_notes)} total"
-                        )
+                        embed.set_footer(f"Showing {NOTE_DISPLAY_LIMIT} most recent notes out of {len(user_notes)} total")
 
             else:  # clear
                 if user_notes:
@@ -333,4 +328,3 @@ def setup_discipline_commands(plugin: "ModerationPlugin") -> list[Callable[..., 
             await plugin.log_command_usage(ctx, "modnote", False, str(exc))
 
     return [warn_member, view_warnings, mod_note]
-

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 
 from bot.plugins.base import BasePlugin
 from bot.web.mixins import WebPanelMixin
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
 
 from .commands import setup_basic_commands, setup_content_commands, setup_game_commands
 from .config import (
@@ -39,17 +39,13 @@ class FunPlugin(BasePlugin, WebPanelMixin):
         await super().on_unload()
 
     def _register_commands(self) -> None:
-        commands = (
-            setup_basic_commands(self)
-            + setup_game_commands(self)
-            + setup_content_commands(self)
-        )
+        commands = setup_basic_commands(self) + setup_game_commands(self) + setup_content_commands(self)
 
         for command_func in commands:
             setattr(self, command_func.__name__, command_func)
 
     # Web Panel Implementation
-    def get_panel_info(self) -> Dict[str, Any]:
+    def get_panel_info(self) -> dict[str, Any]:
         """Return metadata about this plugin's web panel."""
         return {
             "name": "Fun & Games",
@@ -84,9 +80,7 @@ class FunPlugin(BasePlugin, WebPanelMixin):
                 num_dice = int(parts[0]) if parts[0] else 1
                 num_sides = int(parts[1])
 
-                if not (
-                    DICE_LIMITS["min_dice"] <= num_dice <= DICE_LIMITS["max_dice"]
-                ) or not (
+                if not (DICE_LIMITS["min_dice"] <= num_dice <= DICE_LIMITS["max_dice"]) or not (
                     DICE_LIMITS["min_sides"] <= num_sides <= DICE_LIMITS["max_sides"]
                 ):
                     return HTMLResponse(
@@ -173,8 +167,7 @@ class FunPlugin(BasePlugin, WebPanelMixin):
 
                 if abs(max_val - min_val) > RANDOM_NUMBER_LIMIT:
                     return HTMLResponse(
-                        "❌ <strong>Range Too Large</strong><br>Range cannot exceed "
-                        f"{RANDOM_NUMBER_LIMIT:,} numbers"
+                        "❌ <strong>Range Too Large</strong><br>Range cannot exceed " f"{RANDOM_NUMBER_LIMIT:,} numbers"
                     )
 
                 result = random.randint(min_val, max_val)
@@ -202,9 +195,7 @@ class FunPlugin(BasePlugin, WebPanelMixin):
                                     joke_text = data["joke"]
                                 else:
                                     joke_text = f"{data['setup']}<br><br>{data['delivery']}"
-                                return HTMLResponse(
-                                    f"😂 <strong>Here's a joke for you:</strong><br><br>{joke_text}"
-                                )
+                                return HTMLResponse(f"😂 <strong>Here's a joke for you:</strong><br><br>{joke_text}")
                     except Exception:
                         pass
 
@@ -234,9 +225,7 @@ class FunPlugin(BasePlugin, WebPanelMixin):
                         pass
 
                 quote_text, quote_author = random.choice(DEFAULT_QUOTES)
-                return HTMLResponse(
-                    f'💭 <strong>Inspirational Quote:</strong><br><br><em>"{quote_text}"</em><br><br>— {quote_author}'
-                )
+                return HTMLResponse(f'💭 <strong>Inspirational Quote:</strong><br><br><em>"{quote_text}"</em><br><br>— {quote_author}')
 
             except Exception as exc:
                 return HTMLResponse(f"❌ <strong>Error:</strong> {exc}")

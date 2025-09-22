@@ -46,7 +46,7 @@ class PermissionManager:
         """Dynamically discover permissions from all loaded plugins."""
         permissions = {}
 
-        if not self._bot or not hasattr(self._bot, 'plugin_loader'):
+        if not self._bot or not hasattr(self._bot, "plugin_loader"):
             logger.warning("Bot or plugin loader not available for permission discovery")
             return permissions
 
@@ -55,24 +55,24 @@ class PermissionManager:
             try:
                 # Look for methods with _unified_command metadata
                 for attr_name in dir(plugin):
-                    if attr_name.startswith('_'):
+                    if attr_name.startswith("_"):
                         continue
 
                     attr = getattr(plugin, attr_name)
-                    if hasattr(attr, '_unified_command'):
+                    if hasattr(attr, "_unified_command"):
                         cmd_meta = attr._unified_command
-                        permission_node = cmd_meta.get('permission_node')
+                        permission_node = cmd_meta.get("permission_node")
 
                         if permission_node:
                             # Generate description from command info
-                            cmd_name = cmd_meta.get('name', attr_name)
-                            cmd_desc = cmd_meta.get('description', '')
+                            cmd_name = cmd_meta.get("name", attr_name)
+                            cmd_desc = cmd_meta.get("description", "")
 
                             if cmd_desc:
                                 description = f"{cmd_desc}"
                             else:
                                 # Generate description from permission node
-                                action = permission_node.split('.')[-1]
+                                action = permission_node.split(".")[-1]
                                 description = f"{action.replace('_', ' ').title()} command"
 
                             permissions[permission_node] = description
@@ -92,19 +92,19 @@ class PermissionManager:
 
     def _match_wildcard_pattern(self, pattern: str, permission_node: str) -> bool:
         """Check if a permission node matches a wildcard pattern."""
-        if '*' not in pattern:
+        if "*" not in pattern:
             return pattern == permission_node
 
         # Handle different wildcard patterns
-        if pattern.endswith('.*'):
+        if pattern.endswith(".*"):
             # Pattern like "moderation.*" matches "moderation.kick", "moderation.ban", etc.
             prefix = pattern[:-2]
-            return permission_node.startswith(prefix + '.')
-        elif pattern.startswith('*.'):
+            return permission_node.startswith(prefix + ".")
+        elif pattern.startswith("*."):
             # Pattern like "*.play" matches "music.play", "audio.play", etc.
             suffix = pattern[2:]
-            return permission_node.endswith('.' + suffix)
-        elif pattern == '*':
+            return permission_node.endswith("." + suffix)
+        elif pattern == "*":
             # Pattern "*" matches everything
             return True
         else:
@@ -114,7 +114,7 @@ class PermissionManager:
 
     async def _resolve_wildcard_permissions(self, pattern: str) -> list[str]:
         """Resolve a wildcard pattern to a list of actual permission nodes."""
-        if '*' not in pattern:
+        if "*" not in pattern:
             # Not a wildcard, return as-is
             return [pattern]
 
@@ -195,7 +195,9 @@ class PermissionManager:
                 self._clear_guild_cache(guild_id)
 
                 success = len(granted_permissions) > 0
-                logger.info(f"Granted {len(granted_permissions)} permissions to role {role_id} in guild {guild_id}: {granted_permissions}")
+                logger.info(
+                    f"Granted {len(granted_permissions)} permissions to role {role_id} in guild {guild_id}: {granted_permissions}"
+                )
                 if failed_permissions:
                     logger.warning(f"Failed to grant {len(failed_permissions)} permissions: {failed_permissions}")
 
@@ -203,7 +205,7 @@ class PermissionManager:
 
         except Exception as e:
             logger.error(f"Error in grant_permission: {e}")
-            return False, [], permission_nodes if 'permission_nodes' in locals() else [permission_pattern]
+            return False, [], permission_nodes if "permission_nodes" in locals() else [permission_pattern]
 
     async def revoke_permission(self, guild_id: int, role_id: int, permission_pattern: str) -> tuple[bool, list[str], list[str]]:
         """
@@ -271,7 +273,9 @@ class PermissionManager:
                 self._clear_guild_cache(guild_id)
 
                 success = len(revoked_permissions) > 0
-                logger.info(f"Revoked {len(revoked_permissions)} permissions from role {role_id} in guild {guild_id}: {revoked_permissions}")
+                logger.info(
+                    f"Revoked {len(revoked_permissions)} permissions from role {role_id} in guild {guild_id}: {revoked_permissions}"
+                )
                 if failed_permissions:
                     logger.warning(f"Failed to revoke {len(failed_permissions)} permissions: {failed_permissions}")
 
@@ -279,7 +283,7 @@ class PermissionManager:
 
         except Exception as e:
             logger.error(f"Error in revoke_permission: {e}")
-            return False, [], permission_nodes if 'permission_nodes' in locals() else [permission_pattern]
+            return False, [], permission_nodes if "permission_nodes" in locals() else [permission_pattern]
 
     async def has_permission(self, guild_id: int, user: hikari.Member, permission_node: str) -> bool:
         logger.debug(f"Checking permission '{permission_node}' for user {user.username} ({user.id}) in guild {guild_id}")
@@ -293,6 +297,7 @@ class PermissionManager:
         # Users with Administrator permission have all permissions
         try:
             from ..core.utils import calculate_member_permissions
+
             member_permissions = calculate_member_permissions(user, guild)
             if member_permissions & hikari.Permissions.ADMINISTRATOR:
                 logger.debug(f"User {user.username} has Administrator permission - granting all permissions")

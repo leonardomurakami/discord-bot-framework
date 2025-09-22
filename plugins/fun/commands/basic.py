@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_basic_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
+def setup_basic_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
     """Register simple utility commands like ping."""
 
     @command(name="ping", description="Test command - check if bot is responding")

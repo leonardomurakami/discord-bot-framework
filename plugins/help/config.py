@@ -1,6 +1,6 @@
+from hikari import Color
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from hikari import Color
 
 
 class HelpSettings(BaseSettings):

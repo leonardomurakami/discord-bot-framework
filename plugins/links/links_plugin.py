@@ -52,10 +52,7 @@ class LinksPlugin(BasePlugin):
 
             async with self.bot.db.session() as session:
                 # Check custom links only
-                stmt = select(Link).where(
-                    Link.guild_id == ctx.guild_id,
-                    Link.name == name.lower()
-                )
+                stmt = select(Link).where(Link.guild_id == ctx.guild_id, Link.name == name.lower())
                 result = await session.execute(stmt)
                 link_record = result.scalar_one_or_none()
 
@@ -63,12 +60,10 @@ class LinksPlugin(BasePlugin):
                     embed = self.create_embed(
                         title=f"🔗 {link_record.name.title()}",
                         description=link_record.description or "Custom server link",
-                        color=hikari.Color(0x00ff00)
+                        color=hikari.Color(0x00FF00),
                     )
                     embed.add_field("URL", link_record.url, inline=False)
-                    embed.add_field("📅 Added",
-                                  f"{link_record.created_at.strftime('%Y-%m-%d %H:%M')} UTC",
-                                  inline=True)
+                    embed.add_field("📅 Added", f"{link_record.created_at.strftime('%Y-%m-%d %H:%M')} UTC", inline=True)
                     embed.set_footer(f"Created by {await self._get_username(link_record.created_by)}")
                     await self.smart_respond(ctx, embed=embed)
                     return
@@ -78,13 +73,14 @@ class LinksPlugin(BasePlugin):
                     embed = self.create_embed(
                         title="💡 Use Dedicated Command",
                         description=f"For **{name}**, use the dedicated command for better information:",
-                        color=hikari.Color(0xFFAA00)
+                        color=hikari.Color(0xFFAA00),
                     )
                     embed.add_field("Recommended Command", f"`!{name.lower()}`", inline=False)
-                    embed.add_field("Why?",
-                                  "Dedicated commands provide enhanced information, "
-                                  "better styling, and contextual help!",
-                                  inline=False)
+                    embed.add_field(
+                        "Why?",
+                        "Dedicated commands provide enhanced information, " "better styling, and contextual help!",
+                        inline=False,
+                    )
                     await self.smart_respond(ctx, embed=embed)
                     return
 
@@ -92,12 +88,10 @@ class LinksPlugin(BasePlugin):
                 embed = self.create_embed(
                     title="❌ Custom Link Not Found",
                     description=f"No custom link named '{name}' found in this server.",
-                    color=hikari.Color(0xFF0000)
+                    color=hikari.Color(0xFF0000),
                 )
                 embed.add_field("📋 View Available Links", "Use `!links` to see all custom links", inline=False)
-                embed.add_field("🌟 Default Commands",
-                              "`!github` • `!panel` • `!docs` • `!support`",
-                              inline=False)
+                embed.add_field("🌟 Default Commands", "`!github` • `!panel` • `!docs` • `!support`", inline=False)
                 await self.smart_respond(ctx, embed=embed, ephemeral=True)
 
         except Exception as e:
@@ -116,12 +110,12 @@ class LinksPlugin(BasePlugin):
             embed = self.create_embed(
                 title="🐙 GitHub Repository",
                 description="Access the source code and contribute to the project",
-                color=hikari.Color(0x24292f)  # GitHub dark color
+                color=hikari.Color(0x24292F),  # GitHub dark color
             )
             embed.add_field("Repository", self._default_links["github"], inline=False)
-            embed.add_field("📝 What you can do",
-                          "• View source code\n• Report issues\n• Submit pull requests\n• Star the project",
-                          inline=False)
+            embed.add_field(
+                "📝 What you can do", "• View source code\n• Report issues\n• Submit pull requests\n• Star the project", inline=False
+            )
             embed.set_thumbnail("https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png")
             await self.smart_respond(ctx, embed=embed)
 
@@ -140,12 +134,12 @@ class LinksPlugin(BasePlugin):
             embed = self.create_embed(
                 title="🎛️ Web Control Panel",
                 description="Manage bot settings through the web interface",
-                color=hikari.Color(0x5865F2)  # Discord blurple
+                color=hikari.Color(0x5865F2),  # Discord blurple
             )
             embed.add_field("Panel URL", self._default_links["panel"], inline=False)
-            embed.add_field("🛠️ Features",
-                          "• Configure plugins\n• Manage permissions\n• View analytics\n• Server settings",
-                          inline=False)
+            embed.add_field(
+                "🛠️ Features", "• Configure plugins\n• Manage permissions\n• View analytics\n• Server settings", inline=False
+            )
             embed.add_field("🔐 Access", "Login with your Discord account", inline=False)
             await self.smart_respond(ctx, embed=embed)
 
@@ -164,12 +158,14 @@ class LinksPlugin(BasePlugin):
             embed = self.create_embed(
                 title="📚 Documentation",
                 description="Learn how to use and configure the bot",
-                color=hikari.Color(0x00D4AA)  # Docs green
+                color=hikari.Color(0x00D4AA),  # Docs green
             )
             embed.add_field("Documentation", self._default_links["docs"], inline=False)
-            embed.add_field("📖 What you'll find",
-                          "• Setup guides\n• Command reference\n• Configuration options\n• Plugin development",
-                          inline=False)
+            embed.add_field(
+                "📖 What you'll find",
+                "• Setup guides\n• Command reference\n• Configuration options\n• Plugin development",
+                inline=False,
+            )
             embed.add_field("💡 Getting Started", "Perfect for new users and developers", inline=False)
             await self.smart_respond(ctx, embed=embed)
 
@@ -188,12 +184,14 @@ class LinksPlugin(BasePlugin):
             embed = self.create_embed(
                 title="💬 Support Server",
                 description="Get help and connect with the community",
-                color=hikari.Color(0x7289DA)  # Discord classic color
+                color=hikari.Color(0x7289DA),  # Discord classic color
             )
             embed.add_field("Discord Server", self._default_links["support"], inline=False)
-            embed.add_field("🤝 Community Support",
-                          "• Ask questions\n• Get help with setup\n• Share feedback\n• Connect with other users",
-                          inline=False)
+            embed.add_field(
+                "🤝 Community Support",
+                "• Ask questions\n• Get help with setup\n• Share feedback\n• Connect with other users",
+                inline=False,
+            )
             embed.add_field("⚡ Quick Response", "Active community and developers", inline=False)
             await self.smart_respond(ctx, embed=embed)
 
@@ -210,9 +208,7 @@ class LinksPlugin(BasePlugin):
         """List custom server links."""
         try:
             embed = self.create_embed(
-                title="🔗 Custom Server Links",
-                description="Links specific to this server",
-                color=hikari.Color(0x0099ff)
+                title="🔗 Custom Server Links", description="Links specific to this server", color=hikari.Color(0x0099FF)
             )
 
             # Add custom links if in a guild
@@ -231,18 +227,20 @@ class LinksPlugin(BasePlugin):
                         embed.add_field("Available Links", "\n".join(link_list), inline=False)
                         embed.set_footer("Use !link <name> to display a specific link")
                     else:
-                        embed.add_field("No Custom Links",
-                                      "No custom links have been added to this server yet.\n"
-                                      "Use `!addlink <name> <url>` to add one!",
-                                      inline=False)
+                        embed.add_field(
+                            "No Custom Links",
+                            "No custom links have been added to this server yet.\n" "Use `!addlink <name> <url>` to add one!",
+                            inline=False,
+                        )
             else:
                 embed.add_field("Server Only", "Custom links are only available in servers.", inline=False)
 
             # Add info about default commands
-            embed.add_field("🌟 Default Commands",
-                          "`!github` • `!panel` • `!docs` • `!support`\n"
-                          "These are always available with enhanced information!",
-                          inline=False)
+            embed.add_field(
+                "🌟 Default Commands",
+                "`!github` • `!panel` • `!docs` • `!support`\n" "These are always available with enhanced information!",
+                inline=False,
+            )
 
             await self.smart_respond(ctx, embed=embed)
 
@@ -291,9 +289,7 @@ class LinksPlugin(BasePlugin):
             reserved_names = {"github", "docs", "panel", "support", "links", "link", "addlink", "removelink"}
             if name.lower() in reserved_names:
                 await self.smart_respond(
-                    ctx,
-                    f"❌ '{name}' is a reserved command name. Please choose a different name.",
-                    ephemeral=True
+                    ctx, f"❌ '{name}' is a reserved command name. Please choose a different name.", ephemeral=True
                 )
                 return
 
@@ -310,9 +306,7 @@ class LinksPlugin(BasePlugin):
                 await session.commit()
 
                 embed = self.create_embed(
-                    title="✅ Link Added",
-                    description=f"Successfully added link '{name}'",
-                    color=hikari.Color(0x00ff00)
+                    title="✅ Link Added", description=f"Successfully added link '{name}'", color=hikari.Color(0x00FF00)
                 )
                 embed.add_field("Name", name.lower(), inline=True)
                 embed.add_field("URL", url, inline=False)
@@ -322,11 +316,7 @@ class LinksPlugin(BasePlugin):
                 await self.smart_respond(ctx, embed=embed)
 
         except IntegrityError:
-            await self.smart_respond(
-                ctx,
-                f"❌ A link with the name '{name}' already exists in this server.",
-                ephemeral=True
-            )
+            await self.smart_respond(ctx, f"❌ A link with the name '{name}' already exists in this server.", ephemeral=True)
         except Exception as e:
             logger.error(f"Error adding link {name}: {e}")
             await self.smart_respond(ctx, "❌ An error occurred while adding the link.", ephemeral=True)
@@ -354,36 +344,23 @@ class LinksPlugin(BasePlugin):
             # Prevent removal of reserved command names
             reserved_names = {"github", "docs", "panel", "support", "links", "link", "addlink", "removelink"}
             if name.lower() in reserved_names:
-                await self.smart_respond(
-                    ctx,
-                    f"❌ '{name}' is a reserved command name and cannot be removed.",
-                    ephemeral=True
-                )
+                await self.smart_respond(ctx, f"❌ '{name}' is a reserved command name and cannot be removed.", ephemeral=True)
                 return
 
             async with self.bot.db.session() as session:
-                stmt = select(Link).where(
-                    Link.guild_id == ctx.guild_id,
-                    Link.name == name.lower()
-                )
+                stmt = select(Link).where(Link.guild_id == ctx.guild_id, Link.name == name.lower())
                 result = await session.execute(stmt)
                 link_record = result.scalar_one_or_none()
 
                 if not link_record:
-                    await self.smart_respond(
-                        ctx,
-                        f"❌ Link '{name}' not found.",
-                        ephemeral=True
-                    )
+                    await self.smart_respond(ctx, f"❌ Link '{name}' not found.", ephemeral=True)
                     return
 
                 await session.delete(link_record)
                 await session.commit()
 
                 embed = self.create_embed(
-                    title="✅ Link Removed",
-                    description=f"Successfully removed link '{name}'",
-                    color=hikari.Color(0x00ff00)
+                    title="✅ Link Removed", description=f"Successfully removed link '{name}'", color=hikari.Color(0x00FF00)
                 )
                 await self.smart_respond(ctx, embed=embed)
 

@@ -4,11 +4,10 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +15,11 @@ logger = logging.getLogger(__name__)
 class WebApp:
     def __init__(self, bot: Any) -> None:
         self.bot = bot
-        self.app = FastAPI(
-            title="Discord Bot Panel",
-            description="Web interface for Discord bot management",
-            version="1.0.0"
-        )
+        self.app = FastAPI(title="Discord Bot Panel", description="Web interface for Discord bot management", version="1.0.0")
 
         # Setup Redis session middleware
-        from .redis_session import session_store, RedisSessionMiddleware
+        from .redis_session import RedisSessionMiddleware, session_store
+
         self.session_store = session_store
         self.app.add_middleware(RedisSessionMiddleware, session_store=session_store)
 
@@ -39,6 +35,7 @@ class WebApp:
 
         # Setup authentication
         from .auth import DiscordAuth
+
         self.auth = DiscordAuth(bot)
 
         # Setup routes
@@ -90,22 +87,24 @@ class WebApp:
 
             # Get plugin panel information
             plugin_panels = []
-            if hasattr(self.bot, 'web_panel_manager'):
+            if hasattr(self.bot, "web_panel_manager"):
                 all_panels = self.bot.web_panel_manager.get_all_panel_info()
                 # Create list of panels with nav_order for sorting
                 panels_with_order = []
                 for plugin_name, panel_info in all_panels.items():
-                    panels_with_order.append({
-                        'name': panel_info['name'],
-                        'route': panel_info['route'],
-                        'description': panel_info['description'],
-                        'icon': panel_info.get('icon'),
-                        'nav_order': panel_info.get('nav_order', 999)
-                    })
+                    panels_with_order.append(
+                        {
+                            "name": panel_info["name"],
+                            "route": panel_info["route"],
+                            "description": panel_info["description"],
+                            "icon": panel_info.get("icon"),
+                            "nav_order": panel_info.get("nav_order", 999),
+                        }
+                    )
 
                 # Sort by nav_order and create final list
-                panels_with_order.sort(key=lambda x: x['nav_order'])
-                plugin_panels = [{k: v for k, v in panel.items() if k != 'nav_order'} for panel in panels_with_order]
+                panels_with_order.sort(key=lambda x: x["nav_order"])
+                plugin_panels = [{k: v for k, v in panel.items() if k != "nav_order"} for panel in panels_with_order]
 
             context = {
                 "request": request,
@@ -132,7 +131,7 @@ class WebApp:
                 return RedirectResponse(url="/panel", status_code=302)
 
             # Check if there was an auth error to prevent infinite loops
-            error = request.query_params.get('error')
+            error = request.query_params.get("error")
             if error:
                 raise HTTPException(status_code=400, detail="Authentication failed. Please try again.")
 
@@ -168,12 +167,7 @@ class WebApp:
             # Initialize Redis connection
             await self.session_store.connect()
 
-            config = uvicorn.Config(
-                app=self.app,
-                host=host,
-                port=port,
-                log_level="info"
-            )
+            config = uvicorn.Config(app=self.app, host=host, port=port, log_level="info")
             self._server = uvicorn.Server(config)
 
             logger.info(f"Starting web server on {host}:{port}")

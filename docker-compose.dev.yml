@@ -14,7 +14,7 @@ services:
       - lavalink
       - redis
     ports:
-      - "8080:8080"  # Web interface
+      - "7000:7000"  # Web interface
     restart: unless-stopped
     networks:
       - lavalink
@@ -23,6 +23,8 @@ services:
 
   lavalink:
     image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    env_file:
+      - .env
     environment:
       - _JAVA_OPTIONS=-Xmx2G
       - SERVER_PORT=2333

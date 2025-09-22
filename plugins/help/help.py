@@ -2,12 +2,12 @@ import logging
 
 import hikari
 import lightbulb
-import miru
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.commands import CommandArgument, command
-from .views import PersistentPluginSelectView, PluginSelectView, PluginSelectWithPaginationView
+
 from .embed_generators import EmbedGenerators
+from .views import PersistentPluginSelectView, PluginSelectWithPaginationView
 
 logger = logging.getLogger(__name__)
 
@@ -73,18 +73,21 @@ class HelpPlugin(BasePlugin):
     async def _get_command_info(self, command_name: str):
         """Test delegation method."""
         from .command_info import CommandInfoManager
+
         info_manager = CommandInfoManager(self)
         return info_manager.get_command_info(command_name)
 
     def _get_plugin_overview(self, plugin_name: str, plugin_obj):
         """Test delegation method."""
         from .command_info import CommandInfoManager
+
         info_manager = CommandInfoManager(self)
         return info_manager.get_plugin_overview(plugin_name, plugin_obj)
 
     def _format_command_list(self, commands: list[dict]):
         """Test delegation method."""
         from .command_info import CommandInfoManager
+
         info_manager = CommandInfoManager(self)
         return info_manager.format_command_list(commands)
 
@@ -203,4 +206,3 @@ class HelpPlugin(BasePlugin):
             )
             await self.smart_respond(ctx, embed=embed, ephemeral=True)
             await self.log_command_usage(ctx, "plugins", False, str(e))
-

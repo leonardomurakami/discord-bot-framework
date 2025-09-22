@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from hikari import Color
 
-
 # Embed colors
 INFO_COLOR = Color(0x5865F2)
 AVATAR_COLOR = Color(0x9932CC)
@@ -82,4 +81,3 @@ TRANSLATE_LANGUAGE_CODES = {
     "tr": "Turkish",
     "th": "Thai",
 }
-

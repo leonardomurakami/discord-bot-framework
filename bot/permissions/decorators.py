@@ -117,6 +117,7 @@ def requires_bot_permissions(*permissions: hikari.Permissions) -> Callable:
                 return await func(ctx, *args, **kwargs)
 
             from ..core.utils import get_bot_user_id
+
             bot_member = guild.get_member(get_bot_user_id(ctx))
             if not bot_member:
                 await ctx.respond(
@@ -129,6 +130,7 @@ def requires_bot_permissions(*permissions: hikari.Permissions) -> Callable:
             missing_perms = []
             try:
                 from ..core.utils import calculate_member_permissions
+
                 bot_permissions = calculate_member_permissions(bot_member, guild)
                 for perm in permissions:
                     if not (bot_permissions & perm):

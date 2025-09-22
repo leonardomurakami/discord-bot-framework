@@ -6,6 +6,7 @@ import hikari
 
 import lavalink
 from bot.plugins.base import BasePlugin
+from bot.web.mixins import WebPanelMixin
 from config.settings import settings
 
 from .commands.history import setup_history_commands
@@ -21,7 +22,7 @@ from .utils import add_to_history, check_voice_channel_empty, restore_all_queues
 logger = logging.getLogger(__name__)
 
 
-class MusicPlugin(BasePlugin):
+class MusicPlugin(BasePlugin, WebPanelMixin):
     def __init__(self, bot: Any) -> None:
         super().__init__(bot)
         self.lavalink_client: lavalink.Client | None = None
@@ -127,3 +128,20 @@ class MusicPlugin(BasePlugin):
     async def _add_to_history(self, guild_id: int, track) -> None:
         """Add a track to the guild's music history."""
         await add_to_history(self, guild_id, track)
+
+    # Web Panel Implementation
+    def get_panel_info(self) -> dict[str, Any]:
+        """Return metadata about this plugin's web panel."""
+        return {
+            "name": "Music Player",
+            "description": "Music queue management and playback controls",
+            "route": "/plugin/music",
+            "icon": "🎵",
+            "nav_order": 5,
+        }
+
+    def register_web_routes(self, app) -> None:
+        """Register web routes for the music plugin."""
+        from .web_panel import register_music_routes
+
+        register_music_routes(app, self)

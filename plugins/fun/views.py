@@ -12,7 +12,6 @@ import miru
 
 from .config import fun_settings
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -189,9 +188,7 @@ class TriviaView(miru.View):
                 )
             else:
                 summary_value = (
-                    f"**Total Participants:** {total_participants}\n"
-                    "**Correct Answers:** 0\n"
-                    "Everyone got it wrong! 😅"
+                    f"**Total Participants:** {total_participants}\n" "**Correct Answers:** 0\n" "Everyone got it wrong! 😅"
                 )
 
             embed.add_field("📊 Summary", summary_value, inline=False)
@@ -325,4 +322,3 @@ class WouldYouRatherView(miru.View):
             await ctx.edit_response(embed=embed, components=self)
         except Exception:  # best-effort update
             pass
-

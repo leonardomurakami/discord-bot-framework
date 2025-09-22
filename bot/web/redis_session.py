@@ -1,15 +1,18 @@
 import json
 import logging
 import uuid
-from typing import Any, Dict, MutableMapping, Optional
-from starlette.middleware.sessions import SessionMiddleware
+from collections.abc import MutableMapping
+from typing import Any
+
 from starlette.requests import Request
 from starlette.responses import Response
+
 from config.settings import settings
 
 # Try to import Redis, fall back to None if not available
 try:
     import redis.asyncio as redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     redis = None
@@ -26,7 +29,7 @@ class RedisSessionStore:
         self.redis_url = redis_url
         self.session_prefix = session_prefix
         self.ttl = ttl
-        self.redis_client: Optional[redis.Redis] = None
+        self.redis_client: redis.Redis | None = None
 
     async def connect(self):
         """Initialize Redis connection"""
@@ -36,11 +39,7 @@ class RedisSessionStore:
             return
 
         try:
-            self.redis_client = redis.from_url(
-                self.redis_url,
-                decode_responses=True,
-                encoding="utf-8"
-            )
+            self.redis_client = redis.from_url(self.redis_url, decode_responses=True, encoding="utf-8")
             # Test connection
             await self.redis_client.ping()
             logger.info("Redis session store connected successfully")
@@ -59,7 +58,7 @@ class RedisSessionStore:
         """Get Redis key for session"""
         return f"{self.session_prefix}{session_id}"
 
-    async def get_session(self, session_id: str) -> Dict[str, Any]:
+    async def get_session(self, session_id: str) -> dict[str, Any]:
         """Get session data from Redis"""
         if not self.redis_client:
             return {}
@@ -74,7 +73,7 @@ class RedisSessionStore:
             logger.error(f"Error getting session {session_id}: {e}")
             return {}
 
-    async def set_session(self, session_id: str, data: Dict[str, Any]):
+    async def set_session(self, session_id: str, data: dict[str, Any]):
         """Set session data in Redis"""
         if not self.redis_client:
             return
@@ -115,7 +114,7 @@ class RedisSession(MutableMapping):
     def __init__(self, session_store: RedisSessionStore, session_id: str):
         self.session_store = session_store
         self.session_id = session_id
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._loaded = False
         self._modified = False
 
@@ -205,17 +204,14 @@ class RedisSessionMiddleware:
                     max_age=self.session_store.ttl,
                     httponly=True,
                     secure=False,  # Set to True in production with HTTPS
-                    samesite="lax"
+                    samesite="lax",
                 )
 
                 # Add cookie to headers
                 if "set-cookie" in response.headers:
                     if "headers" not in message:
                         message["headers"] = []
-                    message["headers"].append([
-                        b"set-cookie",
-                        response.headers["set-cookie"].encode()
-                    ])
+                    message["headers"].append([b"set-cookie", response.headers["set-cookie"].encode()])
 
             await send(message)
 
@@ -224,7 +220,5 @@ class RedisSessionMiddleware:
 
 # Global session store instance
 session_store = RedisSessionStore(
-    redis_url=settings.redis_url,
-    session_prefix=settings.redis_session_prefix,
-    ttl=settings.redis_session_ttl
+    redis_url=settings.redis_url, session_prefix=settings.redis_session_prefix, ttl=settings.redis_session_ttl
 )

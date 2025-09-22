@@ -50,6 +50,7 @@ class DiscordBot:
 
         # Initialize web panel manager
         from ..web import WebPanelManager
+
         self.web_panel_manager = WebPanelManager(self)
 
         # Bot state
@@ -198,8 +199,9 @@ class DiscordBot:
         """Get the prefix for a specific guild, falling back to default if not found."""
         try:
             async with self.db.session() as session:
-                from bot.database.models import Guild
                 from sqlalchemy import select
+
+                from bot.database.models import Guild
 
                 result = await session.execute(select(Guild).where(Guild.id == guild_id))
                 guild = result.scalar_one_or_none()

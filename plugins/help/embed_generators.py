@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+
 import hikari
 
 logger = logging.getLogger(__name__)
@@ -48,12 +48,12 @@ class EmbedGenerators:
         )
 
         # Show available plugin categories
-        if stats['plugin_categories']:
+        if stats["plugin_categories"]:
             categories_text = "**Available Categories:**\n"
             # Group into a nice display
-            for category in stats['plugin_categories'][:6]:  # Show max 6
+            for category in stats["plugin_categories"][:6]:  # Show max 6
                 categories_text += f"• {category}\n"
-            if len(stats['plugin_categories']) > 6:
+            if len(stats["plugin_categories"]) > 6:
                 categories_text += f"• ...and {len(stats['plugin_categories']) - 6} more!"
 
             embed.add_field("🗂️ Plugin Categories", categories_text, inline=False)
@@ -71,7 +71,7 @@ class EmbedGenerators:
 
         return embed
 
-    async def get_command_help(self, command_name: str, guild_id: int = None) -> Optional[hikari.Embed]:
+    async def get_command_help(self, command_name: str, guild_id: int = None) -> hikari.Embed | None:
         """Get detailed help for a specific command."""
         from .command_info import CommandInfoManager
 
@@ -111,7 +111,7 @@ class EmbedGenerators:
         # TODO: Add slash command help lookup when needed
         return None
 
-    async def get_plugin_help(self, plugin_name: str) -> Optional[hikari.Embed]:
+    async def get_plugin_help(self, plugin_name: str) -> hikari.Embed | None:
         """Get help for a specific plugin."""
         # Try to find the plugin
         plugins = self.bot.plugin_loader.get_loaded_plugins()
@@ -234,7 +234,7 @@ class EmbedGenerators:
         embed.set_footer("💡 Use 'help <plugin>' for detailed information about any plugin!")
         return embed
 
-    async def get_plugin_commands_embed(self, plugin_name: str, guild_id: int = None, page: int = 0) -> Optional[hikari.Embed]:
+    async def get_plugin_commands_embed(self, plugin_name: str, guild_id: int = None, page: int = 0) -> hikari.Embed | None:
         """Generate a user-friendly embed showing all commands for a specific plugin."""
         from .command_info import CommandInfoManager
 
@@ -334,15 +334,9 @@ class EmbedGenerators:
                 "total_pages": total_pages,
                 "plugin_name": plugin_name,
                 "guild_id": guild_id,
-                "total_commands": len(sorted_commands)
+                "total_commands": len(sorted_commands),
             }
         else:
             embed.add_field("📝 Commands", "No commands available in this plugin.", inline=False)
             # Return tuple for consistency
-            return embed, {
-                "current_page": 0,
-                "total_pages": 1,
-                "plugin_name": plugin_name,
-                "guild_id": guild_id,
-                "total_commands": 0
-            }
+            return embed, {"current_page": 0, "total_pages": 1, "plugin_name": plugin_name, "guild_id": guild_id, "total_commands": 0}

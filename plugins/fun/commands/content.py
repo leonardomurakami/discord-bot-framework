@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_content_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
+def setup_content_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
     """Register commands that deliver jokes, quotes, memes, and facts."""
 
     @command(name="joke", description="Get a random joke")

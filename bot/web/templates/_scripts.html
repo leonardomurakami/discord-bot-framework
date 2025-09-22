@@ -1,30 +1,51 @@
 <!-- Shared JavaScript for sidebar functionality -->
 <script>
     // Global guild selection handler
-    function handleGuildChange(guildId) {
+    function handleGlobalGuildChange(guildId) {
+        const globalSelect = document.getElementById('global-guild-select');
+        const guildIndicator = document.getElementById('global-guild-indicator');
+        const guildNameSpan = document.getElementById('global-guild-name');
+
         if (guildId) {
             // Store selected guild in localStorage for persistence
             localStorage.setItem('selectedGuildId', guildId);
 
             // Get guild name from option data
-            const select = document.getElementById('guild-select');
-            const selectedOption = select.options[select.selectedIndex];
+            const selectedOption = globalSelect.options[globalSelect.selectedIndex];
             const guildName = selectedOption.getAttribute('data-name');
 
+            // Show guild indicator in sidebar
+            if (guildNameSpan && guildIndicator) {
+                guildNameSpan.textContent = guildName;
+                guildIndicator.style.display = 'flex';
+            }
+
             // Emit custom events for plugins to listen to
-            const guildChangeEvent = new CustomEvent('guildChanged', {
+            const guildChangeEvent = new CustomEvent('guild-changed', {
                 detail: { guildId, guildName }
             });
-            document.dispatchEvent(guildChangeEvent);
+            document.body.dispatchEvent(guildChangeEvent);
 
             console.log('Selected guild:', guildName, '(ID:', guildId, ')');
         } else {
             // Clear selection
             localStorage.removeItem('selectedGuildId');
 
-            const clearEvent = new CustomEvent('guildCleared');
-            document.dispatchEvent(clearEvent);
+            // Hide guild indicator
+            if (guildIndicator) {
+                guildIndicator.style.display = 'none';
+            }
+
+            const clearEvent = new CustomEvent('guild-changed', {
+                detail: { guildId: null, guildName: null }
+            });
+            document.body.dispatchEvent(clearEvent);
         }
+    }
+
+    // Legacy function for backward compatibility
+    function handleGuildChange(guildId) {
+        return handleGlobalGuildChange(guildId);
     }
 
     // Logout function with token revocation
@@ -75,12 +96,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Restore guild selection
         const savedGuildId = localStorage.getItem('selectedGuildId');
-        const guildSelect = document.getElementById('guild-select');
+        const globalGuildSelect = document.getElementById('global-guild-select');
 
-        if (savedGuildId && guildSelect) {
-            guildSelect.value = savedGuildId;
+        if (savedGuildId && globalGuildSelect) {
+            globalGuildSelect.value = savedGuildId;
             // Trigger change event to notify components
-            handleGuildChange(savedGuildId);
+            handleGlobalGuildChange(savedGuildId);
         }
 
         // Restore theme preference

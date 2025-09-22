@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -12,7 +13,6 @@ from ..config import (
     ERROR_COLOR,
     SERVER_FEATURE_MAPPING,
     SERVER_INFO_COLOR,
-    SUCCESS_COLOR,
     UPTIME_COLOR,
 )
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_info_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
+def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     """Register informational admin commands."""
 
     @command(
@@ -104,9 +104,7 @@ def setup_info_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
             embed.add_field("📺 Channels", f"{channel_count} total", inline=True)
             embed.add_field("🎭 Roles", str(role_count), inline=True)
 
-            channel_breakdown = (
-                f"💬 Text: {text_channels}\n🔊 Voice: {voice_channels}\n📁 Categories: {category_channels}"
-            )
+            channel_breakdown = f"💬 Text: {text_channels}\n🔊 Voice: {voice_channels}\n📁 Categories: {category_channels}"
             embed.add_field("Channel Breakdown", channel_breakdown, inline=True)
             embed.add_field("😀 Emojis", str(emoji_count), inline=True)
 
@@ -251,4 +249,3 @@ def setup_info_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
             await plugin.log_command_usage(ctx, "uptime", False, str(exc))
 
     return [bot_info, server_info, uptime]
-

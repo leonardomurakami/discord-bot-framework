@@ -206,4 +206,3 @@ DEFAULT_WYR_QUESTIONS = [
 
 MOTIVATIONAL_EMOJIS = ["💪", "🌟", "✨", "🎯", "🚀", "💎", "🔥", "⭐"]
 EDUCATIONAL_EMOJIS = ["🧠", "📚", "🔬", "🌟", "💡", "🎓", "🧪", "🔍"]
-

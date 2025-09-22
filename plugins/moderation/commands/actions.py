@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
 
-from bot.plugins.commands import CommandArgument, command
 from bot.core.utils import get_bot_user_id
+from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
     BAN_DM_COLOR,
     ERROR_COLOR,
     KICK_DM_COLOR,
-    NOTICE_COLOR,
     SUCCESS_COLOR,
 )
 
@@ -22,8 +22,6 @@ if TYPE_CHECKING:
     from ..moderation_plugin import ModerationPlugin
 
 logger = logging.getLogger(__name__)
-
-
 
 
 def _extract_member_from_context(ctx: lightbulb.Context) -> tuple[hikari.Member | None, str]:
@@ -75,7 +73,7 @@ def _extract_user_from_context(ctx: lightbulb.Context) -> tuple[int | None, hika
     return user_id, user, delete_days, reason
 
 
-def setup_action_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]]:
+def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     """Register core moderation action commands."""
 
     @command(

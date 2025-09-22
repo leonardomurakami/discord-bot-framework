@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from .config import TIMESTAMP_FORMATS
 
@@ -59,4 +59,3 @@ def chunk_text(text: str, limit: int) -> Iterable[str]:
     """Yield chunks of text within the provided limit."""
     for i in range(0, len(text), limit):
         yield text[i : i + limit]
-

@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 import re
 import urllib.parse
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import hikari
@@ -19,7 +20,6 @@ from ..config import (
     QR_COLOR,
     QR_TEXT_LIMIT,
     REMINDER_COLOR,
-    REMINDER_MAX_MINUTES,
 )
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
+def setup_tool_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
     """Register utility and productivity commands."""
 
     @command(
@@ -48,20 +48,20 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         try:
             # Parse input - either timedelta or dd/mm/yyyy format
             target_date = None
-            
+
             # Try timedelta format first (e.g., "5m", "1h", "20d")
             timedelta_match = re.match(r"^(\d+)([mhd])$", date.lower().strip())
             if timedelta_match:
                 amount = int(timedelta_match.group(1))
                 unit = timedelta_match.group(2)
-                
+
                 if unit == "m":
                     delta = timedelta(minutes=amount)
                 elif unit == "h":
                     delta = timedelta(hours=amount)
                 else:  # unit == "d"
                     delta = timedelta(days=amount)
-                
+
                 target_date = datetime.now() + delta
             else:
                 # Try dd/mm/yyyy format
@@ -70,10 +70,10 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
                     day = int(date_match.group(1))
                     month = int(date_match.group(2))
                     year = int(date_match.group(3))
-                    
+
                     if not (1 <= day <= 31 and 1 <= month <= 12):
                         raise ValueError("Invalid date: day must be 1-31, month must be 1-12")
-                    
+
                     target_date = datetime(year, month, day)
                 else:
                     embed = plugin.create_embed(
@@ -87,27 +87,25 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
             # Get historical events from Wikipedia API
             month = target_date.month
             day = target_date.day
-            
+
             url = f"https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/{month:02d}/{day:02d}"
-            
-            headers = {
-                "User-Agent": "discord-bot-framework/1.0 (aiohttp; +https://github.com/discord-bot-framework) Bot"
-            }
-            
+
+            headers = {"User-Agent": "discord-bot-framework/1.0 (aiohttp; +https://github.com/discord-bot-framework) Bot"}
+
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=headers) as response:
                     if response.status != 200:
                         raise Exception(f"Wikipedia API returned status {response.status}")
-                    
+
                     data = await response.json()
-            
+
             # Create embed with historical events
             embed = plugin.create_embed(
                 title=f"📅 On This Day - {target_date.strftime('%B %d')}",
                 description=f"Historical events for {target_date.strftime('%B %d')}",
                 color=REMINDER_COLOR,
             )
-            
+
             # Add selected events (limit to avoid embed size limits)
             if "selected" in data and data["selected"]:
                 events_text = ""
@@ -115,45 +113,45 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
                     year = event.get("year", "Unknown")
                     text = event.get("text", "No description available")
                     # Clean up the text and limit length
-                    clean_text = re.sub(r'<[^>]+>', '', text)[:150]
+                    clean_text = re.sub(r"<[^>]+>", "", text)[:150]
                     if len(text) > 150:
                         clean_text += "..."
                     events_text += f"**{year}**: {clean_text}\n\n"
-                
+
                 if events_text:
                     embed.add_field("🏛️ Historical Events", events_text.strip(), inline=False)
-            
+
             # Add births if available
             if "births" in data and data["births"]:
                 births_text = ""
                 for i, birth in enumerate(data["births"][:2]):  # Limit to 2 births
                     year = birth.get("year", "Unknown")
                     text = birth.get("text", "No description available")
-                    clean_text = re.sub(r'<[^>]+>', '', text)[:100]
+                    clean_text = re.sub(r"<[^>]+>", "", text)[:100]
                     if len(text) > 100:
                         clean_text += "..."
                     births_text += f"**{year}**: {clean_text}\n"
-                
+
                 if births_text:
                     embed.add_field("👶 Notable Births", births_text.strip(), inline=True)
-            
+
             # Add deaths if available
             if "deaths" in data and data["deaths"]:
                 deaths_text = ""
                 for i, death in enumerate(data["deaths"][:2]):  # Limit to 2 deaths
                     year = death.get("year", "Unknown")
                     text = death.get("text", "No description available")
-                    clean_text = re.sub(r'<[^>]+>', '', text)[:100]
+                    clean_text = re.sub(r"<[^>]+>", "", text)[:100]
                     if len(text) > 100:
                         clean_text += "..."
                     deaths_text += f"**{year}**: {clean_text}\n"
-                
+
                 if deaths_text:
                     embed.add_field("⚰️ Notable Deaths", deaths_text.strip(), inline=True)
-            
+
             if target_date.date() != datetime.now().date():
                 embed.add_field("📅 Date", f"<t:{int(target_date.timestamp())}:D>", inline=True)
-            
+
             embed.set_footer("Data from Wikipedia • More events available on Wikipedia")
 
             await ctx.respond(embed=embed)
@@ -310,4 +308,3 @@ def setup_tool_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
             await plugin.log_command_usage(ctx, "poll", False, str(exc))
 
     return [on_this_day, generate_qr, create_poll]
-

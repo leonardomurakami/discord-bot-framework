@@ -7,4 +7,3 @@ __all__ = [
     "setup_channel_commands",
     "setup_discipline_commands",
 ]
-

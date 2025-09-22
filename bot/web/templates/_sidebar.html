@@ -29,8 +29,28 @@
                 {% endif %}
             </div>
         </div>
-
     </div>
+
+    <!-- Guild Selector -->
+    {% if current_user.guilds %}
+    <div class="guild-selector-section">
+        <div class="nav-heading">Server Selection</div>
+        <div class="sidebar-guild-selector">
+            <select id="global-guild-select" class="sidebar-guild-dropdown" onchange="handleGlobalGuildChange(this.value)">
+                <option value="">Choose a server...</option>
+                {% for guild in current_user.guilds %}
+                <option value="{{ guild.id }}" data-name="{{ guild.name }}">
+                    {{ guild.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <div class="selected-guild-indicator" id="global-guild-indicator" style="display: none;">
+                <span class="guild-icon">🏰</span>
+                <span class="guild-name" id="global-guild-name"></span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <div class="nav-divider"></div>
     {% endif %}
 

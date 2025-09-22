@@ -7,4 +7,3 @@ __all__ = [
     "setup_info_commands",
     "setup_tool_commands",
 ]
-

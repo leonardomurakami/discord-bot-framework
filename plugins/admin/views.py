@@ -31,7 +31,7 @@ class PermissionsPaginationView(miru.View):
         """Start the view with the miru client."""
         try:
             # Get miru client from bot
-            if hasattr(self.admin_plugin, 'bot') and hasattr(self.admin_plugin.bot, 'miru_client'):
+            if hasattr(self.admin_plugin, "bot") and hasattr(self.admin_plugin.bot, "miru_client"):
                 self.admin_plugin.bot.miru_client.start_view(self)
         except Exception as e:
             logger.error(f"Failed to start miru view: {e}")
@@ -150,7 +150,9 @@ class PermissionsPaginationView(miru.View):
 class RolePermissionsPaginationView(miru.View):
     """Pagination view for role-specific permissions list."""
 
-    def __init__(self, admin_plugin: "AdminPlugin", role: hikari.Role, permissions: list[str], page_size: int = 10, initial_page: int = 0) -> None:
+    def __init__(
+        self, admin_plugin: "AdminPlugin", role: hikari.Role, permissions: list[str], page_size: int = 10, initial_page: int = 0
+    ) -> None:
         super().__init__(timeout=300)  # 5 minute timeout
         self.admin_plugin = admin_plugin
         self.role = role
@@ -167,7 +169,7 @@ class RolePermissionsPaginationView(miru.View):
         """Start the view with the miru client."""
         try:
             # Get miru client from bot
-            if hasattr(self.admin_plugin, 'bot') and hasattr(self.admin_plugin.bot, 'miru_client'):
+            if hasattr(self.admin_plugin, "bot") and hasattr(self.admin_plugin.bot, "miru_client"):
                 self.admin_plugin.bot.miru_client.start_view(self)
         except Exception as e:
             logger.error(f"Failed to start miru view: {e}")

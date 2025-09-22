@@ -1,4 +1,5 @@
 import logging
+
 import hikari
 import miru
 
@@ -86,6 +87,7 @@ class PersistentPluginSelectView(miru.View):
             # Handle "Home" selection
             if selected_value == "__home__":
                 from .embed_generators import EmbedGenerators
+
                 embed_gen = EmbedGenerators(help_plugin_instance)
                 home_embed = await embed_gen.get_general_help(ctx.guild_id)
                 # Update the view with current plugin options
@@ -95,6 +97,7 @@ class PersistentPluginSelectView(miru.View):
 
             # Generate plugin-specific embed
             from .embed_generators import EmbedGenerators
+
             embed_gen = EmbedGenerators(help_plugin_instance)
             result = await embed_gen.get_plugin_commands_embed(selected_value, ctx.guild_id, 0)
 
@@ -193,6 +196,7 @@ class PluginSelectView(miru.View):
         selected_value = select.values[0]
 
         from .embed_generators import EmbedGenerators
+
         embed_gen = EmbedGenerators(self.help_plugin)
 
         # Handle "Home" selection
@@ -283,22 +287,12 @@ class PluginSelectWithPaginationView(miru.View):
     def _setup_pagination_buttons(self) -> None:
         """Setup pagination buttons."""
         # Previous page button
-        prev_button = miru.Button(
-            style=hikari.ButtonStyle.SECONDARY,
-            emoji="⬅️",
-            custom_id="help_prev_page",
-            row=1
-        )
+        prev_button = miru.Button(style=hikari.ButtonStyle.SECONDARY, emoji="⬅️", custom_id="help_prev_page", row=1)
         prev_button.callback = self.on_previous_page
         self.add_item(prev_button)
 
         # Next page button
-        next_button = miru.Button(
-            style=hikari.ButtonStyle.SECONDARY,
-            emoji="➡️",
-            custom_id="help_next_page",
-            row=1
-        )
+        next_button = miru.Button(style=hikari.ButtonStyle.SECONDARY, emoji="➡️", custom_id="help_next_page", row=1)
         next_button.callback = self.on_next_page
         self.add_item(next_button)
 
@@ -316,6 +310,7 @@ class PluginSelectWithPaginationView(miru.View):
         selected_value = select.values[0]
 
         from .embed_generators import EmbedGenerators
+
         embed_gen = EmbedGenerators(self.help_plugin)
 
         # Handle "Home" selection
@@ -364,6 +359,7 @@ class PluginSelectWithPaginationView(miru.View):
 
             # Generate new embed for previous page
             from .embed_generators import EmbedGenerators
+
             embed_gen = EmbedGenerators(self.help_plugin)
             result = await embed_gen.get_plugin_commands_embed(plugin_name, guild_id, current_page - 1)
 
@@ -400,6 +396,7 @@ class PluginSelectWithPaginationView(miru.View):
 
             # Generate new embed for next page
             from .embed_generators import EmbedGenerators
+
             embed_gen = EmbedGenerators(self.help_plugin)
             result = await embed_gen.get_plugin_commands_embed(plugin_name, guild_id, current_page + 1)
 

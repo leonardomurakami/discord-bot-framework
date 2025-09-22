@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -13,7 +14,6 @@ from ..config import (
     ERROR_COLOR,
     LOCK_COLOR,
     LOCKDOWN_ACTIONS,
-    NOTICE_COLOR,
     PURGE_MAX,
     PURGE_MIN,
     SLOWMODE_DISABLE_COLOR,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_channel_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any]]:
+def setup_channel_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     """Register channel-related moderation commands."""
 
     @command(
@@ -369,4 +369,3 @@ def setup_channel_commands(plugin: "ModerationPlugin") -> list[Callable[..., Any
             await plugin.log_command_usage(ctx, "lockdown", False, str(exc))
 
     return [purge_messages, slowmode, lockdown_channel]
-

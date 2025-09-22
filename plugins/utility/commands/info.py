@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_info_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
+def setup_info_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
     """Register informational utility commands."""
 
     @command(
@@ -173,8 +174,7 @@ def setup_info_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
 
                         embed = plugin.create_embed(
                             title=(
-                                "🌤️ Weather for "
-                                f"{location_info['areaName'][0]['value']}, {location_info['country'][0]['value']}"
+                                "🌤️ Weather for " f"{location_info['areaName'][0]['value']}, {location_info['country'][0]['value']}"
                             ),
                             color=WEATHER_COLOR,
                         )
@@ -234,4 +234,3 @@ def setup_info_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
             await plugin.log_command_usage(ctx, "weather", False, str(exc))
 
     return [user_info, avatar, weather_info]
-

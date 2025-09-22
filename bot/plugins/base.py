@@ -53,6 +53,7 @@ class BasePlugin:
     async def _register_web_panel(self) -> None:
         # Register web panel if plugin supports it
         from ..web.mixins import WebPanelMixin
+
         if isinstance(self, WebPanelMixin):
             self.bot.web_panel_manager.register_plugin_panel(self.name, self)
             self.logger.debug(f"Registered web panel for plugin: {self.name}")
@@ -60,6 +61,7 @@ class BasePlugin:
     async def _unregister_web_panel(self) -> None:
         # Unregister web panel if plugin supports it
         from ..web.mixins import WebPanelMixin
+
         if isinstance(self, WebPanelMixin):
             self.bot.web_panel_manager.unregister_plugin_panel(self.name)
             self.logger.debug(f"Unregistered web panel for plugin: {self.name}")
@@ -177,8 +179,9 @@ class BasePlugin:
     ) -> None:
         try:
             async with self.bot.db.session() as session:
-                from ..database.models import CommandUsage, User, Guild
                 from sqlalchemy import select
+
+                from ..database.models import CommandUsage, Guild, User
 
                 # Ensure user exists in database
                 user_result = await session.execute(select(User).where(User.id == ctx.author.id))
@@ -189,7 +192,7 @@ class BasePlugin:
                     user = User(
                         id=ctx.author.id,
                         username=ctx.author.username,
-                        discriminator=getattr(ctx.author, 'discriminator', '0000'),
+                        discriminator=getattr(ctx.author, "discriminator", "0000"),
                     )
                     session.add(user)
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from hikari import Color
 
-
 ERROR_COLOR = Color(0xFF0000)
 SUCCESS_COLOR = Color(0x00FF00)
 WARNING_COLOR = Color(0xFFAA00)
@@ -26,4 +25,3 @@ NOTE_DISPLAY_LIMIT = 5
 
 LOCKDOWN_ACTIONS = {"lock", "unlock"}
 MODNOTE_ACTIONS = {"add", "view", "clear"}
-

@@ -1,0 +1,960 @@
+{% extends "plugin_base.html" %}
+
+
+{% block extra_styles %}
+/* Music plugin specific styling */
+.music-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.75rem;
+}
+
+/* Hide music controls when no server selected */
+.music-controls-hidden {
+    opacity: 0.3;
+    pointer-events: none;
+    user-select: none;
+}
+
+.no-server-message {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    margin-bottom: 2rem;
+}
+
+.no-server-message h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.no-server-message p {
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+.music-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 1.6rem 1.8rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.music-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.connection-details {
+    margin: 0 0 1.2rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.current-track {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: calc(var(--card-radius) - 4px);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+}
+
+.track-info {
+    margin-bottom: 1rem;
+}
+
+.track-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.track-author {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.progress-container {
+    margin: 1rem 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--accent-color);
+    width: 0%;
+    transition: width 0.1s ease;
+}
+
+.progress-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.controls {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+}
+
+.control-btn {
+    background: var(--accent-color);
+    color: var(--accent-contrast);
+    border: none;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.control-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.volume-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(148, 163, 184, 0.3);
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    cursor: pointer;
+    border: none;
+}
+
+.add-track {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.add-track form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.add-track input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.add-track .btn {
+    padding: 0.75rem 1.25rem;
+    white-space: nowrap;
+}
+
+.add-track input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.queue-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+}
+
+.queue-list-offline .queue-item {
+    opacity: 0.75;
+}
+
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
+}
+
+.queue-item:hover {
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.queue-item:last-child {
+    border-bottom: none;
+}
+
+.queue-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.queue-item-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-author {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.queue-item-duration {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+.btn-remove {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.mode-controls {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.mode-btn {
+    background: rgba(148, 163, 184, 0.2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.mode-btn.active {
+    background: var(--accent-color);
+    color: var(--accent-contrast);
+    border-color: var(--accent-color);
+}
+
+.mode-btn:hover {
+    border-color: var(--accent-color);
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.status-connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-disconnected {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.empty-queue {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.queue-offline-hint {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.queue-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem;
+    margin: 1.25rem 0 0.5rem 0;
+}
+
+.queue-stat-card {
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.queue-stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.queue-stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.queue-meta-footer {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .music-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+[data-theme="dark"] .no-server-message {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(148, 163, 184, 0.3);
+}
+
+@media (max-width: 768px) {
+    .controls {
+        gap: 0.5rem;
+    }
+
+    .control-btn {
+        padding: 0.5rem 0.75rem;
+        min-width: 70px;
+        font-size: 0.8rem;
+    }
+
+    .mode-controls {
+        flex-wrap: wrap;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<!-- No server selected message -->
+<div id="no-server-message" class="no-server-message">
+    <h3>🎵 Select a Server</h3>
+    <p>Please select a server from the sidebar to start managing music playback.</p>
+</div>
+
+<!-- Music controls (hidden by default) -->
+<div id="music-controls" class="music-grid music-controls-hidden">
+    <!-- Left Column: Player Controls -->
+    <div class="music-section">
+        <h3>🎵 Player Controls</h3>
+
+        <div id="connection-status" class="status-indicator status-disconnected">
+            🔴 Disconnected
+        </div>
+
+        <p id="connection-details" class="connection-details">
+            Connect the bot to a voice channel to enable playback controls.
+        </p>
+
+        <div id="current-track" class="current-track" style="display: none;">
+            <div class="track-info">
+                <div class="track-title" id="track-title">No track playing</div>
+                <div class="track-author" id="track-author"></div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-time">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button type="button" id="play-btn" class="control-btn" disabled
+                    hx-post="/api/music/controls/play"
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                ▶️ Play
+            </button>
+            <button type="button" id="pause-btn" class="control-btn" disabled
+                    hx-post="/api/music/controls/pause"
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                ⏸️ Pause
+            </button>
+            <button type="button" id="skip-btn" class="control-btn" disabled
+                    hx-post="/api/music/controls/skip"
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                ⏭️ Skip
+            </button>
+            <button type="button" id="stop-btn" class="control-btn" disabled
+                    hx-post="/api/music/controls/stop"
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                ⏹️ Stop
+            </button>
+        </div>
+
+        <div class="volume-control">
+            <span>🔊</span>
+            <input type="range" id="volume-slider" class="volume-slider"
+                   min="0" max="150" value="50" disabled>
+            <span id="volume-display">50%</span>
+        </div>
+
+        <div class="mode-controls">
+            <button type="button" id="repeat-off" class="mode-btn active"
+                    hx-post="/api/music/repeat"
+                    hx-vals='{"mode": "off"}'
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                🔁 Off
+            </button>
+            <button type="button" id="repeat-track" class="mode-btn"
+                    hx-post="/api/music/repeat"
+                    hx-vals='{"mode": "track"}'
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                🔂 Track
+            </button>
+            <button type="button" id="repeat-queue" class="mode-btn"
+                    hx-post="/api/music/repeat"
+                    hx-vals='{"mode": "queue"}'
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                🔁 Queue
+            </button>
+            <button type="button" id="shuffle-btn" class="mode-btn"
+                    hx-post="/api/music/shuffle"
+                    hx-include="[name='guild_id']"
+                    hx-target="#control-result">
+                🔀 Shuffle
+            </button>
+        </div>
+
+        <div id="control-result" class="result"></div>
+    </div>
+
+    <!-- Right Column: Queue Management -->
+    <div class="music-section">
+        <h3>📋 Queue Management</h3>
+
+        <div class="add-track">
+            <form hx-post="/api/music/play" hx-target="#add-result">
+                <input type="hidden" name="guild_id" value="" id="guild-id-input">
+                <input type="text" name="query" id="add-track-input" placeholder="Enter song name, artist, or YouTube URL..." required>
+                <button type="submit" class="btn" id="add-track-button">➕ Add to Queue</button>
+            </form>
+        </div>
+
+        <div id="add-result" class="result"></div>
+
+        <div class="queue-stats">
+            <div class="queue-stat-card">
+                <span class="queue-stat-label">Tracks</span>
+                <span class="queue-stat-value" id="queue-count">0</span>
+            </div>
+            <div class="queue-stat-card">
+                <span class="queue-stat-label">Total Length</span>
+                <span class="queue-stat-value" id="queue-duration">0:00</span>
+            </div>
+            <div class="queue-stat-card">
+                <span class="queue-stat-label">Repeat</span>
+                <span class="queue-stat-value" id="queue-repeat">Off</span>
+            </div>
+            <div class="queue-stat-card">
+                <span class="queue-stat-label">Shuffle</span>
+                <span class="queue-stat-value" id="queue-shuffle">Off</span>
+            </div>
+        </div>
+
+        <div class="queue-meta-footer" id="queue-last-updated">Last updated — waiting…</div>
+
+        <div id="queue-container">
+            <div class="empty-queue">
+                <p>Queue is empty</p>
+                <p class="text-sm">Add some tracks to get started!</p>
+            </div>
+        </div>
+
+        <div id="queue-result" class="result"></div>
+    </div>
+</div>
+
+<!-- Hidden input for guild ID -->
+<input type="hidden" name="guild_id" value="" id="guild-id-hidden">
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentGuildId = null;
+let statusUpdateInterval = null;
+let latestStatus = null;
+let pollInProgress = false;
+
+const QUEUE_LOADING_HTML = '<div class="empty-queue"><p>Loading queue...</p></div>';
+const QUEUE_SELECT_SERVER_HTML = '<div class="empty-queue"><p>Select a server to view the queue.</p></div>';
+
+document.body.addEventListener('guild-changed', (event) => {
+    const guildId = event.detail.guildId;
+    const noServerMessage = document.getElementById('no-server-message');
+    const musicControls = document.getElementById('music-controls');
+
+    if (guildId) {
+        noServerMessage.style.display = 'none';
+        musicControls.style.display = 'grid';
+        musicControls.classList.remove('music-controls-hidden');
+        handleMusicGuildChange(guildId);
+    } else {
+        noServerMessage.style.display = 'block';
+        musicControls.style.display = 'none';
+        musicControls.classList.add('music-controls-hidden');
+        handleMusicGuildChange('');
+    }
+});
+
+function formatTime(ms) {
+    const totalMs = Number(ms ?? 0);
+    const minutes = Math.floor(totalMs / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+async function updateStatus() {
+    if (!currentGuildId) return;
+
+    try {
+        const response = await fetch(`/api/music/status/${currentGuildId}`);
+        const status = await response.json();
+        latestStatus = status;
+
+        const connectionStatus = document.getElementById('connection-status');
+        const connectionDetails = document.getElementById('connection-details');
+        if (status.connected) {
+            connectionStatus.className = 'status-indicator status-connected';
+            connectionStatus.textContent = '🟢 Connected';
+            connectionDetails.textContent = status.playing ? 'Playback in progress.' : 'Ready to play music.';
+        } else {
+            connectionStatus.className = 'status-indicator status-disconnected';
+            connectionStatus.textContent = '🔴 Disconnected';
+            connectionDetails.textContent = 'Connect the bot to a voice channel to enable playback controls.';
+        }
+
+        ['play-btn', 'pause-btn', 'skip-btn', 'stop-btn'].forEach((id) => {
+            const button = document.getElementById(id);
+            if (button) {
+                button.disabled = !status.connected;
+            }
+        });
+
+        const volumeSlider = document.getElementById('volume-slider');
+        volumeSlider.disabled = !status.connected;
+
+        const addTrackInput = document.getElementById('add-track-input');
+        const addTrackButton = document.getElementById('add-track-button');
+        addTrackInput.disabled = !status.connected;
+        addTrackButton.disabled = !status.connected;
+
+        const currentTrackDiv = document.getElementById('current-track');
+        if (status.current_track) {
+            currentTrackDiv.style.display = 'block';
+            document.getElementById('track-title').textContent = status.current_track.title;
+            document.getElementById('track-author').textContent = status.current_track.author;
+            document.getElementById('current-time').textContent = formatTime(status.current_track.position);
+            document.getElementById('total-time').textContent = formatTime(status.current_track.duration);
+
+            const progress = status.current_track.duration
+                ? Math.min(100, (status.current_track.position / status.current_track.duration) * 100)
+                : 0;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+        } else {
+            currentTrackDiv.style.display = 'none';
+            document.getElementById('progress-fill').style.width = '0%';
+        }
+
+        volumeSlider.value = status.volume;
+        document.getElementById('volume-display').textContent = `${status.volume}%`;
+
+        document.querySelectorAll('.mode-btn').forEach((btn) => btn.classList.remove('active'));
+        const repeatButton = document.getElementById(`repeat-${status.repeat_mode}`);
+        if (repeatButton) {
+            repeatButton.classList.add('active');
+        }
+        const shuffleButton = document.getElementById('shuffle-btn');
+        shuffleButton.classList.toggle('active', Boolean(status.shuffle_enabled));
+
+        updateQueueStats(status);
+    } catch (error) {
+        console.error('Error updating status:', error);
+    }
+}
+
+async function refreshQueue(showLoading = false) {
+    if (!currentGuildId) return;
+
+    const queueContainer = document.getElementById('queue-container');
+    if (!queueContainer) return;
+
+    if (showLoading) {
+        queueContainer.innerHTML = QUEUE_LOADING_HTML;
+        setQueueFooter('Last updated — syncing…');
+    }
+
+    const status = latestStatus;
+    if (!status) {
+        return;
+    }
+
+    if (!status.connected) {
+        queueContainer.innerHTML = renderOfflineQueue(status);
+        updateQueueTimestamp();
+        return;
+    }
+
+    const html = renderConnectedQueue(status);
+    queueContainer.innerHTML = html;
+    if (window.htmx) {
+        htmx.process(queueContainer);
+    }
+    updateQueueTimestamp();
+}
+
+document.getElementById('volume-slider').addEventListener('input', function(e) {
+    const volume = e.target.value;
+    document.getElementById('volume-display').textContent = `${volume}%`;
+
+    clearTimeout(this.volumeTimeout);
+    this.volumeTimeout = setTimeout(() => {
+        if (currentGuildId) {
+            const formData = new FormData();
+            formData.append('guild_id', currentGuildId);
+            formData.append('volume', volume);
+
+            fetch('/api/music/volume', {
+                method: 'POST',
+                body: formData
+            });
+        }
+    }, 300);
+});
+
+function updateQueueStats(status) {
+    document.getElementById('queue-count').textContent = status.queue.length;
+    document.getElementById('queue-duration').textContent = formatTime(status.queue_duration);
+
+    const repeatLabel = { off: 'Off', track: 'Track', queue: 'Queue' }[status.repeat_mode] || 'Off';
+    document.getElementById('queue-repeat').textContent = repeatLabel;
+    document.getElementById('queue-shuffle').textContent = status.shuffle_enabled ? 'On' : 'Off';
+}
+
+function escapeHtml(value) {
+    if (typeof value !== 'string') {
+        return String(value ?? '');
+    }
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderConnectedQueue(status) {
+    const queue = Array.isArray(status.queue) ? status.queue : [];
+
+    if (queue.length === 0) {
+        return '<div class="empty-queue"><p>Queue is empty</p><p class="text-sm">Add some tracks to get started!</p></div>';
+    }
+
+    const rawGuildId = String(currentGuildId ?? '');
+    const guildId = rawGuildId.replace(/[^0-9]/g, '') || rawGuildId;
+    let html = '<div class="queue-list">';
+    queue.forEach((track, index) => {
+        const title = escapeHtml(track.title ?? track.track_title ?? `Track ${index + 1}`);
+        const author = escapeHtml(track.author ?? track.track_author ?? 'Unknown artist');
+        const duration = formatTime(track.duration ?? track.track_duration ?? 0);
+        const position = index;
+        const hxVals = `{"guild_id": "${guildId}", "position": ${position}}`;
+
+        html += `
+            <div class="queue-item" data-position="${position}">
+                <div class="queue-item-info">
+                    <div class="queue-item-title">${title}</div>
+                    <div class="queue-item-author">${author}</div>
+                </div>
+                <div class="queue-item-duration">${duration}</div>
+                <button type="button"
+                        class="btn-remove"
+                        hx-post="/api/music/queue/remove"
+                        hx-vals='${hxVals}'
+                        hx-target="#queue-result">
+                    🗑️
+                </button>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+function renderOfflineQueue(status) {
+    if (!status || !status.queue || status.queue.length === 0) {
+        return '<div class="empty-queue"><p>Queue is empty</p><p class="text-sm">Add some tracks to get started!</p></div>';
+    }
+
+    let html = '<div class="queue-list queue-list-offline">';
+    status.queue.forEach((track, index) => {
+        const title = escapeHtml(track.title ?? track.track_title ?? `Track ${index + 1}`);
+        const author = escapeHtml(track.author ?? track.track_author ?? 'Unknown artist');
+        const duration = formatTime(track.duration ?? track.track_duration ?? 0);
+
+        html += `
+            <div class="queue-item">
+                <div class="queue-item-info">
+                    <div class="queue-item-title">${title}</div>
+                    <div class="queue-item-author">${author}</div>
+                </div>
+                <div class="queue-item-duration">${duration}</div>
+            </div>
+        `;
+    });
+    html += '</div><div class="queue-offline-hint">Connect the bot to a voice channel to manage this queue live.</div>';
+    return html;
+}
+
+function setQueueFooter(message) {
+    const footer = document.getElementById('queue-last-updated');
+    if (footer) {
+        footer.textContent = message;
+    }
+}
+
+function updateQueueTimestamp() {
+    const now = new Date();
+    const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setQueueFooter(`Last updated — ${formatted}`);
+}
+
+async function pollStatusAndQueue(options = {}) {
+    if (!currentGuildId || pollInProgress) return;
+
+    pollInProgress = true;
+    try {
+        await updateStatus();
+        await refreshQueue(Boolean(options.showLoading));
+    } catch (error) {
+        console.error('Music poll error:', error);
+    } finally {
+        pollInProgress = false;
+    }
+}
+
+function resetMusicView() {
+    latestStatus = null;
+    const connectionStatus = document.getElementById('connection-status');
+    connectionStatus.className = 'status-indicator status-disconnected';
+    connectionStatus.textContent = '🔴 Disconnected';
+
+    const connectionDetails = document.getElementById('connection-details');
+    connectionDetails.textContent = 'Connect the bot to a voice channel to enable playback controls.';
+
+    document.getElementById('current-track').style.display = 'none';
+    document.getElementById('progress-fill').style.width = '0%';
+
+    ['play-btn', 'pause-btn', 'skip-btn', 'stop-btn'].forEach((id) => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.disabled = true;
+        }
+    });
+
+    document.getElementById('volume-slider').disabled = true;
+    document.getElementById('volume-display').textContent = '50%';
+    document.getElementById('volume-slider').value = 50;
+
+    document.getElementById('add-track-input').disabled = true;
+    document.getElementById('add-track-button').disabled = true;
+
+    document.getElementById('queue-count').textContent = '0';
+    document.getElementById('queue-duration').textContent = '0:00';
+    document.getElementById('queue-repeat').textContent = 'Off';
+    document.getElementById('queue-shuffle').textContent = 'Off';
+    setQueueFooter('Last updated — waiting…');
+}
+
+function handleMusicGuildChange(guildId) {
+    currentGuildId = guildId;
+
+    const queueContainer = document.getElementById('queue-container');
+
+    if (currentGuildId) {
+        document.getElementById('guild-id-input').value = currentGuildId;
+        document.getElementById('guild-id-hidden').value = currentGuildId;
+        document.querySelectorAll('input[name="guild_id"]').forEach((input) => {
+            input.value = currentGuildId;
+        });
+
+        if (queueContainer) {
+            queueContainer.innerHTML = QUEUE_LOADING_HTML;
+        }
+
+        document.getElementById('add-track-input').disabled = true;
+        document.getElementById('add-track-button').disabled = true;
+        setQueueFooter('Last updated — syncing…');
+
+        if (statusUpdateInterval) {
+            clearInterval(statusUpdateInterval);
+        }
+
+        pollStatusAndQueue({ showLoading: true });
+        statusUpdateInterval = setInterval(() => {
+            pollStatusAndQueue();
+        }, 2000);
+    } else {
+        if (statusUpdateInterval) {
+            clearInterval(statusUpdateInterval);
+            statusUpdateInterval = null;
+        }
+
+        document.getElementById('guild-id-input').value = '';
+        document.getElementById('guild-id-hidden').value = '';
+        document.querySelectorAll('input[name="guild_id"]').forEach((input) => {
+            input.value = '';
+        });
+
+        if (queueContainer) {
+            queueContainer.innerHTML = QUEUE_SELECT_SERVER_HTML;
+        }
+
+        resetMusicView();
+    }
+}
+
+document.querySelectorAll('.mode-btn').forEach((button) => {
+    button.addEventListener('htmx:afterRequest', (event) => {
+        if (event.detail.successful) {
+            pollStatusAndQueue();
+        }
+    });
+});
+
+window.addEventListener('beforeunload', () => {
+    if (statusUpdateInterval) {
+        clearInterval(statusUpdateInterval);
+    }
+});
+
+if (window.htmx) {
+    document.body.addEventListener('htmx:afterRequest', (event) => {
+        const path = event.detail && event.detail.pathInfo ? event.detail.pathInfo.path : null;
+        if (!path) {
+            return;
+        }
+
+        if ([
+            '/api/music/queue/remove',
+            '/api/music/controls/play',
+            '/api/music/controls/pause',
+            '/api/music/controls/skip',
+            '/api/music/controls/stop',
+            '/api/music/repeat',
+            '/api/music/shuffle',
+            '/api/music/play',
+            '/api/music/volume'
+        ].includes(path)) {
+            pollStatusAndQueue();
+        }
+    });
+}
+</script>
+{% endblock %}

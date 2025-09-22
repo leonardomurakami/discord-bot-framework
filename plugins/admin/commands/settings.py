@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
+from sqlalchemy import select
 
 from bot.database.models import Guild
 from bot.plugins.commands import CommandArgument, command
-from sqlalchemy import select
 
 from ..config import (
-    AUTOROLE_VALID_ACTIONS,
     ERROR_COLOR,
-    PERMISSION_LIST_LIMIT,
     PREFIX_DISALLOWED_CHARS,
     PREFIX_MAX_LENGTH,
     SERVER_INFO_COLOR,
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
+def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     """Register admin configuration commands."""
 
     @command(
@@ -56,7 +55,9 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
             ),
         ],
     )
-    async def manage_permissions(ctx: lightbulb.Context, action: str = "list", role: hikari.Role | None = None, permission: str | None = None) -> None:
+    async def manage_permissions(
+        ctx: lightbulb.Context, action: str = "list", role: hikari.Role | None = None, permission: str | None = None
+    ) -> None:
 
         try:
             if action == "list":
@@ -116,10 +117,14 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
                     )
                 else:
                     if action == "grant":
-                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.grant_permission(ctx.guild_id, role.id, permission)
+                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.grant_permission(
+                            ctx.guild_id, role.id, permission
+                        )
                         action_text = "granted to"
                     else:
-                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.revoke_permission(ctx.guild_id, role.id, permission)
+                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.revoke_permission(
+                            ctx.guild_id, role.id, permission
+                        )
                         action_text = "revoked from"
                         granted_perms = granted_perms  # For consistency, rename to processed_perms
 
@@ -146,13 +151,9 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
                             )
 
                         if failed_perms:
-                            embed.add_field(
-                                "⚠️ Failed",
-                                f"{len(failed_perms)} permissions could not be processed",
-                                inline=True
-                            )
+                            embed.add_field("⚠️ Failed", f"{len(failed_perms)} permissions could not be processed", inline=True)
                     else:
-                        if '*' in permission:
+                        if "*" in permission:
                             embed = plugin.create_embed(
                                 title="❌ Pattern Update Failed",
                                 description=f"No permissions found matching pattern `{permission}` or all failed to process.",
@@ -453,4 +454,3 @@ def setup_settings_commands(plugin: "AdminPlugin") -> list[Callable[..., Any]]:
             await plugin.log_command_usage(ctx, "autorole", False, str(exc))
 
     return [manage_permissions, manage_prefix, autorole]
-

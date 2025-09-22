@@ -61,4 +61,3 @@ class AdminPlugin(BasePlugin):
 
         except Exception as exc:
             logger.error("Error in auto role assignment for %s: %s", member.username, exc)
-

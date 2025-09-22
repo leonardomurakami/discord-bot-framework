@@ -20,12 +20,7 @@ class ModerationPlugin(BasePlugin):
         self._register_commands()
 
     def _register_commands(self) -> None:
-        command_factories = (
-            setup_action_commands(self)
-            + setup_channel_commands(self)
-            + setup_discipline_commands(self)
-        )
+        command_factories = setup_action_commands(self) + setup_channel_commands(self) + setup_discipline_commands(self)
 
         for command_func in command_factories:
             setattr(self, command_func.__name__, command_func)
-

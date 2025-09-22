@@ -4,7 +4,8 @@ import base64
 import hashlib
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -15,11 +16,9 @@ from ..config import (
     BASE64_ACTIONS,
     BASE64_COLOR,
     COLOR_NAME_MAP,
-    COLOR_TOOL_COLOR,
     ERROR_COLOR,
     HASH_ALGORITHMS,
     HASH_COLOR,
-    INFO_COLOR,
     TIMESTAMP_COLOR,
     TRANSLATE_COLOR,
     TRANSLATE_LANGUAGE_CODES,
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
+def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
     """Register conversion and formatting commands."""
 
     @command(
@@ -82,10 +81,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
         except ValueError:
             embed = plugin.create_embed(
                 title="❌ Invalid Format",
-                description=(
-                    "Please use formats like:\n• `YYYY-MM-DD HH:MM`\n• `YYYY-MM-DD`\n"
-                    "• Unix timestamp\n• `now`"
-                ),
+                description=("Please use formats like:\n• `YYYY-MM-DD HH:MM`\n• `YYYY-MM-DD`\n" "• Unix timestamp\n• `now`"),
                 color=ERROR_COLOR,
             )
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
@@ -306,14 +302,11 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
 
             target_lang = target_language.lower().strip()
             if target_lang not in TRANSLATE_LANGUAGE_CODES:
-                examples = ", ".join(
-                    f"`{code}` ({name})" for code, name in list(TRANSLATE_LANGUAGE_CODES.items())[:10]
-                )
+                examples = ", ".join(f"`{code}` ({name})" for code, name in list(TRANSLATE_LANGUAGE_CODES.items())[:10])
                 embed = plugin.create_embed(
                     title="❌ Invalid Language Code",
                     description=(
-                        "Please use a valid language code.\n\n**Examples:**\n"
-                        f"{examples}\n\n[See more language codes online]"
+                        "Please use a valid language code.\n\n**Examples:**\n" f"{examples}\n\n[See more language codes online]"
                     ),
                     color=ERROR_COLOR,
                 )
@@ -323,8 +316,7 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
             embed = plugin.create_embed(
                 title="🌐 Translation Service",
                 description=(
-                    f"**Original Text:**\n{text}\n\n"
-                    f"**Target Language:** {TRANSLATE_LANGUAGE_CODES[target_lang]} ({target_lang})"
+                    f"**Original Text:**\n{text}\n\n" f"**Target Language:** {TRANSLATE_LANGUAGE_CODES[target_lang]} ({target_lang})"
                 ),
                 color=TRANSLATE_COLOR,
             )
@@ -359,4 +351,3 @@ def setup_convert_commands(plugin: "UtilityPlugin") -> list[Callable[..., Any]]:
             await plugin.log_command_usage(ctx, "translate", False, str(exc))
 
     return [timestamp, color_info, base64_convert, hash_text, translate_text]
-

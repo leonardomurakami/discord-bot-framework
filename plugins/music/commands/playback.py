@@ -191,9 +191,7 @@ def setup_playback_commands(plugin):
         await clear_queue_from_db(plugin, ctx.guild_id)
 
         embed = plugin.create_embed(
-            title="⏹️ Stopped",
-            description="Stopped the music and cleared the queue.",
-            color=hikari.Color(0xFF0000)
+            title="⏹️ Stopped", description="Stopped the music and cleared the queue.", color=hikari.Color(0xFF0000)
         )
         await plugin.smart_respond(ctx, embed=embed)
 

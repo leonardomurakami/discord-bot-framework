@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-from fastapi import FastAPI, APIRouter
+from typing import Any
+
+from fastapi import APIRouter, FastAPI
 
 
 class WebPanelMixin(ABC):
@@ -13,10 +14,10 @@ class WebPanelMixin(ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._web_router: Optional[APIRouter] = None
+        self._web_router: APIRouter | None = None
 
     @abstractmethod
-    def get_panel_info(self) -> Dict[str, Any]:
+    def get_panel_info(self) -> dict[str, Any]:
         """
         Return metadata about this plugin's web panel.
 
@@ -51,10 +52,7 @@ class WebPanelMixin(ABC):
         their routes using FastAPI's APIRouter.
         """
         if self._web_router is None:
-            self._web_router = APIRouter(
-                prefix=f"/plugin/{self.name}",
-                tags=[self.name]
-            )
+            self._web_router = APIRouter(prefix=f"/plugin/{self.name}", tags=[self.name])
         return self._web_router
 
     def register_router_with_app(self, app: FastAPI) -> None:
@@ -66,23 +64,23 @@ class WebPanelMixin(ABC):
         if self._web_router:
             app.include_router(self._web_router)
 
-    def get_template_directory(self) -> Optional[str]:
+    def get_template_directory(self) -> str | None:
         """
         Return the directory path for plugin-specific templates.
 
         Override this to provide custom templates for your plugin.
         Defaults to 'templates' subdirectory in plugin directory.
         """
-        import os
         import inspect
+        import os
 
         # Get the plugin's source file path
         plugin_file = inspect.getfile(self.__class__)
         plugin_dir = os.path.dirname(plugin_file)
-        template_dir = os.path.join(plugin_dir, 'templates')
+        template_dir = os.path.join(plugin_dir, "templates")
         return template_dir if os.path.exists(template_dir) else None
 
-    def get_static_directory(self) -> Optional[str]:
+    def get_static_directory(self) -> str | None:
         """
         Return the directory path for plugin-specific static files.
 
@@ -90,8 +88,9 @@ class WebPanelMixin(ABC):
         Defaults to 'static' subdirectory in plugin directory.
         """
         import os
-        plugin_dir = os.path.dirname(self.__module__.replace('.', '/'))
-        static_dir = os.path.join(plugin_dir, 'static')
+
+        plugin_dir = os.path.dirname(self.__module__.replace(".", "/"))
+        static_dir = os.path.join(plugin_dir, "static")
         return static_dir if os.path.exists(static_dir) else None
 
     def render_plugin_template(self, request, template_name: str, context: dict = None):
@@ -110,10 +109,10 @@ class WebPanelMixin(ABC):
         Returns:
             Jinja2 TemplateResponse
         """
-        from fastapi.templating import Jinja2Templates
-        from jinja2 import FileSystemLoader, Environment
         import os
-        from pathlib import Path
+
+        from fastapi.templating import Jinja2Templates
+        from jinja2 import Environment, FileSystemLoader
 
         # Build list of template directories to search
         template_dirs = []
@@ -124,7 +123,7 @@ class WebPanelMixin(ABC):
             template_dirs.append(plugin_template_dir)
 
         # 2. Bot core template directory (fallback for shared templates)
-        if hasattr(self.bot, 'web_panel_manager'):
+        if hasattr(self.bot, "web_panel_manager"):
             core_template_dir = str(self.bot.web_panel_manager.web_app.templates_dir)
             if os.path.exists(core_template_dir):
                 template_dirs.append(core_template_dir)
@@ -148,38 +147,40 @@ class WebPanelMixin(ABC):
 
         current_user = None
         auth_configured = False
-        if hasattr(self.bot, 'web_panel_manager'):
-            web_app = getattr(self.bot.web_panel_manager, 'web_app', None)
-            if web_app and hasattr(web_app, 'auth'):
+        if hasattr(self.bot, "web_panel_manager"):
+            web_app = getattr(self.bot.web_panel_manager, "web_app", None)
+            if web_app and hasattr(web_app, "auth"):
                 auth_configured = web_app.auth.is_configured()
                 current_user = web_app.auth.get_current_user(request)
 
         base_context = {
             "request": request,
-            "plugin_name": plugin_info.get('name', self.name),
-            "plugin_description": plugin_info.get('description', ''),
-            "plugin_icon": plugin_info.get('icon', ''),
-            "bot_name": getattr(bot_user, 'username', 'Discord Bot') if bot_user else 'Discord Bot',
+            "plugin_name": plugin_info.get("name", self.name),
+            "plugin_description": plugin_info.get("description", ""),
+            "plugin_icon": plugin_info.get("icon", ""),
+            "bot_name": getattr(bot_user, "username", "Discord Bot") if bot_user else "Discord Bot",
             "bot_avatar": bot_avatar,
             "current_user": current_user,
             "auth_configured": auth_configured,
         }
 
         # Add plugin panels for sidebar navigation
-        if hasattr(self.bot, 'web_panel_manager'):
+        if hasattr(self.bot, "web_panel_manager"):
             all_panels = self.bot.web_panel_manager.get_all_panel_info()
             panels_with_order = []
             for plugin_name, panel_info in all_panels.items():
-                panels_with_order.append({
-                    'name': panel_info['name'],
-                    'route': panel_info['route'],
-                    'description': panel_info['description'],
-                    'icon': panel_info.get('icon'),
-                    'nav_order': panel_info.get('nav_order', 999)
-                })
-            panels_with_order.sort(key=lambda x: x['nav_order'])
-            base_context['plugin_panels'] = [{k: v for k, v in panel.items() if k != 'nav_order'} for panel in panels_with_order]
-            base_context['has_plugin_panels'] = len(panels_with_order) > 0
+                panels_with_order.append(
+                    {
+                        "name": panel_info["name"],
+                        "route": panel_info["route"],
+                        "description": panel_info["description"],
+                        "icon": panel_info.get("icon"),
+                        "nav_order": panel_info.get("nav_order", 999),
+                    }
+                )
+            panels_with_order.sort(key=lambda x: x["nav_order"])
+            base_context["plugin_panels"] = [{k: v for k, v in panel.items() if k != "nav_order"} for panel in panels_with_order]
+            base_context["has_plugin_panels"] = len(panels_with_order) > 0
 
         # Merge with provided context
         if context:

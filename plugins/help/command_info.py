@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ class CommandInfoManager:
         self.help_plugin = help_plugin
         self.bot = help_plugin.bot
 
-    def get_command_info(self, command_name: str) -> Optional[dict]:
+    def get_command_info(self, command_name: str) -> dict | None:
         """Get detailed information for a specific command."""
         # Get prefix safely
         prefix = "!"  # Default prefix
@@ -111,6 +110,7 @@ class CommandInfoManager:
         # Fallback to default prefix
         try:
             from config.settings import settings
+
             return settings.bot_prefix
         except (AttributeError, ImportError):
             pass

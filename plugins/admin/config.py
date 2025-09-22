@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from hikari import Color
 
-
 PERMISSION_LIST_LIMIT = 20
 
 SERVER_INFO_COLOR = Color(0x7289DA)
@@ -29,4 +28,3 @@ PREFIX_MAX_LENGTH = 5
 PREFIX_DISALLOWED_CHARS = {'"', "'", "`", "\n", "\r", "\t"}
 
 AUTOROLE_VALID_ACTIONS = {"add", "remove", "list", "clear"}
-

@@ -3,7 +3,8 @@ from __future__ import annotations
 import html
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import lightbulb
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def setup_game_commands(plugin: "FunPlugin") -> list[Callable[..., Any]]:
+def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
     """Register interactive game-style commands."""
 
     @command(

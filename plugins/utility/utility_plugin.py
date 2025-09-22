@@ -30,11 +30,7 @@ class UtilityPlugin(BasePlugin):
         await super().on_unload()
 
     def _register_commands(self) -> None:
-        command_factories = (
-            setup_info_commands(self)
-            + setup_convert_commands(self)
-            + setup_tool_commands(self)
-        )
+        command_factories = setup_info_commands(self) + setup_convert_commands(self) + setup_tool_commands(self)
 
         for command_func in command_factories:
             setattr(self, command_func.__name__, command_func)
