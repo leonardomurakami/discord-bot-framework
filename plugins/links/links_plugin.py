@@ -7,20 +7,23 @@ import hikari
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from bot.database.models import Link
 from bot.plugins.base import BasePlugin
+from bot.plugins.mixins import DatabaseMixin
 from bot.plugins.commands.argument_types import CommandArgument
 from bot.plugins.commands.decorators import command
 
 from .config import links_settings
+from .models import Link
 
 logger = logging.getLogger(__name__)
 
 
-class LinksPlugin(BasePlugin):
+class LinksPlugin(DatabaseMixin, BasePlugin):
     def __init__(self, bot: Any) -> None:
         super().__init__(bot)
         self._default_links = links_settings.default_links
+        # Register the Link model with the database manager
+        self.register_model(Link)
 
     async def on_load(self) -> None:
         await super().on_load()

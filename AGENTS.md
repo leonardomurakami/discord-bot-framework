@@ -39,9 +39,19 @@ Welcome! This repository houses a modular Discord bot built on top of Hikari (ga
 - Command registration is handled by `CommandRegistry`: slash commands get dynamically generated Lightbulb classes (with option descriptors from `OptionDescriptorFactory`), while prefix commands use `MessageCommandHandler` with parsing performed by `ArgumentParserFactory`. Always express inputs with `CommandArgument` to stay compatible with both invocation styles.
 - Unified command decorator (`bot/plugins/commands/decorators.py::command`): define `name`, `description`, optional aliases, `permission_node`, and a shared `arguments` list of `CommandArgument`. Slash commands receive Lightbulb option descriptors; prefix commands are wrapped with `PrefixCommand` instances and parsed via `ArgumentParserFactory` (string, int, bool, user, channel, role, mentionable).
 - Respect permission nodes: declare required nodes in `PLUGIN_METADATA["permissions"]`, guard handlers with `permission_node="plugin.node"` or manual decorator stacking, and update tests if access rules change.
-- For plugins needing persistence, use the provided database models or introduce new ORM entities in `bot/database/models.py` (with accompanying migrations/tests). Leverage `BasePlugin.get_setting`/`set_setting` for lightweight per-guild configuration.
+- For plugins needing persistence, inherit from `DatabaseMixin` in `bot/plugins/mixins.py` to register custom models, or leverage `BasePlugin.get_setting`/`set_setting` for lightweight per-guild configuration. Plugin models should be defined in a `models.py` file within the plugin directory and registered in the plugin's `__init__` method using `self.register_model()` or `self.register_models()`.
 - Music plugin specifics live in `plugins/music/`; it integrates Lavalink (see `config.settings` for connection fields) and persists queue/session state. Install optional extras (`uv sync --extra music`) when modifying those components.
 - Web-enabled plugins should inherit `WebPanelMixin` to expose control-panel pages. Implement `get_panel_info()` for navigation metadata, register FastAPI routes inside `register_web_routes()`, and use `render_plugin_template()` to load plugin-specific Jinja templates (which can extend `bot/web/templates/plugin_base.html`). Static assets can live in a `static/` directory; `WebPanelManager` will mount them automatically when provided.
+- Database-enabled plugins should inherit `DatabaseMixin` to register custom SQLAlchemy models. Define models in `plugins/<name>/models.py` inheriting from `bot.database.models.Base`, then register them in the plugin's `__init__` method. The database manager automatically discovers and creates tables for registered models during startup. Example:
+  ```python
+  from bot.plugins.mixins import DatabaseMixin
+  from .models import MyModel
+
+  class MyPlugin(DatabaseMixin, BasePlugin):
+      def __init__(self, bot):
+          super().__init__(bot)
+          self.register_model(MyModel)  # or self.register_models(Model1, Model2)
+  ```
 
 ## 5. Configuration & environment
 - Settings are centrally provided by `config.settings.settings` (Pydantic). Modify defaults thoughtfully and document new fields in `README.md` or `.env.example`.

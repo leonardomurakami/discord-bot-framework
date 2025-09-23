@@ -24,7 +24,7 @@ async def save_queue_to_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import text
 
-            from bot.database.models import MusicQueue, MusicSession
+            from .models import MusicQueue, MusicSession
 
             await session.execute(text("DELETE FROM music_queues WHERE guild_id = :guild_id"), {"guild_id": guild_id})
 
@@ -82,7 +82,7 @@ async def restore_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> b
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import select
 
-            from bot.database.models import MusicQueue, MusicSession
+            from .models import MusicQueue, MusicSession
 
             session_data = await session.get(MusicSession, guild_id)
             if not session_data:
@@ -150,7 +150,7 @@ async def restore_all_queues(music_plugin: "MusicPlugin") -> None:
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import select
 
-            from bot.database.models import MusicSession
+            from .models import MusicSession
 
             result = await session.execute(select(MusicSession.guild_id).distinct())
             guild_ids = [row[0] for row in result.fetchall()]
@@ -176,7 +176,7 @@ async def add_to_history(music_plugin: "MusicPlugin", guild_id: int, track) -> N
         async with music_plugin.bot.db.session() as session:
             from sqlalchemy import exc, text
 
-            from bot.database.models import MusicQueue
+            from .models import MusicQueue
 
             # First, clean up old history entries before adding new one
             await session.execute(

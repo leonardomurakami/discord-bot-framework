@@ -29,7 +29,7 @@ def setup_history_commands(plugin):
             async with plugin.bot.db.session() as session:
                 from sqlalchemy import select
 
-                from bot.database.models import MusicQueue
+                from ..models import MusicQueue
 
                 result = await session.execute(
                     select(MusicQueue)

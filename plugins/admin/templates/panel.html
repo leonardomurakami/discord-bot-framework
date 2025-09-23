@@ -1,0 +1,942 @@
+{% extends "plugin_base.html" %}
+
+{% block extra_styles %}
+/* Admin panel specific styling */
+.admin-grid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 1.75rem;
+    min-height: 600px;
+}
+
+.admin-sidebar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    height: fit-content;
+}
+
+.admin-main {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.guild-status {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--input-radius);
+    background: var(--bg-primary);
+}
+
+.guild-status.has-guild {
+    background: var(--accent-soft);
+    border-color: var(--accent-color);
+}
+
+.guild-status h3 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guild-status p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.role-item {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--input-radius);
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.role-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+}
+
+.role-item.active {
+    background: var(--accent-soft);
+    border-color: var(--accent-color);
+}
+
+.role-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.role-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.permission-manager {
+    display: none;
+}
+
+.permission-manager.active {
+    display: block;
+}
+
+.permission-search {
+    margin-bottom: 1.5rem;
+}
+
+.permission-search input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--input-radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+}
+
+.permission-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.permission-category {
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+}
+
+.category-header {
+    background: var(--bg-primary);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.category-header:hover {
+    background: var(--bg-hover);
+}
+
+.category-toggle {
+    transition: transform 0.2s ease;
+}
+
+.category-header.collapsed .category-toggle {
+    transform: rotate(-90deg);
+}
+
+.permission-list {
+    padding: 0.5rem;
+    background: var(--bg-primary);
+}
+
+.permission-list.collapsed {
+    display: none;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    border-radius: var(--input-radius);
+    margin-bottom: 0.25rem;
+    transition: background-color 0.2s ease;
+}
+
+.permission-item:hover {
+    background: var(--bg-hover);
+}
+
+.permission-info {
+    flex: 1;
+}
+
+.permission-node {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    color: var(--accent-color);
+    margin-bottom: 0.25rem;
+}
+
+.permission-description {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.permission-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.toggle-switch.active {
+    background: var(--accent-color);
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-slider {
+    transform: translateX(20px);
+}
+
+.no-guild-selected {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-secondary);
+}
+
+.no-guild-selected h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.error-message {
+    background: var(--error-bg);
+    color: var(--error-text);
+    padding: 0.75rem;
+    border-radius: var(--input-radius);
+    margin-bottom: 1rem;
+    border: 1px solid var(--error-border);
+}
+
+.success-message {
+    background: var(--success-bg);
+    color: var(--success-text);
+    padding: 0.75rem;
+    border-radius: var(--input-radius);
+    margin-bottom: 1rem;
+    border: 1px solid var(--success-border);
+}
+
+/* Toast notification system */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow-lg);
+    min-width: 300px;
+    max-width: 400px;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    position: relative;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast.success {
+    border-left: 4px solid #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), var(--bg-secondary));
+}
+
+.toast.error {
+    border-left: 4px solid #ef4444;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), var(--bg-secondary));
+}
+
+.toast.warning {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), var(--bg-secondary));
+}
+
+.toast-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.toast-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.toast.success .toast-icon {
+    color: #10b981;
+}
+
+.toast.error .toast-icon {
+    color: #ef4444;
+}
+
+.toast.warning .toast-icon {
+    color: #f59e0b;
+}
+
+.toast-message {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.toast-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    padding: 0.25rem;
+    transition: color 0.2s ease;
+}
+
+.toast-close:hover {
+    color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+    .toast-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: none;
+    }
+}
+
+.bulk-actions {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+}
+
+.bulk-actions h4 {
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.bulk-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.bulk-btn {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--input-radius);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bulk-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-color);
+}
+
+@media (max-width: 768px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .admin-sidebar {
+        order: 2;
+    }
+
+    .admin-main {
+        order: 1;
+    }
+}
+{% endblock %}
+
+{% block content %}
+<!-- Toast notification container -->
+<div class="toast-container" id="toast-container"></div>
+
+<div class="admin-grid">
+    <!-- Sidebar -->
+    <div class="admin-sidebar">
+        <div id="guild-status" class="guild-status">
+            <div class="no-guild-selected">
+                <h3>No Server Selected</h3>
+                <p>Please select a server from the sidebar to manage roles and permissions.</p>
+            </div>
+        </div>
+
+        <div id="roles-container" style="display: none;">
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Server Roles</h4>
+            <div class="loading">Loading roles...</div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="admin-main">
+        <div id="permission-manager" class="permission-manager">
+            <div class="no-guild-selected">
+                <h3>Select a Role</h3>
+                <p>Choose a role from the sidebar to manage its permissions.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Templates for dynamic content -->
+<template id="roles-template">
+    <div class="roles-list">
+        <!-- Roles will be populated here by HTMX -->
+    </div>
+</template>
+
+<template id="permission-manager-template">
+    <div class="bulk-actions">
+        <h4>Quick Actions</h4>
+        <div class="bulk-action-buttons">
+            <button class="bulk-btn" data-action="grant" data-pattern="admin.*">
+                <i class="fa-solid fa-crown"></i> Grant Admin
+            </button>
+            <button class="bulk-btn" data-action="grant" data-pattern="moderation.*">
+                <i class="fa-solid fa-hammer"></i> Grant Moderation
+            </button>
+            <button class="bulk-btn" data-action="grant" data-pattern="music.*">
+                <i class="fa-solid fa-music"></i> Grant Music
+            </button>
+            <button class="bulk-btn" data-action="revoke" data-pattern="*">
+                <i class="fa-solid fa-ban"></i> Revoke All
+            </button>
+        </div>
+    </div>
+
+    <div class="permission-search">
+        <input type="text" id="permission-search" placeholder="Search permissions..." />
+    </div>
+
+    <div class="permission-categories">
+        {% for category, permissions in permissions_by_category.items() %}
+        <div class="permission-category" data-category="{{ category }}">
+            <div class="category-header" onclick="toggleCategory('{{ category }}')">
+                <span>{{ category.title() }} ({{ permissions|length }})</span>
+                <i class="fa-solid fa-chevron-down category-toggle"></i>
+            </div>
+            <div class="permission-list" id="category-{{ category }}">
+                {% for permission in permissions %}
+                <div class="permission-item" data-permission="{{ permission.node }}">
+                    <div class="permission-info">
+                        <div class="permission-node">{{ permission.node }}</div>
+                        <div class="permission-description">{{ permission.description }}</div>
+                    </div>
+                    <div class="permission-toggle">
+                        <div class="toggle-switch"
+                             data-permission="{{ permission.node }}"
+                             onclick="togglePermission(this, '{{ permission.node }}')">
+                            <div class="toggle-slider"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentGuildId = null;
+let currentRoleId = null;
+let currentRolePermissions = new Set();
+
+// Listen for guild changes from the sidebar (following music plugin pattern exactly)
+document.body.addEventListener('guild-changed', (event) => {
+    const guildId = event.detail.guildId;
+    console.log('Admin panel - Guild changed to:', guildId);
+
+    if (guildId) {
+        handleAdminGuildChange(guildId);
+    } else {
+        resetToNoGuild();
+    }
+});
+
+async function handleAdminGuildChange(guildId) {
+    console.log('handleAdminGuildChange called with:', guildId);
+    currentGuildId = guildId;
+    currentRoleId = null;
+    currentRolePermissions.clear();
+
+    // Show that we're working with this guild immediately
+    showGuildLoading(guildId);
+
+    // Then check access and load data
+    await checkAccessAndLoadGuild(guildId);
+}
+
+function showGuildLoading(guildId) {
+    const guildStatus = document.getElementById('guild-status');
+    guildStatus.className = 'guild-status has-guild';
+    guildStatus.innerHTML = `
+        <h3>
+            <i class="fa-solid fa-server"></i>
+            Loading server...
+        </h3>
+        <p>Checking permissions and loading server data...</p>
+    `;
+
+    document.getElementById('roles-container').style.display = 'block';
+    document.getElementById('roles-container').innerHTML = `
+        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Server Roles</h4>
+        <div class="loading">Checking access permissions...</div>
+    `;
+}
+
+async function checkAccessAndLoadGuild(guildId) {
+    console.log('checkAccessAndLoadGuild called with:', guildId);
+
+    // First check if user has access to this guild
+    try {
+        console.log('Checking access for guild:', guildId);
+        const accessResponse = await fetch(`/plugin/admin/check-access/${guildId}`);
+        console.log('Access response status:', accessResponse.status);
+
+        const accessData = await accessResponse.json();
+        console.log('Access data:', accessData);
+
+        if (!accessData.success) {
+            console.log('Access denied:', accessData.message);
+            showGuildAccessDenied(accessData.message || 'Access denied');
+            return;
+        }
+
+        // User has access, proceed to load guild data
+        console.log('Access granted, loading guild data');
+
+        // Update guild status
+        updateGuildStatus(accessData.guild_info);
+
+        // Load roles
+        await loadGuildRoles(guildId);
+
+    } catch (error) {
+        console.error('Error checking guild access:', error);
+        showGuildAccessDenied('Failed to check guild access');
+    }
+}
+
+function updateGuildStatus(guildInfo) {
+    const guildStatus = document.getElementById('guild-status');
+    if (guildInfo) {
+        guildStatus.className = 'guild-status has-guild';
+        guildStatus.innerHTML = `
+            <h3>
+                ${guildInfo.icon ? `<img src="${guildInfo.icon}" alt="${guildInfo.name}" style="width: 20px; height: 20px; border-radius: 50%;" />` : '<i class="fa-solid fa-server"></i>'}
+                ${guildInfo.name}
+            </h3>
+            <p>Managing permissions for this server</p>
+        `;
+    } else {
+        resetToNoGuild();
+    }
+}
+
+function showGuildAccessDenied(message) {
+    const guildStatus = document.getElementById('guild-status');
+    guildStatus.className = 'guild-status';
+    guildStatus.innerHTML = `
+        <h3><i class="fa-solid fa-shield-xmark" style="color: var(--error-color);"></i> Access Denied</h3>
+        <p>${message}</p>
+    `;
+
+    document.getElementById('roles-container').style.display = 'none';
+    resetPermissionManager();
+}
+
+function resetToNoGuild() {
+    const guildStatus = document.getElementById('guild-status');
+    guildStatus.className = 'guild-status';
+    guildStatus.innerHTML = `
+        <div class="no-guild-selected">
+            <h3>No Server Selected</h3>
+            <p>Please select a server from the sidebar to manage roles and permissions.</p>
+        </div>
+    `;
+
+    document.getElementById('roles-container').style.display = 'none';
+    resetPermissionManager();
+
+    currentGuildId = null;
+    currentRoleId = null;
+    currentRolePermissions.clear();
+}
+
+async function loadGuildRoles(guildId) {
+    const rolesContainer = document.getElementById('roles-container');
+    rolesContainer.style.display = 'block';
+    rolesContainer.innerHTML = `
+        <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Server Roles</h4>
+        <div class="loading">Loading roles...</div>
+    `;
+
+    try {
+        const response = await fetch(`/plugin/admin/api/guild/${guildId}/roles`);
+        const html = await response.text();
+        rolesContainer.innerHTML = `
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Server Roles</h4>
+            ${html}
+        `;
+
+        resetPermissionManager();
+
+    } catch (error) {
+        console.error('Error loading guild roles:', error);
+        rolesContainer.innerHTML = `
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Server Roles</h4>
+            <div class="error-message">Failed to load guild roles</div>
+        `;
+    }
+}
+
+function resetPermissionManager() {
+    const permissionManager = document.getElementById('permission-manager');
+    permissionManager.classList.remove('active');
+    permissionManager.innerHTML = `
+        <div class="no-guild-selected">
+            <h3>Select a Role</h3>
+            <p>Choose a role from the sidebar to manage its permissions.</p>
+        </div>
+    `;
+}
+
+function selectRole(roleId, roleName, roleColor) {
+    // Remove active class from all roles
+    document.querySelectorAll('.role-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Add active class to selected role
+    const roleElement = document.querySelector(`[data-role-id="${roleId}"]`);
+    if (roleElement) {
+        roleElement.classList.add('active');
+    }
+
+    currentRoleId = roleId;
+    loadRolePermissions(roleId, roleName);
+}
+
+async function loadRolePermissions(roleId, roleName) {
+    if (!currentGuildId) return;
+
+    try {
+        const response = await fetch(`/plugin/admin/api/guild/${currentGuildId}/role/${roleId}/permissions`);
+        const data = await response.json();
+
+        currentRolePermissions = new Set(data.permissions);
+
+        // Show permission manager
+        const permissionManager = document.getElementById('permission-manager');
+        const template = document.getElementById('permission-manager-template');
+        permissionManager.innerHTML = template.innerHTML;
+        permissionManager.classList.add('active');
+
+        // Update header
+        const header = permissionManager.querySelector('h4');
+        if (header) {
+            header.textContent = `Managing permissions for: ${roleName}`;
+        }
+
+        // Update toggle states
+        updatePermissionToggles();
+
+    } catch (error) {
+        console.error('Error loading role permissions:', error);
+        showMessage('Error loading role permissions', 'error');
+    }
+}
+
+function updatePermissionToggles() {
+    document.querySelectorAll('.toggle-switch').forEach(toggle => {
+        const permission = toggle.dataset.permission;
+        const isGranted = currentRolePermissions.has(permission);
+
+        if (isGranted) {
+            toggle.classList.add('active');
+        } else {
+            toggle.classList.remove('active');
+        }
+    });
+}
+
+async function togglePermission(toggleElement, permissionNode) {
+    if (!currentGuildId || !currentRoleId) return;
+
+    const isCurrentlyGranted = currentRolePermissions.has(permissionNode);
+    const action = isCurrentlyGranted ? 'revoke' : 'grant';
+
+    try {
+        const formData = new FormData();
+        formData.append('permission_node', permissionNode);
+
+        const response = await fetch(`/plugin/admin/api/guild/${currentGuildId}/role/${currentRoleId}/permissions/${action}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (action === 'grant') {
+                data.granted.forEach(perm => currentRolePermissions.add(perm));
+                showToast(data.message, 'success', 'Permission Granted');
+            } else {
+                data.revoked.forEach(perm => currentRolePermissions.delete(perm));
+                showToast(data.message, 'success', 'Permission Revoked');
+            }
+
+            updatePermissionToggles();
+        } else {
+            showToast(data.message, 'error', 'Permission Error');
+        }
+
+    } catch (error) {
+        console.error('Error toggling permission:', error);
+        showMessage('Error updating permission', 'error');
+    }
+}
+
+function toggleCategory(category) {
+    const categoryElement = document.querySelector(`[data-category="${category}"]`);
+    const header = categoryElement.querySelector('.category-header');
+    const permissionList = categoryElement.querySelector('.permission-list');
+
+    header.classList.toggle('collapsed');
+    permissionList.classList.toggle('collapsed');
+}
+
+function showToast(message, type = 'success', title = null) {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        console.error('Toast container not found');
+        return;
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    // Determine icon and title based on type
+    let icon, defaultTitle;
+    switch (type) {
+        case 'success':
+            icon = 'fa-solid fa-check-circle';
+            defaultTitle = 'Success';
+            break;
+        case 'error':
+            icon = 'fa-solid fa-times-circle';
+            defaultTitle = 'Error';
+            break;
+        case 'warning':
+            icon = 'fa-solid fa-exclamation-triangle';
+            defaultTitle = 'Warning';
+            break;
+        default:
+            icon = 'fa-solid fa-info-circle';
+            defaultTitle = 'Info';
+    }
+
+    toast.innerHTML = `
+        <div class="toast-header">
+            <i class="${icon} toast-icon"></i>
+            <span>${title || defaultTitle}</span>
+        </div>
+        <div class="toast-message">${message}</div>
+        <button class="toast-close" onclick="dismissToast(this)">&times;</button>
+    `;
+
+    // Add to container
+    container.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        dismissToast(toast.querySelector('.toast-close'));
+    }, 5000);
+}
+
+function dismissToast(closeButton) {
+    const toast = closeButton.closest('.toast');
+    if (toast) {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }
+}
+
+// Legacy function for backward compatibility
+function showMessage(message, type) {
+    showToast(message, type);
+}
+
+
+// Search functionality
+document.addEventListener('input', function(event) {
+    if (event.target.id === 'permission-search') {
+        const searchTerm = event.target.value.toLowerCase();
+        const permissionItems = document.querySelectorAll('.permission-item');
+
+        permissionItems.forEach(item => {
+            const node = item.querySelector('.permission-node').textContent.toLowerCase();
+            const description = item.querySelector('.permission-description').textContent.toLowerCase();
+
+            if (node.includes(searchTerm) || description.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show/hide categories based on visible items
+        document.querySelectorAll('.permission-category').forEach(category => {
+            const visibleItems = category.querySelectorAll('.permission-item[style="display: flex"], .permission-item:not([style])');
+            const hasVisibleItems = Array.from(visibleItems).some(item => item.style.display !== 'none');
+
+            if (hasVisibleItems) {
+                category.style.display = 'block';
+            } else {
+                category.style.display = 'none';
+            }
+        });
+    }
+});
+
+// Bulk actions
+document.addEventListener('click', function(event) {
+    if (event.target.closest('.bulk-btn')) {
+        const button = event.target.closest('.bulk-btn');
+        const action = button.dataset.action;
+        const pattern = button.dataset.pattern;
+
+        if (currentGuildId && currentRoleId) {
+            handleBulkAction(action, pattern);
+        }
+    }
+});
+
+async function handleBulkAction(action, pattern) {
+    if (!confirm(`Are you sure you want to ${action} permissions matching "${pattern}"?`)) {
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('permission_node', pattern);
+
+        const response = await fetch(`/plugin/admin/api/guild/${currentGuildId}/role/${currentRoleId}/permissions/${action}`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (action === 'grant') {
+                data.granted.forEach(perm => currentRolePermissions.add(perm));
+                showToast(data.message, 'success', 'Permission Granted');
+            } else {
+                data.revoked.forEach(perm => currentRolePermissions.delete(perm));
+                showToast(data.message, 'success', 'Permission Revoked');
+            }
+
+            updatePermissionToggles();
+        } else {
+            showToast(data.message, 'error', 'Permission Error');
+        }
+
+    } catch (error) {
+        console.error('Error with bulk action:', error);
+        showMessage('Error with bulk action', 'error');
+    }
+}
+</script>
+{% endblock %}

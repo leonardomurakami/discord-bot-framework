@@ -6,6 +6,7 @@ import hikari
 
 import lavalink
 from bot.plugins.base import BasePlugin
+from bot.plugins.mixins import DatabaseMixin
 from bot.web.mixins import WebPanelMixin
 from config.settings import settings
 
@@ -18,17 +19,20 @@ from .commands.settings import setup_settings_commands
 from .commands.voice import setup_voice_commands
 from .events import MusicEventHandler
 from .utils import add_to_history, check_voice_channel_empty, restore_all_queues, save_queue_to_db
+from .models import MusicQueue, MusicSession
 
 logger = logging.getLogger(__name__)
 
 
-class MusicPlugin(BasePlugin, WebPanelMixin):
+class MusicPlugin(DatabaseMixin, BasePlugin, WebPanelMixin):
     def __init__(self, bot: Any) -> None:
         super().__init__(bot)
         self.lavalink_client: lavalink.Client | None = None
         self.repeat_modes: dict[int, int] = {}
         self.disconnect_timers: dict[int, Any] = {}
         self._restoring_queues: set[int] = set()
+        # Register music models with the database manager
+        self.register_models(MusicQueue, MusicSession)
 
     async def on_load(self) -> None:
         # Register all commands BEFORE calling super().on_load()

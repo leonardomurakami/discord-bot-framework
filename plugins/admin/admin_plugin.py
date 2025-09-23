@@ -7,13 +7,14 @@ import hikari
 
 from bot.core.event_system import event_listener
 from bot.plugins.base import BasePlugin
+from bot.web.mixins import WebPanelMixin
 
 from .commands import setup_info_commands, setup_settings_commands
 
 logger = logging.getLogger(__name__)
 
 
-class AdminPlugin(BasePlugin):
+class AdminPlugin(BasePlugin, WebPanelMixin):
     def __init__(self, bot: Any) -> None:
         super().__init__(bot)
         self._register_commands()
@@ -61,3 +62,20 @@ class AdminPlugin(BasePlugin):
 
         except Exception as exc:
             logger.error("Error in auto role assignment for %s: %s", member.username, exc)
+
+    # Web Panel Implementation
+    def get_panel_info(self) -> dict[str, Any]:
+        """Return metadata about this plugin's web panel."""
+        return {
+            "name": "Admin Panel",
+            "description": "Guild administration and permission management",
+            "route": "/plugin/admin",
+            "icon": "fa-solid fa-shield-halved",
+            "nav_order": 1,
+        }
+
+    def register_web_routes(self, app) -> None:
+        """Register web routes for the admin plugin."""
+        from .web_panel import register_admin_routes
+
+        register_admin_routes(app, self)

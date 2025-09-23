@@ -1,0 +1,67 @@
+{% extends "plugin_base.html" %}
+
+{% block extra_styles %}
+.auth-required-container {
+    max-width: 500px;
+    margin: 3rem auto;
+    text-align: center;
+}
+
+.auth-required-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: var(--accent-soft);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--accent-color);
+}
+
+.auth-required-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.login-button {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--accent-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--input-radius);
+    transition: background-color 0.2s ease;
+}
+
+.login-button:hover {
+    background: var(--accent-hover);
+}
+{% endblock %}
+
+{% block content %}
+<div class="auth-required-container">
+    <div class="auth-required-icon">
+        <i class="fa-brands fa-discord"></i>
+    </div>
+
+    <div class="auth-required-content">
+        <h2 style="color: var(--text-primary); margin-bottom: 1rem;">Authentication Required</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+            Please log in with Discord to access the admin panel.
+        </p>
+        <p style="color: var(--text-secondary); font-size: 0.875rem;">
+            You'll need administrator permissions in at least one server where this bot is present.
+        </p>
+
+        <a href="/auth/login" class="login-button">
+            <i class="fa-brands fa-discord"></i> Login with Discord
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -7,7 +7,7 @@ from fastapi import FastAPI, Form, HTTPException, Query, Request, WebSocket, Web
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from bot.database.manager import db_manager
-from bot.database.models import MusicQueue, MusicSession
+from .models import MusicQueue, MusicSession
 
 logger = logging.getLogger(__name__)
 

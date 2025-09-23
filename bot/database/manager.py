@@ -1,9 +1,11 @@
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Type
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from config.settings import settings
 
@@ -17,6 +19,7 @@ class DatabaseManager:
         self.database_url = database_url or settings.database_url
         self.engine = None
         self.session_factory = None
+        self._plugin_models: dict[str, list[Type[DeclarativeBase]]] = {}
         self._setup_engine()
 
     def _setup_engine(self) -> None:
@@ -43,6 +46,62 @@ class DatabaseManager:
         self.engine = create_async_engine(async_url, **engine_kwargs)
         self.session_factory = async_sessionmaker(bind=self.engine, class_=AsyncSession, expire_on_commit=False)
 
+    def register_plugin_model(self, model_class: Type[DeclarativeBase], plugin_name: str) -> None:
+        """Register a model class from a plugin.
+
+        Args:
+            model_class: SQLAlchemy model class that inherits from Base
+            plugin_name: Name of the plugin registering the model
+        """
+        if not issubclass(model_class, DeclarativeBase):
+            raise ValueError(f"Model {model_class.__name__} must inherit from DeclarativeBase")
+
+        if not hasattr(model_class, "__tablename__"):
+            raise ValueError(f"Model {model_class.__name__} must define __tablename__")
+
+        if plugin_name not in self._plugin_models:
+            self._plugin_models[plugin_name] = []
+
+        if model_class not in self._plugin_models[plugin_name]:
+            self._plugin_models[plugin_name].append(model_class)
+            logger.debug(f"Registered model {model_class.__name__} for plugin {plugin_name}")
+
+    def unregister_plugin_model(self, model_class: Type[DeclarativeBase], plugin_name: str) -> None:
+        """Unregister a model class from a plugin.
+
+        Args:
+            model_class: SQLAlchemy model class to unregister
+            plugin_name: Name of the plugin unregistering the model
+        """
+        if plugin_name in self._plugin_models:
+            try:
+                self._plugin_models[plugin_name].remove(model_class)
+                logger.debug(f"Unregistered model {model_class.__name__} for plugin {plugin_name}")
+
+                # Clean up empty plugin entries
+                if not self._plugin_models[plugin_name]:
+                    del self._plugin_models[plugin_name]
+            except ValueError:
+                logger.warning(f"Model {model_class.__name__} was not registered for plugin {plugin_name}")
+
+    def get_plugin_models(self, plugin_name: str | None = None) -> list[Type[DeclarativeBase]]:
+        """Get registered models for a plugin or all plugins.
+
+        Args:
+            plugin_name: Name of plugin to get models for, or None for all models
+
+        Returns:
+            List of registered model classes
+        """
+        if plugin_name:
+            return self._plugin_models.get(plugin_name, []).copy()
+
+        # Return all models from all plugins
+        all_models = []
+        for models in self._plugin_models.values():
+            all_models.extend(models)
+        return all_models
+
     async def create_tables(self) -> None:
         if not self.engine:
             raise RuntimeError("Database engine not initialized")
@@ -50,7 +109,8 @@ class DatabaseManager:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        logger.info("Database tables created successfully")
+        total_models = len(self.get_plugin_models())
+        logger.info(f"Database tables created successfully (including {total_models} plugin models)")
 
     async def drop_tables(self) -> None:
         if not self.engine:
