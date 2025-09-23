@@ -21,7 +21,7 @@ async def save_queue_to_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
         if not player:
             return
 
-        async with music_plugin.bot.db.session() as session:
+        async with music_plugin.db_session() as session:
             from sqlalchemy import text
 
             from .models import MusicQueue, MusicSession
@@ -79,7 +79,7 @@ async def restore_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> b
     try:
         music_plugin._restoring_queues.add(guild_id)
 
-        async with music_plugin.bot.db.session() as session:
+        async with music_plugin.db_session() as session:
             from sqlalchemy import select
 
             from .models import MusicQueue, MusicSession
@@ -131,7 +131,7 @@ async def restore_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> b
 async def clear_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
     """Clear queue from database when player is stopped."""
     try:
-        async with music_plugin.bot.db.session() as session:
+        async with music_plugin.db_session() as session:
             from sqlalchemy import text
 
             await session.execute(text("DELETE FROM music_queues WHERE guild_id = :guild_id"), {"guild_id": guild_id})
@@ -147,7 +147,7 @@ async def restore_all_queues(music_plugin: "MusicPlugin") -> None:
     try:
         await asyncio.sleep(music_settings.check_empty_interval_seconds)
 
-        async with music_plugin.bot.db.session() as session:
+        async with music_plugin.db_session() as session:
             from sqlalchemy import select
 
             from .models import MusicSession
@@ -173,7 +173,7 @@ async def restore_all_queues(music_plugin: "MusicPlugin") -> None:
 async def add_to_history(music_plugin: "MusicPlugin", guild_id: int, track) -> None:
     """Add a track to the guild's music history."""
     try:
-        async with music_plugin.bot.db.session() as session:
+        async with music_plugin.db_session() as session:
             from sqlalchemy import exc, text
 
             from .models import MusicQueue
@@ -231,7 +231,7 @@ async def check_voice_channel_empty(music_plugin: "MusicPlugin", guild_id: int, 
     try:
         voice_states = [
             vs
-            for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
+            for vs in music_plugin.cache.get_voice_states_view_for_guild(guild_id).values()
             if vs.channel_id == channel_id and vs.member is not None and not vs.member.is_bot
         ]
 
@@ -259,14 +259,14 @@ async def start_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> 
                 if player.channel_id:
                     voice_states = [
                         vs
-                        for vs in music_plugin.bot.hikari_bot.cache.get_voice_states_view_for_guild(guild_id).values()
+                        for vs in music_plugin.cache.get_voice_states_view_for_guild(guild_id).values()
                         if vs.channel_id == player.channel_id and vs.member is not None and not vs.member.is_bot
                     ]
 
                     if len(voice_states) == 0:
                         await player.stop()
                         player.queue.clear()
-                        await music_plugin.bot.hikari_bot.update_voice_state(guild_id, None)
+                        await music_plugin.update_voice_state(guild_id, None)
                         logger.debug(f"Auto-disconnected from empty voice channel in guild {guild_id}")
 
             music_plugin.disconnect_timers.pop(guild_id, None)
@@ -291,7 +291,7 @@ async def handle_playlist_add(music_plugin: "MusicPlugin", ctx, search_result, p
     tracks = search_result.tracks
 
     if not player.is_connected:
-        await music_plugin.bot.hikari_bot.update_voice_state(ctx.guild_id, channel_id)
+        await music_plugin.update_voice_state(ctx.guild_id, channel_id)
 
     added_count = 0
     for track in tracks:
@@ -307,7 +307,7 @@ async def handle_playlist_add(music_plugin: "MusicPlugin", ctx, search_result, p
     total_hours = total_minutes // 60
     remaining_minutes = total_minutes % 60
 
-    embed = music_plugin.create_embed(title="📋 Playlist Added", color=music_plugin.bot.hikari_bot.get_me().accent_color or 0x00FF00)
+    embed = music_plugin.create_embed(title="📋 Playlist Added", color=music_plugin.gateway.get_me().accent_color or 0x00FF00)
 
     playlist_name = "Unknown Playlist"
     if hasattr(search_result, "playlist_info") and search_result.playlist_info:

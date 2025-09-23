@@ -1,485 +1,241 @@
 # Plugin Development Guide
 
-This guide explains how to create, structure, and develop plugins for the Discord bot framework.
+This document explains how to build, structure, and maintain plugins for the Discord bot framework. It covers:
 
-## Table of Contents
-- [Plugin Structure](#plugin-structure)
-- [Creating a New Plugin](#creating-a-new-plugin)
-- [Plugin Metadata](#plugin-metadata)
-- [Base Plugin Class](#base-plugin-class)
-- [Commands](#commands)
-- [Events](#events)
-- [Permissions](#permissions)
-- [Database Access](#database-access)
-- [Utilities](#utilities)
-- [Best Practices](#best-practices)
-- [Examples](#examples)
+- Bootstrapping a new plugin package
+- Defining the metadata that the loader consumes
+- Understanding the services exposed through `BasePlugin`
+- Common patterns for commands, events, database access, and permissions
 
-## Plugin Structure
+If you are extending existing plugins, pair this guide with any local `AGENTS.md` instructions that live beside the plugin.
 
-Each plugin should be organized as a Python package with the following structure:
+## Quick start
+
+### 1. Create a package
+
+Each plugin lives inside `plugins/<slug>/`. A minimal layout looks like this:
 
 ```
 plugins/
-├── your_plugin/
-│   ├── __init__.py          # Plugin exports and metadata
-│   └── your_plugin.py       # Main plugin implementation
-└── README.md               # This guide
+├── my_plugin/
+│   ├── __init__.py          # exports and metadata (required)
+│   └── plugin.py            # plugin implementation (convention)
+└── README.md
 ```
 
-### Required Files
+### 2. Define metadata and exports
 
-1. **`__init__.py`** - Contains plugin metadata and exports
-2. **`your_plugin.py`** - Main plugin class and commands
+`__init__.py` must expose your plugin subclass (or a `setup()` factory) and the accompanying `PLUGIN_METADATA` dictionary. Example:
 
-## Creating a New Plugin
-
-### 1. Create Plugin Directory
-```bash
-mkdir plugins/my_plugin
-```
-
-### 2. Create `__init__.py`
 ```python
-from .my_plugin import MyPlugin
+from .plugin import MyPlugin
 
 PLUGIN_METADATA = {
-    "name": "My Plugin",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "description": "Description of what your plugin does",
-    "permissions": ["my_plugin.command1", "my_plugin.command2"],
+    'name': 'My Plugin',
+    'version': '1.0.0',
+    'author': 'Your Name',
+    'description': 'Short description of what the plugin does',
+    'permissions': ['my_plugin.use', 'my_plugin.admin'],
+    'dependencies': ['admin'],  # optional list of plugin slugs you require
 }
 
-__all__ = ["MyPlugin"]
+__all__ = ['MyPlugin']
 ```
 
-### 3. Create `my_plugin.py`
+If you prefer a factory-style export, implement a `setup(bot)` function that returns the plugin instance.
+
+### 3. Implement the plugin class
+
+Subclass `bot.plugins.base.BasePlugin` and register commands using the shared decorators.
+
 ```python
-import logging
 import hikari
-import lightbulb
-
 from bot.plugins.base import BasePlugin
-from bot.plugins.commands import command, CommandArgument
-
-logger = logging.getLogger(__name__)
+from bot.plugins.commands import CommandArgument, command
 
 
 class MyPlugin(BasePlugin):
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-        # Initialize plugin-specific attributes here
-
-    async def on_load(self) -> None:
-        """Called when the plugin is loaded."""
-        await super().on_load()
-        logger.info("MyPlugin loaded successfully")
-
-    async def on_unload(self) -> None:
-        """Called when the plugin is unloaded."""
-        await super().on_unload()
-        logger.info("MyPlugin unloaded")
-
     @command(
-        name="hello",
-        description="Say hello to the user",
-        aliases=["hi", "greet"]
+        name='greet',
+        description='Send a greeting',
+        permission_node='my_plugin.use',
+        arguments=[CommandArgument('user', hikari.OptionType.USER, 'Who to greet')],
     )
-    async def hello_command(self, ctx) -> None:
-        embed = self.create_embed(
-            title="👋 Hello!",
-            description=f"Hello, {ctx.author.mention}!",
-            color=hikari.Color(0x00FF00)
-        )
-        await ctx.respond(embed=embed)
+    async def greet(self, ctx, user: hikari.User) -> None:
+        async with self.track_command(ctx, 'greet'):
+            await self.respond_success(
+                ctx,
+                f'Hello {user.mention}! 👋',
+                command_name='greet',
+                ephemeral=False,
+            )
 ```
 
-## Plugin Metadata
+Once the package exists and is listed in `config/settings.py::settings.enabled_plugins`, the loader will discover it automatically.
 
-Metadata is defined in the `__init__.py` file as a `PLUGIN_METADATA` dictionary:
+## Plugin metadata reference
 
-```python
-PLUGIN_METADATA = {
-    "name": "Display Name",           # Plugin display name
-    "version": "1.0.0",              # Semantic version
-    "author": "Author Name",         # Plugin author
-    "description": "Plugin purpose", # Brief description
-    "permissions": [                 # List of permission nodes
-        "plugin.permission1",
-        "plugin.permission2"
-    ],
-}
-```
+`PluginLoader` consumes `PLUGIN_METADATA` to display and enforce information about each plugin. Supported keys:
 
-### Metadata Fields
-- **`name`** (required) - Display name shown in help and plugin lists
-- **`version`** (required) - Plugin version following semantic versioning
-- **`author`** (required) - Plugin author/maintainer
-- **`description`** (required) - Brief description of plugin functionality
-- **`permissions`** (optional) - List of permission nodes the plugin uses
+| Field          | Required | Description |
+| -------------- | -------- | ----------- |
+| `name`         | ✅       | Display name shown in UIs and logs. |
+| `version`      | ✅       | Semantic version string. |
+| `author`       | ✅       | Author or maintainer attribution. |
+| `description`  | ✅       | Short summary of the plugin. |
+| `permissions`  | ⚠️       | List of permission nodes this plugin may enforce. Optional but recommended so defaults can be seeded. |
+| `dependencies` | ⚠️       | List of plugin slugs that must load before this one. |
 
-## Base Plugin Class
+Additional keys are passed through unchanged, so you may add custom metadata for your own tooling. Keep names snake_case.
 
-All plugins inherit from `BasePlugin` which provides common functionality:
+## BasePlugin lifecycle and services
 
-### Available Properties
-```python
-self.bot           # Main bot instance
-self.logger        # Plugin-specific logger
-```
+`BasePlugin` wires your plugin into the framework. It automatically registers decorated commands and event listeners during `on_load()` and reverses the process in `on_unload()`.
 
-### Available Methods
+Every plugin instance receives cached references to the most common services. Use these instead of reaching back through `self.bot`:
 
-#### Lifecycle Methods
-```python
-async def on_load(self) -> None:
-    """Called when plugin is loaded. Override for initialization."""
+| Attribute        | Type or source            | Purpose |
+| ---------------- | ------------------------- | ------- |
+| `self.logger`    | `logging.Logger`          | Plugin scoped logger named `plugin.<slug>`. |
+| `self.db`        | `DatabaseManager`         | Async SQLAlchemy session factory and model registry. |
+| `self.events`    | `EventSystem`             | Publish or listen for framework level events. |
+| `self.permissions` | `PermissionManager`     | Query and mutate permission grants. |
+| `self.web_panel` | `WebPanelManager` or `None` | Register FastAPI routes when using `WebPanelMixin`. |
+| `self.command_client` | `lightbulb.LightbulbApp` | Slash command registration and introspection. |
+| `self.gateway`   | `hikari.GatewayBot`       | Access REST, cache, and voice helpers via `self.rest` and `self.cache`. |
+| `self.rest`      | `hikari.api.RESTClient`   | Perform REST calls such as `fetch_user`. |
+| `self.cache`     | `hikari.api.CacheView`    | Inspect cached guild, member, and voice state objects. |
+| `self.services`  | `dict[str, Any]`          | Snapshot of the bot wide service registry. |
 
-async def on_unload(self) -> None:
-    """Called when plugin is unloaded. Override for cleanup."""
-```
+For advanced scenarios reach the full bot via `self.bot`, or resolve additional services with `self.bot.get_service('name')`.
 
-#### Utility Methods
-```python
-def create_embed(self, title: str = None, description: str = None,
-                color: hikari.Color = None) -> hikari.Embed:
-    """Create a standardized embed with optional parameters."""
+### Helper methods
 
-async def smart_respond(self, ctx, content: str = None, *,
-                       embed: hikari.Embed = None, ephemeral: bool = False) -> None:
-    """Smart response that handles different context types."""
+`BasePlugin` exposes utilities that eliminate boilerplate:
 
-async def log_command_usage(self, ctx, command_name: str,
-                           success: bool, error: str = None) -> None:
-    """Log command usage for analytics and debugging."""
-```
+- **Responding**: `create_embed()`, `smart_respond()`, `respond_success()`, and `respond_error()` standardise messaging and analytics.
+- **Command analytics**: `track_command()` and `log_command_usage()` capture success or failure automatically.
+- **Database access**: `db_session()` async context manager and `with_session(callback)` helper wrap the shared SQLAlchemy session.
+- **Settings**: `get_setting()`, `set_setting()`, `is_enabled_in_guild()`, `enable_in_guild()`, `disable_in_guild()` provide per guild configuration storage.
+- **Events**: `emit_event(name, *args, suppress_errors=True)` proxies to the event bus with optional error suppression.
+- **Discord clients**: `fetch_user()`, `fetch_channel()`, `update_voice_state()`, and `get_voice_state()` utilise the shared gateway and REST clients.
+- **Miscellaneous**: `get_guild_prefix(guild_id)` returns the effective prefix using the bot helper.
 
-#### Bot Access
-```python
-self.bot.hikari_bot          # Hikari gateway bot instance
-self.bot.db                  # Database manager
-self.bot.permission_manager  # Permission system
-self.bot.plugin_loader       # Plugin loader
-self.bot.event_system        # Event system
-```
+Refer to `bot/plugins/base.py` for the full catalogue.
 
 ## Commands
 
-Commands are defined using the `@command` decorator:
+Commands are registered through `bot.plugins.commands.decorators.command`. The decorator abstracts both slash and prefix command creation and accepts shared argument descriptors.
 
-### Basic Command
 ```python
-@command(
-    name="basic",
-    description="A basic command"
-)
-async def basic_command(self, ctx) -> None:
-    await ctx.respond("Hello!")
-```
+from bot.plugins.commands import CommandArgument, command
+import hikari
 
-### Command with Arguments
-```python
 @command(
-    name="greet",
-    description="Greet a user",
+    name='purge',
+    description='Delete the last N messages',
+    permission_node='my_plugin.moderate',
     arguments=[
-        CommandArgument("user", hikari.OptionType.USER, "User to greet"),
-        CommandArgument("message", hikari.OptionType.STRING, "Custom message", required=False)
-    ]
+        CommandArgument('amount', hikari.OptionType.INTEGER, 'How many messages', min_value=1, max_value=100),
+    ],
 )
-async def greet_command(self, ctx, user: hikari.User, message: str = "Hello!") -> None:
-    await ctx.respond(f"{message} {user.mention}!")
+async def purge(self, ctx, amount: int) -> None:
+    async with self.track_command(ctx, 'purge'):
+        deleted = await self._purge_messages(ctx.channel_id, amount)
+        await self.respond_success(ctx, f'Deleted {deleted} messages', command_name='purge')
 ```
 
-### Command with Permissions
+Inside the handler you interact with the Lightbulb context `ctx`. `respond_success()` and `respond_error()` handle ephemeral flags correctly for slash invocations while still working for prefix commands.
+
+## Event handling
+
+Two approaches are available:
+
+1. **Framework events** – Use the event bus for cross plugin communication.
+
+    ```python
+    from bot.core.event_system import event_listener
+
+    class MyPlugin(BasePlugin):
+        @event_listener('bot_ready')
+        async def announce_ready(self, bot) -> None:
+            self.logger.info('Bot is ready; loaded plugins: %s', len(bot.plugin_loader.get_loaded_plugins()))
+    ```
+
+    Decorated methods are auto registered during `on_load()` and cleaned up during `on_unload()`.
+
+2. **Gateway events** – Listen directly to Hikari events when you need raw Discord payloads.
+
+    ```python
+    class MyPlugin(BasePlugin):
+        async def on_load(self) -> None:
+            await super().on_load()
+
+            @self.gateway.listen(hikari.GuildMessageCreateEvent)
+            async def handle_message(event: hikari.GuildMessageCreateEvent) -> None:
+                if event.is_bot or not event.content:
+                    return
+                await self.emit_event('message_logged', event)
+    ```
+
+    Remember to unregister manual listeners in `on_unload()` if you add any yourself.
+
+## Database access
+
+Use the shared manager instead of creating your own engines:
+
 ```python
-@command(
-    name="admin",
-    description="Admin-only command",
-    permission_node="my_plugin.admin"
-)
-async def admin_command(self, ctx) -> None:
-    await ctx.respond("Admin command executed!")
+from datetime import UTC, datetime
+from sqlalchemy import select
+from bot.plugins.mixins import DatabaseMixin
+from .models import Reminder
+
+class RemindersPlugin(DatabaseMixin, BasePlugin):
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.register_model(Reminder)
+
+    async def fetch_due(self) -> list[Reminder]:
+        async with self.db_session() as session:
+            result = await session.execute(select(Reminder).where(Reminder.due_at <= datetime.now(UTC)))
+            return result.scalars().all()
 ```
 
-### Command Options
-- **`name`** (required) - Command name
-- **`description`** (required) - Command description
-- **`aliases`** (optional) - List of command aliases
-- **`permission_node`** (optional) - Required permission
-- **`arguments`** (optional) - List of command arguments
-
-### Argument Types
-Available argument types from `hikari.OptionType`:
-- `STRING` - Text input
-- `INTEGER` - Whole numbers
-- `USER` - Discord user
-- `CHANNEL` - Discord channel
-- `ROLE` - Discord role
-- `BOOLEAN` - True/false
-
-## Events
-
-Plugins can listen to Discord events by defining event handlers:
-
-### Event Handler Example
-```python
-@self.bot.hikari_bot.listen(hikari.GuildMessageCreateEvent)
-async def on_message(self, event: hikari.GuildMessageCreateEvent) -> None:
-    """Handle message creation events."""
-    if event.author.is_bot:
-        return
-
-    # Process message
-    if "hello" in event.content.lower():
-        await event.message.respond("Hello there!")
-```
-
-### Common Events
-- `hikari.GuildMessageCreateEvent` - New messages
-- `hikari.MemberCreateEvent` - Members joining
-- `hikari.MemberDeleteEvent` - Members leaving
-- `hikari.ReactionAddEvent` - Reactions added
-- `hikari.VoiceStateUpdateEvent` - Voice state changes
+- `DatabaseMixin` (see `bot/plugins/mixins.py`) registers models so tables are created at startup.
+- `db_session()` guarantees commits or rollbacks and reuses the shared engine.
 
 ## Permissions
 
-The framework includes a permission system for controlling command access:
+Declare required nodes in `PLUGIN_METADATA['permissions']`. Commands can opt in to enforcement via `permission_node`.
 
-### Defining Permissions
-```python
-# In PLUGIN_METADATA
-"permissions": [
-    "my_plugin.basic",        # Basic permission
-    "my_plugin.admin",        # Admin permission
-    "my_plugin.moderation"    # Moderation permission
-]
-```
-
-### Using Permissions
 ```python
 @command(
-    name="moderate",
-    description="Moderation command",
-    permission_node="my_plugin.moderation"
+    name='reload',
+    description='Reload this plugin',
+    permission_node='my_plugin.admin',
 )
-async def moderate_command(self, ctx) -> None:
-    # Only users with 'my_plugin.moderation' permission can use this
-    await ctx.respond("Moderation action performed!")
+async def reload_self(self, ctx) -> None:
+    await self.bot.plugin_loader.reload_plugin(self.name)
+    await self.respond_success(ctx, 'Plugin reloaded', command_name='reload')
 ```
 
-### Permission Naming Convention
-Use the format: `plugin_name.permission_type`
-- `plugin_name.basic` - Basic functionality
-- `plugin_name.admin` - Administrative functions
-- `plugin_name.moderate` - Moderation functions
-
-## Database Access
-
-Access the database through the bot instance:
+Use the permission manager directly for advanced logic:
 
 ```python
-async def get_user_data(self, user_id: int) -> dict:
-    """Example database query."""
-    async with self.bot.db.acquire() as conn:
-        query = "SELECT * FROM users WHERE user_id = $1"
-        result = await conn.fetchrow(query, user_id)
-        return dict(result) if result else None
-
-async def save_user_data(self, user_id: int, data: dict) -> None:
-    """Example database insert/update."""
-    async with self.bot.db.acquire() as conn:
-        query = """
-        INSERT INTO users (user_id, data)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id)
-        DO UPDATE SET data = $2
-        """
-        await conn.execute(query, user_id, data)
+if await self.permissions.has_permission(ctx.guild_id, ctx.author.id, 'my_plugin.special'):
+    ...
 ```
 
-## Utilities
+## Web panel integration
 
-### Creating Embeds
-```python
-# Basic embed
-embed = self.create_embed(
-    title="Success",
-    description="Operation completed successfully!",
-    color=hikari.Color(0x00FF00)
-)
+Plugins that expose web routes should inherit `bot.web.mixins.WebPanelMixin`. Implement `register_web_routes()` and optionally `get_panel_info()`. During `on_load()` the mixin hooks into `WebPanelManager` so your FastAPI routes become part of the control panel automatically.
 
-# Custom embed
-embed = hikari.Embed(
-    title="Custom Embed",
-    description="Description here",
-    color=hikari.Color(0x5865F2)
-)
-embed.add_field("Field Name", "Field Value", inline=True)
-embed.set_thumbnail("https://example.com/image.png")
-```
+## Best practices
 
-### Error Handling
-```python
-@command(name="example", description="Example with error handling")
-async def example_command(self, ctx) -> None:
-    try:
-        # Command logic here
-        result = await some_operation()
+- Prefer the helpers in `BasePlugin` instead of touching `self.bot.hikari_bot` or `self.bot.db` directly.
+- Wrap potentially failing command bodies in `track_command()` to capture success and failure metrics automatically.
+- Emit custom events rather than calling into other plugins to keep integrations loosely coupled.
+- Keep metadata and permission nodes in sync with actual command behaviour.
+- Update or add tests under `tests/unit/plugins/<slug>/` when introducing new behaviour.
 
-        embed = self.create_embed(
-            title="✅ Success",
-            description=f"Result: {result}",
-            color=hikari.Color(0x00FF00)
-        )
-        await ctx.respond(embed=embed)
-        await self.log_command_usage(ctx, "example", True)
-
-    except Exception as e:
-        logger.error(f"Error in example command: {e}")
-
-        embed = self.create_embed(
-            title="❌ Error",
-            description=f"An error occurred: {str(e)}",
-            color=hikari.Color(0xFF0000)
-        )
-        await self.smart_respond(ctx, embed=embed, ephemeral=True)
-        await self.log_command_usage(ctx, "example", False, str(e))
-```
-
-### HTTP Requests
-```python
-import aiohttp
-
-class MyPlugin(BasePlugin):
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-        self.session: aiohttp.ClientSession = None
-
-    async def on_load(self) -> None:
-        self.session = aiohttp.ClientSession()
-        await super().on_load()
-
-    async def on_unload(self) -> None:
-        if self.session:
-            await self.session.close()
-        await super().on_unload()
-
-    async def fetch_data(self, url: str) -> dict:
-        """Example HTTP request."""
-        async with self.session.get(url) as response:
-            if response.status == 200:
-                return await response.json()
-            else:
-                raise Exception(f"HTTP {response.status}")
-```
-
-## Best Practices
-
-### Code Organization
-1. **Keep plugins focused** - One plugin should handle one area of functionality
-2. **Use descriptive names** - Commands and functions should be self-explanatory
-3. **Handle errors gracefully** - Always use try/except blocks for external operations
-4. **Log appropriately** - Use the plugin logger for debugging and error tracking
-
-### Performance
-1. **Use async/await** - All database and HTTP operations should be asynchronous
-2. **Limit API calls** - Cache data when possible, respect rate limits
-3. **Clean up resources** - Close sessions, connections in `on_unload()`
-
-### Security
-1. **Validate input** - Always validate user input before processing
-2. **Use permissions** - Protect sensitive commands with appropriate permissions
-3. **Sanitize output** - Be careful with user-generated content in embeds
-4. **No secrets in code** - Use environment variables for API keys
-
-### User Experience
-1. **Provide feedback** - Always respond to user commands
-2. **Use embeds** - Rich embeds are more visually appealing than plain text
-3. **Handle edge cases** - Consider what happens with invalid input
-4. **Add helpful aliases** - Provide shorter aliases for commonly used commands
-
-## Examples
-
-### Simple Utility Plugin
-```python
-# plugins/utils/__init__.py
-from .utils import UtilsPlugin
-
-PLUGIN_METADATA = {
-    "name": "Utils",
-    "version": "1.0.0",
-    "author": "Bot Framework",
-    "description": "Utility commands for server management",
-    "permissions": ["utils.info"],
-}
-
-__all__ = ["UtilsPlugin"]
-```
-
-```python
-# plugins/utils/utils.py
-import logging
-import hikari
-import lightbulb
-from datetime import datetime
-
-from bot.plugins.base import BasePlugin
-from bot.plugins.commands import command, CommandArgument
-
-logger = logging.getLogger(__name__)
-
-
-class UtilsPlugin(BasePlugin):
-    @command(
-        name="serverinfo",
-        description="Display server information",
-        permission_node="basic.utility.info.view"
-    )
-    async def server_info(self, ctx) -> None:
-        guild = ctx.get_guild()
-        if not guild:
-            await ctx.respond("This command can only be used in a server!")
-            return
-
-        embed = self.create_embed(
-            title=f"🏰 {guild.name}",
-            color=hikari.Color(0x5865F2)
-        )
-
-        embed.add_field("Members", str(guild.member_count), inline=True)
-        embed.add_field("Owner", f"<@{guild.owner_id}>", inline=True)
-        embed.add_field("Created", f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
-
-        if guild.icon_url:
-            embed.set_thumbnail(guild.icon_url)
-
-        await ctx.respond(embed=embed)
-
-    @command(
-        name="userinfo",
-        description="Display user information",
-        arguments=[
-            CommandArgument("user", hikari.OptionType.USER, "User to check", required=False)
-        ]
-    )
-    async def user_info(self, ctx, user: hikari.User = None) -> None:
-        target = user or ctx.author
-
-        embed = self.create_embed(
-            title=f"👤 {target.username}",
-            color=hikari.Color(0x5865F2)
-        )
-
-        embed.add_field("ID", str(target.id), inline=True)
-        embed.add_field("Created", f"<t:{int(target.created_at.timestamp())}:R>", inline=True)
-        embed.add_field("Bot", "Yes" if target.is_bot else "No", inline=True)
-
-        if target.make_avatar_url():
-            embed.set_thumbnail(target.make_avatar_url())
-
-        await ctx.respond(embed=embed)
-```
-
-This guide should help you create well-structured, maintainable plugins for the Discord bot framework. For more examples, check the existing plugins in this directory.
+With these building blocks you can create powerful, well integrated plugins that feel consistent across the framework.

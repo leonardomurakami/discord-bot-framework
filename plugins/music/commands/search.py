@@ -24,7 +24,7 @@ def setup_search_commands(plugin):
             await plugin.smart_respond(ctx, "This command can only be used in a server.", ephemeral=True)
             return
 
-        voice_state = ctx.bot.hikari_bot.cache.get_voice_state(ctx.guild_id, ctx.author.id)
+        voice_state = plugin.get_voice_state(ctx.guild_id, ctx.author.id)
         if not voice_state or not voice_state.channel_id:
             await plugin.smart_respond(ctx, "You must be in a voice channel to use this command.", ephemeral=True)
             return
@@ -86,7 +86,7 @@ def setup_search_commands(plugin):
                 player = plugin.lavalink_client.player_manager.create(ctx.guild_id)
 
                 if not player.is_connected:
-                    await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, voice_state.channel_id)
+                    await plugin.update_voice_state(ctx.guild_id, voice_state.channel_id)
 
                 player.add(requester=ctx.author.id, track=first_track)
 

@@ -26,7 +26,7 @@ def setup_history_commands(plugin):
             return
 
         try:
-            async with plugin.bot.db.session() as session:
+            async with plugin.db_session() as session:
                 from sqlalchemy import select
 
                 from ..models import MusicQueue
@@ -68,7 +68,7 @@ def setup_history_commands(plugin):
                     duration_seconds = (track.track_duration % 60000) // 1000
 
                     try:
-                        user = await ctx.bot.hikari_bot.rest.fetch_user(track.requester_id)
+                        user = await plugin.fetch_user(track.requester_id)
                         requester_name = user.display_name or user.username
                     except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                         requester_name = "Unknown"

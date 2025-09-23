@@ -1,17 +1,28 @@
+from __future__ import annotations
+
 import logging
-from typing import TYPE_CHECKING, Any
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import hikari
 import lightbulb
 
 if TYPE_CHECKING:
-    pass
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from ..core.bot import DiscordBot
+
+T = TypeVar("T")
+
+SUCCESS_COLOR = hikari.Color(0x57F287)
+ERROR_COLOR = hikari.Color(0xED4245)
 
 logger = logging.getLogger(__name__)
 
 
 class BasePlugin:
-    def __init__(self, bot: Any) -> None:
+    def __init__(self, bot: DiscordBot) -> None:
         self.bot = bot
         self.name = self.__class__.__name__.lower().replace("plugin", "")
         self.logger = logging.getLogger(f"plugin.{self.name}")
@@ -20,6 +31,15 @@ class BasePlugin:
         from .commands import CommandRegistry
 
         self._command_registry: CommandRegistry = CommandRegistry(self)
+        self.db = bot.db
+        self.events = bot.event_system
+        self.permissions = bot.permission_manager
+        self.web_panel = getattr(bot, "web_panel_manager", None)
+        self.command_client = bot.command_client
+        self.gateway = bot.gateway
+        self.rest = bot.rest
+        self.cache = bot.cache
+        self.services = getattr(bot, "services", {})
 
     async def on_load(self) -> None:
         await self._command_registry.register_commands()
@@ -39,14 +59,14 @@ class BasePlugin:
             attr = getattr(self, attr_name)
             if hasattr(attr, "_event_listener"):
                 event_name = attr._event_listener
-                self.bot.event_system.add_listener(event_name, attr)
+                self.events.add_listener(event_name, attr)
                 self._event_listeners.append((event_name, attr))
                 self.logger.debug(f"Registered event listener: {attr_name} -> {event_name}")
 
     async def _unregister_event_listeners(self) -> None:
         # Unregister event listeners
         for event_name, listener in self._event_listeners:
-            self.bot.event_system.remove_listener(event_name, listener)
+            self.events.remove_listener(event_name, listener)
 
         self._event_listeners.clear()
 
@@ -55,7 +75,8 @@ class BasePlugin:
         from ..web.mixins import WebPanelMixin
 
         if isinstance(self, WebPanelMixin):
-            self.bot.web_panel_manager.register_plugin_panel(self.name, self)
+            if self.web_panel:
+                self.web_panel.register_plugin_panel(self.name, self)
             self.logger.debug(f"Registered web panel for plugin: {self.name}")
 
     async def _unregister_web_panel(self) -> None:
@@ -63,12 +84,13 @@ class BasePlugin:
         from ..web.mixins import WebPanelMixin
 
         if isinstance(self, WebPanelMixin):
-            self.bot.web_panel_manager.unregister_plugin_panel(self.name)
+            if self.web_panel:
+                self.web_panel.unregister_plugin_panel(self.name)
             self.logger.debug(f"Unregistered web panel for plugin: {self.name}")
 
     async def get_setting(self, guild_id: int, key: str, default: Any = None) -> Any:
         # Get plugin-specific setting for a guild
-        async with self.bot.db.session() as session:
+        async with self.db.session() as session:
             from sqlalchemy import select
 
             from ..database.models import PluginSetting
@@ -89,7 +111,7 @@ class BasePlugin:
     async def set_setting(self, guild_id: int, key: str, value: Any) -> bool:
         # Set plugin-specific setting for a guild
         try:
-            async with self.bot.db.session() as session:
+            async with self.db.session() as session:
                 from sqlalchemy import select
 
                 from ..database.models import PluginSetting
@@ -178,7 +200,7 @@ class BasePlugin:
         execution_time: float | None = None,
     ) -> None:
         try:
-            async with self.bot.db.session() as session:
+            async with self.db.session() as session:
                 from sqlalchemy import select
 
                 from ..database.models import CommandUsage, Guild, User
@@ -227,3 +249,107 @@ class BasePlugin:
 
         except Exception as e:
             self.logger.error(f"Error logging command usage: {e}")
+
+    @asynccontextmanager
+    async def db_session(self) -> AsyncIterator[AsyncSession]:
+        """Alias for the shared database session context manager."""
+
+        async with self.db.session() as session:
+            yield session
+
+    async def with_session(
+        self,
+        callback: Callable[[AsyncSession], Awaitable[T]],
+    ) -> T:
+        """Execute a callback within a managed database session."""
+
+        async with self.db_session() as session:
+            return await callback(session)
+
+    async def get_guild_prefix(self, guild_id: int) -> str:
+        """Shortcut to the shared guild prefix helper."""
+
+        return await self.bot.get_guild_prefix(guild_id)
+
+    async def emit_event(self, event_name: str, *args: Any, suppress_errors: bool = True, **kwargs: Any) -> None:
+        """Convenience wrapper for :class:`EventSystem.emit`."""
+
+        try:
+            await self.events.emit(event_name, *args, **kwargs)
+        except Exception as exc:  # pragma: no cover - defensive logging
+            if suppress_errors:
+                self.logger.error("Failed to emit event %s: %s", event_name, exc)
+            else:
+                raise
+
+    @asynccontextmanager
+    async def track_command(self, ctx: lightbulb.Context, command_name: str) -> AsyncIterator[None]:
+        """Context manager that records command success or failure automatically."""
+
+        try:
+            yield
+        except Exception as exc:
+            await self.log_command_usage(ctx, command_name, False, str(exc))
+            raise
+        else:
+            await self.log_command_usage(ctx, command_name, True)
+
+    async def respond_success(
+        self,
+        ctx: lightbulb.Context,
+        message: str | None = None,
+        *,
+        title: str | None = None,
+        embed: hikari.Embed | None = None,
+        command_name: str | None = None,
+        ephemeral: bool = False,
+        log: bool = True,
+        color: hikari.Color = SUCCESS_COLOR,
+        **kwargs: Any,
+    ) -> None:
+        """Respond with a success-styled embed and optionally log usage."""
+
+        response_embed = embed or self.create_embed(title=title, description=message, color=color)
+        await self.smart_respond(ctx, embed=response_embed, ephemeral=ephemeral, **kwargs)
+        if log and command_name:
+            await self.log_command_usage(ctx, command_name, True)
+
+    async def respond_error(
+        self,
+        ctx: lightbulb.Context,
+        message: str,
+        *,
+        title: str | None = "❌ Error",
+        embed: hikari.Embed | None = None,
+        command_name: str | None = None,
+        ephemeral: bool = True,
+        log: bool = True,
+        color: hikari.Color = ERROR_COLOR,
+        **kwargs: Any,
+    ) -> None:
+        """Respond with an error embed and optionally log the failure."""
+
+        response_embed = embed or self.create_embed(title=title, description=message, color=color)
+        await self.smart_respond(ctx, embed=response_embed, ephemeral=ephemeral, **kwargs)
+        if log and command_name:
+            await self.log_command_usage(ctx, command_name, False, message)
+
+    async def fetch_user(self, user_id: int) -> hikari.User:
+        """Fetch a user using the shared REST client."""
+
+        return await self.rest.fetch_user(user_id)
+
+    async def fetch_channel(self, channel_id: int) -> hikari.PartialChannel:
+        """Fetch a channel using the shared REST client."""
+
+        return await self.rest.fetch_channel(channel_id)
+
+    async def update_voice_state(self, guild_id: int, channel_id: int | None) -> None:
+        """Proxy for :meth:`hikari.GatewayBot.update_voice_state`."""
+
+        await self.gateway.update_voice_state(guild_id, channel_id)
+
+    def get_voice_state(self, guild_id: int, user_id: int) -> hikari.VoiceState | None:
+        """Retrieve a voice state from the gateway cache."""
+
+        return self.cache.get_voice_state(guild_id, user_id)

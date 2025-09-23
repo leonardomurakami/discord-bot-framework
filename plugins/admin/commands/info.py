@@ -33,40 +33,33 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     )
     async def bot_info(ctx: lightbulb.Context) -> None:
         try:
-            bot_user = plugin.bot.hikari_bot.get_me()
-            guild_count = len(plugin.bot.hikari_bot.cache.get_guilds_view())
-
-            db_healthy = await plugin.bot.db.health_check()
-            db_status = "✅ Connected" if db_healthy else "❌ Disconnected"
-
-            plugin_count = len(plugin.bot.plugin_loader.get_loaded_plugins())
+            overview = await plugin.bot.get_bot_overview()
+            bot_user = overview.user
 
             embed = plugin.create_embed(
                 title=f"🤖 {bot_user.username} Information",
                 color=SERVER_INFO_COLOR,
             )
 
-            embed.add_field("Guilds", str(guild_count), inline=True)
-            embed.add_field("Plugins Loaded", str(plugin_count), inline=True)
-            embed.add_field("Database", db_status, inline=True)
+            embed.add_field("Guilds", str(overview.guild_count), inline=True)
+            embed.add_field("Plugins Loaded", str(overview.plugin_count), inline=True)
+            embed.add_field("Database", "✅ Connected" if overview.database_connected else "❌ Disconnected", inline=True)
 
             embed.set_thumbnail(bot_user.display_avatar_url)
 
             if bot_user.created_at:
                 embed.set_footer(f"Created on {bot_user.created_at.strftime('%B %d, %Y')}")
 
-            await ctx.respond(embed=embed)
-            await plugin.log_command_usage(ctx, "bot-info", True)
+            await plugin.respond_success(ctx, embed=embed, command_name="bot-info")
 
         except Exception as exc:
             logger.error("Error in bot-info command: %s", exc)
-            embed = plugin.create_embed(
-                title="❌ Error",
-                description=f"Failed to get bot information: {exc}",
+            await plugin.respond_error(
+                ctx,
+                f"Failed to get bot information: {exc}",
+                command_name="bot-info",
                 color=ERROR_COLOR,
             )
-            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-            await plugin.log_command_usage(ctx, "bot-info", False, str(exc))
 
     @command(
         name="server-info",
@@ -78,23 +71,15 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
         try:
             guild = ctx.get_guild()
             if not guild:
-                embed = plugin.create_embed(
-                    title="❌ Error",
-                    description="This command can only be used in a server.",
+                await plugin.respond_error(
+                    ctx,
+                    "This command can only be used in a server.",
+                    command_name="server-info",
                     color=ERROR_COLOR,
                 )
-                await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            member_count = guild.member_count or 0
-            channels = guild.get_channels()
-            channel_count = len(channels)
-            role_count = len(guild.get_roles())
-            emoji_count = len(guild.get_emojis())
-
-            text_channels = len([c for c in channels.values() if c.type == hikari.ChannelType.GUILD_TEXT])
-            voice_channels = len([c for c in channels.values() if c.type == hikari.ChannelType.GUILD_VOICE])
-            category_channels = len([c for c in channels.values() if c.type == hikari.ChannelType.GUILD_CATEGORY])
+            summary = plugin.bot.summarise_guild(guild)
 
             embed = plugin.create_embed(title=f"🏰 {guild.name}", color=SERVER_INFO_COLOR)
 
@@ -102,13 +87,17 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
             embed.add_field("Owner", f"<@{guild.owner_id}>", inline=True)
             embed.add_field("Created", f"<t:{int(guild.created_at.timestamp())}:R>", inline=True)
 
-            embed.add_field("👥 Members", str(member_count), inline=True)
-            embed.add_field("📺 Channels", f"{channel_count} total", inline=True)
-            embed.add_field("🎭 Roles", str(role_count), inline=True)
+            embed.add_field("👥 Members", str(summary.member_count), inline=True)
+            embed.add_field("📺 Channels", f"{summary.channel_count} total", inline=True)
+            embed.add_field("🎭 Roles", str(summary.role_count), inline=True)
 
-            channel_breakdown = f"💬 Text: {text_channels}\n🔊 Voice: {voice_channels}\n📁 Categories: {category_channels}"
+            channel_breakdown = (
+                f"💬 Text: {summary.text_channels}\n"
+                f"🔊 Voice: {summary.voice_channels}\n"
+                f"📁 Categories: {summary.category_channels}"
+            )
             embed.add_field("Channel Breakdown", channel_breakdown, inline=True)
-            embed.add_field("😀 Emojis", str(emoji_count), inline=True)
+            embed.add_field("😀 Emojis", str(summary.emoji_count), inline=True)
 
             features = guild.features
             if features:
@@ -135,18 +124,16 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
             if banner_url:
                 embed.set_image(banner_url)
 
-            await ctx.respond(embed=embed)
-            await plugin.log_command_usage(ctx, "server-info", True)
+            await plugin.respond_success(ctx, embed=embed, command_name="server-info")
 
         except Exception as exc:
             logger.error("Error in server-info command: %s", exc)
-            embed = plugin.create_embed(
-                title="❌ Error",
-                description=f"Failed to get server information: {exc}",
+            await plugin.respond_error(
+                ctx,
+                f"Failed to get server information: {exc}",
+                command_name="server-info",
                 color=ERROR_COLOR,
             )
-            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-            await plugin.log_command_usage(ctx, "server-info", False, str(exc))
 
     @command(
         name="uptime",
@@ -206,19 +193,18 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
             except Exception:
                 pass
 
-            guild_count = len(plugin.bot.hikari_bot.cache.get_guilds_view())
+            guild_count = len(plugin.cache.get_guilds_view()) if plugin.cache else 0
             embed.add_field("🏰 Servers", str(guild_count), inline=True)
 
             try:
-                latency = plugin.bot.hikari_bot.heartbeat_latency * 1000
+                latency = plugin.gateway.heartbeat_latency * 1000
                 embed.add_field("📡 Latency", f"{latency:.1f}ms", inline=True)
             except Exception:
                 pass
 
             embed.set_footer(f"Process ID: {process.pid}")
 
-            await ctx.respond(embed=embed)
-            await plugin.log_command_usage(ctx, "uptime", True)
+            await plugin.respond_success(ctx, embed=embed, command_name="uptime")
 
         except ImportError:
             embed = plugin.create_embed(
@@ -227,28 +213,26 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                 color=UPTIME_COLOR,
             )
 
-            guild_count = len(plugin.bot.hikari_bot.cache.get_guilds_view())
+            guild_count = len(plugin.cache.get_guilds_view()) if plugin.cache else 0
             embed.add_field("🏰 Servers", str(guild_count), inline=True)
 
             try:
-                latency = plugin.bot.hikari_bot.heartbeat_latency * 1000
+                latency = plugin.gateway.heartbeat_latency * 1000
                 embed.add_field("📡 Latency", f"{latency:.1f}ms", inline=True)
             except Exception:
                 pass
 
             embed.set_footer("Install 'psutil' for detailed system information")
 
-            await ctx.respond(embed=embed)
-            await plugin.log_command_usage(ctx, "uptime", True)
+            await plugin.respond_success(ctx, embed=embed, command_name="uptime")
 
         except Exception as exc:
             logger.error("Error in uptime command: %s", exc)
-            embed = plugin.create_embed(
-                title="❌ Error",
-                description=f"Failed to get uptime information: {exc}",
+            await plugin.respond_error(
+                ctx,
+                f"Failed to get uptime information: {exc}",
+                command_name="uptime",
                 color=ERROR_COLOR,
             )
-            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-            await plugin.log_command_usage(ctx, "uptime", False, str(exc))
 
     return [bot_info, server_info, uptime]

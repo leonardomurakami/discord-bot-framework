@@ -167,7 +167,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
 
         if not user and user_id is not None:
             try:
-                user = await plugin.bot.hikari_bot.rest.fetch_user(user_id)
+                user = await plugin.fetch_user(user_id)
             except Exception:
                 user = None
 

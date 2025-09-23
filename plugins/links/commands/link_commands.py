@@ -44,7 +44,7 @@ class LinkCommands:
                 await self.plugin.smart_respond(ctx, "This command can only be used in a server!")
                 return
 
-            async with self.plugin.bot.db.session() as session:
+            async with self.plugin.db_session() as session:
                 # Check custom links only
                 stmt = select(Link).where(Link.guild_id == ctx.guild_id, Link.name == name.lower())
                 result = await session.execute(stmt)
@@ -106,7 +106,7 @@ class LinkCommands:
 
             # Add custom links if in a guild
             if ctx.guild_id:
-                async with self.plugin.bot.db.session() as session:
+                async with self.plugin.db_session() as session:
                     stmt = select(Link).where(Link.guild_id == ctx.guild_id).order_by(Link.name)
                     result = await session.execute(stmt)
                     custom_links = result.scalars().all()
@@ -186,7 +186,7 @@ class LinkCommands:
                 )
                 return
 
-            async with self.plugin.bot.db.session() as session:
+            async with self.plugin.db_session() as session:
                 new_link = Link(
                     guild_id=ctx.guild_id,
                     name=name.lower(),
@@ -240,7 +240,7 @@ class LinkCommands:
                 await self.plugin.smart_respond(ctx, f"❌ '{name}' is a reserved command name and cannot be removed.", ephemeral=True)
                 return
 
-            async with self.plugin.bot.db.session() as session:
+            async with self.plugin.db_session() as session:
                 stmt = select(Link).where(Link.guild_id == ctx.guild_id, Link.name == name.lower())
                 result = await session.execute(stmt)
                 link_record = result.scalar_one_or_none()
@@ -264,7 +264,7 @@ class LinkCommands:
     async def _get_username(self, user_id: int) -> str:
         """Get username for a user ID."""
         try:
-            user = self.plugin.bot.hikari_bot.cache.get_user(user_id)
+            user = self.plugin.cache.get_user(user_id) if self.plugin.cache else None
             if user:
                 return user.username
             return f"User {user_id}"

@@ -92,7 +92,7 @@ def setup_queue_commands(plugin):
                 duration_seconds = (track.duration % 60000) // 1000
 
                 try:
-                    user = await ctx.bot.hikari_bot.rest.fetch_user(track.requester)
+                    user = await plugin.fetch_user(track.requester)
                     requester_name = user.display_name or user.username
                 except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                     requester_name = "Unknown"
@@ -246,7 +246,7 @@ def setup_queue_commands(plugin):
         await _broadcast_music_update(plugin, ctx.guild_id, "queue_update")
 
         try:
-            user = await ctx.bot.hikari_bot.rest.fetch_user(removed_track.requester)
+            user = await plugin.fetch_user(removed_track.requester)
             requester_name = user.display_name or user.username
         except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             requester_name = "Unknown"

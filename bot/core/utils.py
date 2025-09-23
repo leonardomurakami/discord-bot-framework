@@ -19,7 +19,7 @@ def get_bot_user_id(ctx: lightbulb.Context) -> int:
         return ctx.client.get_me().id
     else:
         # PrefixContext
-        return ctx.bot.hikari_bot.get_me().id
+        return ctx.bot.gateway.get_me().id
 
 
 def calculate_member_permissions(

@@ -40,7 +40,7 @@ class MusicPlugin(DatabaseMixin, BasePlugin, WebPanelMixin):
 
         await super().on_load()
 
-        self.lavalink_client = lavalink.Client(self.bot.hikari_bot.get_me().id)
+        self.lavalink_client = lavalink.Client(self.gateway.get_me().id)
         self.lavalink_client.add_node(
             host=settings.lavalink_host,
             port=settings.lavalink_port,
@@ -51,7 +51,7 @@ class MusicPlugin(DatabaseMixin, BasePlugin, WebPanelMixin):
 
         self.lavalink_client.add_event_hooks(MusicEventHandler(self))
 
-        @self.bot.hikari_bot.listen(hikari.VoiceServerUpdateEvent)
+        @self.gateway.listen(hikari.VoiceServerUpdateEvent)
         async def voice_server_update(event: hikari.VoiceServerUpdateEvent) -> None:
             lavalink_data = {
                 "t": "VOICE_SERVER_UPDATE",
@@ -63,7 +63,7 @@ class MusicPlugin(DatabaseMixin, BasePlugin, WebPanelMixin):
             }
             await self.lavalink_client.voice_update_handler(lavalink_data)
 
-        @self.bot.hikari_bot.listen(hikari.VoiceStateUpdateEvent)
+        @self.gateway.listen(hikari.VoiceStateUpdateEvent)
         async def voice_state_update(event: hikari.VoiceStateUpdateEvent) -> None:
             lavalink_data = {
                 "t": "VOICE_STATE_UPDATE",

@@ -62,7 +62,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
         try:
             if action == "list":
                 if role:
-                    permissions = await plugin.bot.permission_manager.get_role_permissions(ctx.guild_id, role.id)
+                    permissions = await plugin.permissions.get_role_permissions(ctx.guild_id, role.id)
                     if permissions:
                         # Use pagination for role permissions if there are many
                         if len(permissions) > 10:
@@ -89,7 +89,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                             color=WARNING_COLOR,
                         )
                 else:
-                    all_perms = await plugin.bot.permission_manager.get_all_permissions()
+                    all_perms = await plugin.permissions.get_all_permissions()
                     if all_perms:
                         # Use pagination for permissions list
                         from ..views import PermissionsPaginationView
@@ -117,12 +117,12 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                     )
                 else:
                     if action == "grant":
-                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.grant_permission(
+                        success, granted_perms, failed_perms = await plugin.permissions.grant_permission(
                             ctx.guild_id, role.id, permission
                         )
                         action_text = "granted to"
                     else:
-                        success, granted_perms, failed_perms = await plugin.bot.permission_manager.revoke_permission(
+                        success, granted_perms, failed_perms = await plugin.permissions.revoke_permission(
                             ctx.guild_id, role.id, permission
                         )
                         action_text = "revoked from"
@@ -210,7 +210,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                 return
 
             if new_prefix is None:
-                current_prefix = await plugin.bot.get_guild_prefix(ctx.guild_id)
+                current_prefix = await plugin.get_guild_prefix(ctx.guild_id)
                 embed = plugin.create_embed(
                     title="🔧 Current Server Prefix",
                     description=f"The current prefix for this server is: `{current_prefix}`",
@@ -249,7 +249,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                     await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                     return
 
-                async with plugin.bot.db.session() as session:
+                async with plugin.db_session() as session:
                     result = await session.execute(select(Guild).where(Guild.id == ctx.guild_id))
                     guild = result.scalar_one_or_none()
 
@@ -373,7 +373,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                     return
 
                 guild = ctx.get_guild()
-                bot_id = plugin.bot.hikari_bot.get_me().id
+                bot_id = plugin.gateway.get_me().id
                 bot_member = guild.get_member(bot_id) if guild else None
 
                 if not bot_member:

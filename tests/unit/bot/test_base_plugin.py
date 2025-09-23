@@ -17,6 +17,9 @@ class TestBasePlugin:
 
         assert plugin.bot == mock_bot
         assert plugin.logger is not None
+        assert plugin.db == mock_bot.db
+        assert plugin.permissions == mock_bot.permission_manager
+        assert plugin.cache == mock_bot.cache
 
     @pytest.mark.asyncio
     async def test_on_load(self, mock_bot):

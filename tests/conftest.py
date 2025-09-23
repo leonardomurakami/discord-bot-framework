@@ -111,11 +111,22 @@ def mock_bot(
     """Mock complete bot instance."""
     bot = MagicMock()
     bot.hikari_bot = mock_hikari_bot
+    bot.command_client = mock_lightbulb_client
     bot.bot = mock_lightbulb_client
     bot.db = mock_db_manager
     bot.permission_manager = mock_permission_manager
     bot.plugin_loader = mock_plugin_loader
     bot.event_system = mock_event_system
+    bot.rest = mock_hikari_bot.rest
+    bot.cache = mock_hikari_bot.cache
+    bot.gateway = mock_hikari_bot
+    bot.services = {
+        "gateway": mock_hikari_bot,
+        "command_client": mock_lightbulb_client,
+        "db": mock_db_manager,
+        "events": mock_event_system,
+        "permissions": mock_permission_manager,
+    }
     bot.miru_client = MagicMock()
     bot.get_guild_prefix = AsyncMock(return_value="!")
     return bot

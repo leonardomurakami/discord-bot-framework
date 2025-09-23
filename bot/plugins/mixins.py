@@ -55,17 +55,17 @@ class DatabaseMixin:
     async def on_load(self) -> None:
         """Override to register models during plugin load."""
         # Register models with the database manager
-        if hasattr(self, 'bot') and hasattr(self.bot, 'db'):
+        if hasattr(self, 'db'):
             for model_class in self._plugin_models:
-                self.bot.db.register_plugin_model(model_class, getattr(self, 'name', 'unknown'))
+                self.db.register_plugin_model(model_class, getattr(self, 'name', 'unknown'))
 
         await super().on_load()
 
     async def on_unload(self) -> None:
         """Override to unregister models during plugin unload."""
         # Unregister models from the database manager
-        if hasattr(self, 'bot') and hasattr(self.bot, 'db'):
+        if hasattr(self, 'db'):
             for model_class in self._plugin_models:
-                self.bot.db.unregister_plugin_model(model_class, getattr(self, 'name', 'unknown'))
+                self.db.unregister_plugin_model(model_class, getattr(self, 'name', 'unknown'))
 
         await super().on_unload()
