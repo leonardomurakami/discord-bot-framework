@@ -1,4 +1,6 @@
-"""Command factories for the links plugin.
+"""Command factories for the links plugin."""
 
-Commands are registered directly on the plugin class.
-"""
+from .default_link_commands import DefaultLinkCommands
+from .link_commands import LinkCommands
+
+__all__ = ["DefaultLinkCommands", "LinkCommands"]
