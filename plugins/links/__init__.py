@@ -6,7 +6,7 @@ PLUGIN_METADATA = {
     "author": "Bot Framework",
     "description": "Easy access to important links and URLs",
     "dependencies": [],
-    "permissions": ["links.view", "links.manage"],
+    "permissions": ["basic.links.view", "links.collection.manage", "links.manage"],
 }
 
 

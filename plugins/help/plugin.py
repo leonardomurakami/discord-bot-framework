@@ -163,7 +163,7 @@ class HelpPlugin(BasePlugin):
         name="commands",
         description="List all available commands organized by plugin",
         aliases=["cmds"],
-        permission_node="basic.commands",
+        permission_node="basic.help.commands.view",
     )
     async def list_commands(self, ctx: lightbulb.Context) -> None:
         """List all available commands organized by plugin."""
@@ -187,7 +187,7 @@ class HelpPlugin(BasePlugin):
         name="plugins",
         description="List all loaded plugins with their information",
         aliases=["plugin-list"],
-        permission_node="basic.plugins",
+        permission_node="basic.help.plugins.view",
     )
     async def list_plugins(self, ctx: lightbulb.Context) -> None:
         """List all loaded plugins with their information."""

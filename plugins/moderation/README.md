@@ -13,7 +13,7 @@ The Moderation plugin provides essential server management tools for moderators 
 #### `!kick` (Alias: `/kick`)
 Kick a member from the server.
 
-**Permission Required:** `moderation.kick`
+**Permission Required:** `moderation.members.kick`
 
 **Usage:** `!kick <member> [reason]`
 
@@ -30,7 +30,7 @@ Kick a member from the server.
 #### `!ban` (Alias: `/ban`)
 Ban a user from the server with message deletion options.
 
-**Permission Required:** `moderation.ban`
+**Permission Required:** `moderation.members.ban`
 
 **Usage:** `!ban <user> [delete_days] [reason]`
 
@@ -53,7 +53,7 @@ Ban a user from the server with message deletion options.
 #### `!timeout` (Alias: `/timeout`)
 Temporarily timeout a member (Discord timeout feature).
 
-**Permission Required:** `moderation.timeout`
+**Permission Required:** `moderation.members.timeout`
 
 **Usage:** `!timeout <member> <duration_minutes> [reason]`
 
@@ -75,7 +75,7 @@ Temporarily timeout a member (Discord timeout feature).
 #### `!unban` (Alias: `/unban`)
 Remove a ban from a user.
 
-**Permission Required:** `moderation.ban`
+**Permission Required:** `moderation.members.ban`
 
 **Usage:** `!unban <user_id> [reason]`
 
@@ -97,7 +97,7 @@ Remove a ban from a user.
 #### `!purge` (Aliases: `!clear`, `/purge`)
 Delete multiple messages from a channel.
 
-**Permission Required:** `moderation.purge`
+**Permission Required:** `moderation.channels.purge`
 
 **Usage:** 
 - `!purge <amount>` - Delete last N messages
@@ -122,7 +122,7 @@ Delete multiple messages from a channel.
 #### `!slowmode` (Aliases: `!slow`, `/slowmode`)
 Set channel slowmode (rate limiting).
 
-**Permission Required:** `moderation.slowmode`
+**Permission Required:** `moderation.channels.slowmode`
 
 **Usage:**
 - `!slowmode` - Disable slowmode (set to 0)
@@ -148,13 +148,14 @@ Set channel slowmode (rate limiting).
 
 The Moderation plugin defines the following permission nodes:
 
-- `moderation.kick` - Permission to kick members
-- `moderation.ban` - Permission to ban and unban users
-- `moderation.mute` - Permission for muting (reserved for future features)
-- `moderation.warn` - Permission for warning system (reserved for future features)
-- `moderation.purge` - Permission to delete multiple messages
-- `moderation.timeout` - Permission to timeout members
-- `moderation.slowmode` - Permission to manage channel slowmode
+- `moderation.manage` - Grants full access to all moderation commands.
+- `moderation.members.kick` - Permission to kick members
+- `moderation.members.ban` - Permission to ban and unban users
+- `moderation.members.mute` - Permission for muting (reserved for future features)
+- `moderation.members.warn` - Permission for warning system (reserved for future features)
+- `moderation.channels.purge` - Permission to delete multiple messages
+- `moderation.members.timeout` - Permission to timeout members
+- `moderation.channels.slowmode` - Permission to manage channel slowmode
 
 ## Safety Features
 

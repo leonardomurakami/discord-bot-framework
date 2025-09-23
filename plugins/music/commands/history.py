@@ -15,7 +15,7 @@ def setup_history_commands(plugin):
         name="history",
         description="Show recently played tracks",
         aliases=["recent"],
-        permission_node="basic.music.play",
+        permission_node="basic.music.queue.view",
         arguments=[
             CommandArgument("page", hikari.OptionType.INTEGER, "Page number (shows 5 tracks per page)", required=False, default=1)
         ],

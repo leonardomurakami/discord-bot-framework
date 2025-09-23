@@ -23,7 +23,7 @@ class DefaultLinkCommands:
         name="github",
         aliases=["gh", "source"],
         description="Show the GitHub repository link",
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def github_link(self, ctx) -> None:
         """Display the GitHub repository link with enhanced styling."""
@@ -47,7 +47,7 @@ class DefaultLinkCommands:
     @command(
         name="panel",
         description="Show the web control panel link",
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def panel_link(self, ctx) -> None:
         """Display the web control panel link with enhanced styling."""
@@ -71,7 +71,7 @@ class DefaultLinkCommands:
     @command(
         name="docs",
         description="Show the documentation link",
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def docs_link(self, ctx) -> None:
         """Display the documentation link with enhanced styling."""
@@ -97,7 +97,7 @@ class DefaultLinkCommands:
     @command(
         name="support",
         description="Show the support Discord server link",
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def support_link(self, ctx) -> None:
         """Display the support Discord server link with enhanced styling."""

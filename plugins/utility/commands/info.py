@@ -24,7 +24,7 @@ def setup_info_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="userinfo",
         description="Get detailed information about a user",
         aliases=["user", "whois"],
-        permission_node="basic.info",
+        permission_node="basic.utility.info.view",
         arguments=[
             CommandArgument(
                 "user",
@@ -112,7 +112,7 @@ def setup_info_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="avatar",
         description="Get a user's avatar in high resolution",
         aliases=["av", "pfp"],
-        permission_node="basic.info",
+        permission_node="basic.utility.info.view",
         arguments=[CommandArgument("user", hikari.OptionType.USER, "User to get avatar of", required=False)],
     )
     async def avatar(ctx: lightbulb.Context, user: hikari.User | None = None) -> None:
@@ -145,7 +145,7 @@ def setup_info_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
     @command(
         name="weather",
         description="Get weather information for a location",
-        permission_node="basic.info",
+        permission_node="basic.utility.info.view",
         arguments=[
             CommandArgument(
                 "location",

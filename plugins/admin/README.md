@@ -13,7 +13,7 @@ The Admin plugin provides essential administrative tools for server owners and b
 #### `!permission` (Alias: `/permission`)
 Manage role permissions for the bot's command system.
 
-**Permission Required:** `admin.permissions`
+**Permission Required:** `admin.permissions.manage`
 
 **Usage:**
 - `!permission` - List all available permissions
@@ -29,6 +29,8 @@ Manage role permissions for the bot's command system.
 #### `!bot-info` (Aliases: `!info`, `/bot-info`)
 Display comprehensive bot information and statistics.
 
+**Permission Required:** `basic.admin.info.view` (granted to everyone by default)
+
 **Usage:** `!bot-info`
 
 **Information Displayed:**
@@ -42,6 +44,8 @@ Display comprehensive bot information and statistics.
 
 #### `!server-info` (Aliases: `!serverinfo`, `!guild-info`, `/server-info`)
 Display detailed server information and statistics.
+
+**Permission Required:** `basic.admin.info.view`
 
 **Usage:** `!server-info`
 
@@ -57,6 +61,8 @@ Display detailed server information and statistics.
 
 #### `!uptime` (Aliases: `!up`, `!status`, `/uptime`)
 Display bot uptime and system information.
+
+**Permission Required:** `basic.admin.status.view`
 
 **Usage:** `!uptime`
 
@@ -75,9 +81,12 @@ Display bot uptime and system information.
 
 The Admin plugin defines the following permission nodes:
 
-- `admin.config` - General administrative configuration
-- `admin.plugins` - Plugin management operations
-- `admin.permissions` - Permission system management
+- `admin.manage` - Grants full access to all admin plugin commands.
+- `admin.config.manage` - General administrative configuration.
+- `admin.plugins.manage` - Plugin management operations.
+- `admin.permissions.manage` - Permission system management.
+- `basic.admin.info.view` - Public info commands (bot/server stats).
+- `basic.admin.status.view` - Public uptime/status command.
 
 ## Dependencies
 

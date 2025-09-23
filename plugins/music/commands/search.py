@@ -16,7 +16,7 @@ def setup_search_commands(plugin):
     @command(
         name="search",
         description="Search for tracks and choose from multiple results",
-        permission_node="basic.music.play",
+        permission_node="basic.music.search.use",
         arguments=[CommandArgument("query", hikari.OptionType.STRING, "Song name or artist to search for")],
     )
     async def search_tracks(ctx: lightbulb.Context, query: str) -> None:

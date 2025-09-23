@@ -35,7 +35,7 @@ class LinkCommands:
                 required=True,
             )
         ],
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def show_link(self, ctx, name: str) -> None:
         """Display a custom link by name."""
@@ -95,7 +95,7 @@ class LinkCommands:
     @command(
         name="links",
         description="List all custom links for this server",
-        permission_node="links.view",
+        permission_node="basic.links.view",
     )
     async def list_links(self, ctx) -> None:
         """List custom server links."""
@@ -164,7 +164,7 @@ class LinkCommands:
                 required=False,
             ),
         ],
-        permission_node="links.manage",
+        permission_node="links.collection.manage",
     )
     async def add_link(self, ctx, name: str, url: str, description: str = None) -> None:
         """Add a custom link."""
@@ -225,7 +225,7 @@ class LinkCommands:
                 required=True,
             )
         ],
-        permission_node="links.manage",
+        permission_node="links.collection.manage",
     )
     async def remove_link(self, ctx, name: str) -> None:
         """Remove a custom link."""

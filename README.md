@@ -1,313 +1,189 @@
 # Discord Bot Framework
 
-A modular Discord bot built with the Hikari framework, featuring a plugin system, RBAC permissions, and database support.
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-## Features
+> A modern, plugin-driven Discord bot built on [Hikari](https://www.hikari-py.dev/), [Lightbulb](https://github.com/tandemdude/hikari-lightbulb), and [Lavalink](https://github.com/freyacodes/Lavalink), featuring async-first architecture, RBAC permissions, and an extensible web control panel.
 
-- 🔌 **Plugin System** - Modular architecture with dynamic plugin loading
-- 🔒 **RBAC Permissions** - Role-based access control using Discord roles
-- 🗄️ **Database Support** - SQLite for development, PostgreSQL for production
-- 🐳 **Docker Ready** - Development and production Docker configurations
-- 📊 **Analytics & Logging** - Built-in middleware for tracking and monitoring
-- ⚡ **Fast Setup** - Get started quickly with uv package management
+## Table of Contents
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Quick Start](#quick-start)
+- [Installation Options](#installation-options)
+- [Configuration](#configuration)
+- [Plugin System](#plugin-system)
+- [Permissions](#permissions)
+- [Web Control Panel](#web-control-panel)
+- [Testing & Quality](#testing--quality)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Documentation & Support](#documentation--support)
+
+## Overview
+The Discord Bot Framework is a batteries-included foundation for building scalable Discord bots. It couples a modular plugin
+system with a robust permission model, asynchronous database manager, and optional FastAPI control panel. Core services (command
+routing, event system, permissions, persistence, and analytics) live in `bot/`, while first-party functionality ships as
+self-contained plugins under `plugins/`.
+
+## Key Features
+- 🔌 **Modular plugins** – enable/disable features per guild, ship custom plugins without touching the core.
+- 🔐 **Hierarchical permissions** – role-based access control with wildcard support and web-based management.
+- 🗃️ **Database persistence** – async SQLAlchemy models with SQLite (dev) or PostgreSQL (prod) backends.
+- 🎛️ **Web panel** – optional FastAPI dashboard for managing plugins, permissions, and music queues.
+- 🎵 **Full music stack** – Lavalink integration with queue persistence, auto-disconnect, and search selection UI.
+- ⚙️ **CLI tooling** – Typer-based CLI for running the bot and managing the database.
+- 🧪 **Comprehensive tests** – pytest suite organised by domain with async fixtures.
 
 ## Quick Start
-
 ### Prerequisites
-
 - Python 3.11+
 - [uv](https://github.com/astral-sh/uv) for dependency management
 - Discord Bot Token
+- Optional: running Lavalink server (required for the music plugin)
 
-### Installation
-
-1. Clone the repository:
+### Local Development Setup
 ```bash
-git clone <your-repo-url>
-cd discord-bot
-```
+# Clone the repository
+git clone https://github.com/your-org/discord-bot-framework.git
+cd discord-bot-framework
 
-2. Install dependencies:
-```bash
+# Install dependencies (editable mode for development)
 uv pip install -e .
-```
 
-3. Copy environment file and configure:
-```bash
+# Copy environment template and populate secrets
 cp .env.example .env
-# Edit .env with your Discord bot token
-```
+$EDITOR .env  # add DISCORD_TOKEN, database URL, Lavalink credentials, etc.
 
-4. Initialize the database:
-```bash
+# Initialise the database schema
 python -m bot.cli db create
+
+# Launch the bot (development logging & settings)
+python -m bot.cli run --dev
 ```
 
-5. Run the bot:
+### Docker (Optional)
 ```bash
-python -m bot.cli run --dev  # Development mode with development defaults
-# or
-python -m bot.cli run        # Production mode
+# Development stack (SQLite + hot reload)
+docker compose -f docker-compose.dev.yml up
+
+# Production profile (PostgreSQL + Lavalink)
+docker compose --profile production up -d
 ```
 
-### Docker Development
-
-```bash
-# Development environment
-docker-compose up bot-dev
-
-# Production with PostgreSQL
-docker-compose --profile production up
-```
-
-## Project Structure
-
-```
-discord-bot/
-├── bot/                    # Core bot framework
-│   ├── core/              # Bot core (plugin loader, event system)
-│   ├── database/          # Database models and manager
-│   ├── permissions/       # RBAC permission system
-│   ├── plugins/           # Base plugin classes
-│   └── middleware/        # Event middleware
-├── plugins/               # Plugin implementations
-│   ├── admin/             # Admin commands
-│   ├── moderation/        # Moderation commands
-│   ├── fun/               # Fun commands and games
-│   ├── utility/           # Utility commands
-│   ├── help/              # Help commands
-│   └── music/             # Music bot functionality
-├── config/                # Configuration management
-└── tests/                 # Test suite
-```
-
-## Creating Plugins
-
-### Basic Plugin Structure
-
-```python
-# plugins/myplugin/__init__.py
-from .myplugin import MyPlugin
-
-PLUGIN_METADATA = {
-    "name": "My Plugin",
-    "version": "1.0.0",
-    "author": "Your Name",
-    "description": "My awesome plugin",
-    "permissions": ["myplugin.use"],
-}
-
-__all__ = ["MyPlugin"]
-```
-
-```python
-# plugins/myplugin/myplugin.py
-import logging
-import hikari
-import lightbulb
-from bot.plugins.base import BasePlugin
-from bot.plugins.commands import command, CommandArgument
-
-logger = logging.getLogger(__name__)
-
-class MyPlugin(BasePlugin):
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-
-    async def on_load(self) -> None:
-        """Called when the plugin is loaded."""
-        await super().on_load()
-        logger.info("MyPlugin loaded successfully")
-
-    async def on_unload(self) -> None:
-        """Called when the plugin is unloaded."""
-        await super().on_unload()
-        logger.info("MyPlugin unloaded")
-
-    @command(
-        name="hello",
-        description="Say hello to the user",
-        permission_node="myplugin.use"
-    )
-    async def hello_command(self, ctx) -> None:
-        embed = self.create_embed(
-            title="👋 Hello!",
-            description=f"Hello, {ctx.author.mention}!",
-            color=hikari.Color(0x00FF00)
-        )
-        await ctx.respond(embed=embed)
-
-    @command(
-        name="greet",
-        description="Greet a specific user",
-        arguments=[
-            CommandArgument("user", hikari.OptionType.USER, "User to greet"),
-            CommandArgument("message", hikari.OptionType.STRING, "Custom message", required=False)
-        ],
-        permission_node="myplugin.use"
-    )
-    async def greet_command(self, ctx, user: hikari.User, message: str = "Hello") -> None:
-        embed = self.create_embed(
-            title="👋 Greetings!",
-            description=f"{message}, {user.mention}!",
-            color=hikari.Color(0x5865F2)
-        )
-        await ctx.respond(embed=embed)
-```
-
-### Plugin Features
-
-- **Commands**: Use `@command()` decorator with support for arguments and permissions
-- **Lifecycle Management**: `on_load()` and `on_unload()` methods for initialization and cleanup
-- **Permissions**: Built-in RBAC with `permission_node` parameter
-- **Event Handling**: Listen to Discord events using Hikari event system
-- **Database Access**: Built-in database manager for data persistence
-- **Utilities**: Helper methods for embeds, responses, and command logging
-- **Error Handling**: Comprehensive error handling and logging support
-
-## Permission System
-
-The bot uses a role-based access control (RBAC) system with automatic hierarchy:
-
-### Permission Hierarchy
-
-1. **Server Owner**: Has all permissions automatically
-2. **Administrator Role**: Users with Discord's Administrator permission have all bot permissions
-3. **Admin Permissions**: `admin.*` permissions grant all other permissions
-4. **Moderation Permissions**: `moderation.*` permissions grant `utility.*` and `fun.*` permissions
-5. **Default Permissions**: Basic commands available to everyone
-
-### Built-in Permissions
-
-- **Admin**: `admin.config`, `admin.plugins`, `admin.permissions`
-- **Moderation**: `moderation.kick`, `moderation.ban`, `moderation.mute`, `moderation.timeout`, `moderation.purge`
-- **Fun**: `fun.games`, `fun.images` *(available by default)*
-- **Utility**: Basic utility commands *(available by default)*
-- **Music**: `music.play`, `music.manage`, `music.settings`
-
-### Managing Permissions
-
-Use the `/permission` command in Discord to manage role permissions:
-
-- Grant permissions to roles
-- Revoke permissions from roles
-- List permissions for specific roles
-- View all available permissions
-
-See the Admin Plugin documentation for detailed usage examples.
+## Installation Options
+| Scenario | Suggested Command |
+| --- | --- |
+| Local development | `uv pip install -e .` |
+| CI / deployment | `uv pip install .` or Docker image build |
+| Install dev extras | `uv pip install -e .[dev]` |
+| Install music extras | `uv pip install -e .[music]` (includes Lavalink client dependencies) |
 
 ## Configuration
+1. **Environment variables** (`.env`)
+   - `DISCORD_TOKEN` – required bot token.
+   - `DATABASE_URL` – e.g. `sqlite+aiosqlite:///data/bot.db` (dev) or `postgresql+asyncpg://user:pass@host/db`.
+   - `BOT_PREFIX` – prefix for message-based commands (default `!`).
+   - `LAVALINK_HOST`, `LAVALINK_PORT`, `LAVALINK_PASSWORD` – required when the music plugin is enabled.
+   - Web panel secrets (`WEB_SECRET_KEY`, `WEB_HOST`, `WEB_PORT`) if hosting the dashboard.
 
-### Environment Variables
+2. **Settings module** (`config/settings.py`)
+   - Toggle enabled plugins via `settings.enabled_plugins`.
+   - Configure plugin search paths and optional services (Redis sessions, analytics middleware, etc.).
 
-```env
-DISCORD_TOKEN=your_discord_bot_token
-DATABASE_URL=sqlite:///data/bot.db
-BOT_PREFIX=!
-ENVIRONMENT=development
-LOG_LEVEL=INFO
+3. **Permissions**
+   - Default permission groups are seeded on first run. Use `/permission` (Admin plugin) or the admin web panel to manage
+     role assignments.
+   - See [docs/permissions/permission_audit.md](docs/permissions/permission_audit.md) for the canonical permission node list and
+     [docs/permissions/migration.md](docs/permissions/migration.md) for migration guidance.
+
+## Plugin System
+Plugins live under `plugins/<name>/` and must expose a `PLUGIN_METADATA` dictionary plus a plugin class (usually in `plugin.py`).
+Example metadata with the updated permission naming convention:
+
+```python
+# plugins/example/__init__.py
+from .plugin import ExamplePlugin
+
+PLUGIN_METADATA = {
+    "name": "Example",
+    "version": "1.0.0",
+    "author": "Bot Framework",
+    "description": "Demonstrates a custom feature",
+    "permissions": [
+        "basic.example.tools.use",
+        "example.settings.manage",
+    ],
+}
 ```
 
-### Bot Settings
+Add optional aggregators (for example `"example.manage"`) when you want to grant a role the entire plugin surface with a single
+assignment.
 
-Edit `config/settings.py` to customize:
+Command modules use the shared decorator from `bot.plugins.commands`:
 
-- Enabled plugins
-- Plugin directories
-- Database configuration
+```python
+from bot.plugins.commands import command
 
-## Database
+@command(
+    name="ping",
+    description="Latency check",
+    permission_node="basic.example.tools.use",
+)
+async def ping(ctx: lightbulb.Context) -> None:
+    await ctx.respond("Pong!")
+```
 
-### Models
+Each plugin ships an `AGENTS.md` guide tailored for LLM contributors (see `plugins/<name>/AGENTS.md`).
 
-The bot includes these database models:
+## Permissions
+- Public commands should use the `basic.<plugin>.<feature>.<action>` prefix. Nodes starting with `basic.` are granted to everyone
+  by default.
+- Administrative commands use `<plugin>.<category>.<action>` (e.g. `music.queue.manage`, `admin.permissions.manage`).
+- Plugin-wide aggregators such as `admin.manage`, `moderation.manage`, `music.manage`, and `links.manage` provide an easy way to
+  grant a role every permission within a plugin without listing each node individually.
+- Wildcards are supported: `admin.*`, `music.queue.*`, and `*.manage` map to matching concrete nodes. Aggregator nodes ending in
+  `.manage` or `.admin` also cascade down their namespace.
+- The permission hierarchy is enforced by `bot/permissions/manager.py`, which handles wildcards, aggregators, and the default
+  `basic.` grants.
 
-- **Guild**: Server settings and configuration
-- **User**: User data and preferences
-- **GuildUser**: Per-server user data
-- **Permission**: Available permissions
-- **RolePermission**: Role-permission mappings
-- **CommandUsage**: Command usage analytics
-- **PluginSetting**: Per-plugin, per-guild settings
+Refer to the [Permission Audit Report](docs/permissions/permission_audit.md) for a full legacy→modern mapping.
 
-### Commands
+## Web Control Panel
+- Located in `bot/web/`, powered by FastAPI with optional Redis-backed sessions.
+- Plugins opt-in via `WebPanelMixin` and register routes under `/plugin/<name>`.
+- Start the panel automatically with the bot (`python -m bot.cli run`) or run the FastAPI app directly if embedding elsewhere.
+- Music plugin exposes real-time queue updates via WebSockets (`plugins/music/web/`).
 
+## Testing & Quality
 ```bash
-# Create database tables
-python -m bot.cli db create
+# Run all tests
+uv run pytest
 
-# Reset database (WARNING: deletes all data)
-python -m bot.cli db reset
+# Run plugin-specific tests
+uv run pytest tests/unit/plugins/admin
+
+# Linting (Ruff) & formatting (Black)
+uv run ruff check .
+uv run black --check .
 ```
+Make targets (`make lint`, `make format`, `make test`) are also available for convenience.
 
-## Development
-
-### Plugin Development
-
-1. Create plugin directory in `plugins/`
-2. Add `__init__.py` with metadata
-3. Implement plugin class extending `BasePlugin`
-
-### Adding Dependencies
-
-```bash
-# Add runtime dependency
-uv add package-name
-
-# Add development dependency
-uv add --dev package-name
-
-# Add optional dependency (e.g., music features)
-uv add --optional music package-name
-```
-
-## Production Deployment
-
-### Docker
-
-```bash
-# Build production image
-docker build --target production -t discord-bot .
-
-# Run with docker-compose
-docker-compose --profile production up -d
-```
-
-### Environment Setup
-
-1. Use PostgreSQL database
-2. Set `ENVIRONMENT=production`
-3. Configure proper logging
-4. Set up monitoring/alerting
-5. Use secrets management for tokens
-
-## Available Plugins
-
-The bot includes several built-in plugins with various functionality:
-
-- **Admin Plugin**: Bot management, permissions, server information
-- **Moderation Plugin**: Member management, message moderation, timeouts
-- **Fun Plugin**: Games, entertainment commands, random utilities
-- **Utility Plugin**: User info, timestamps, encoding utilities
-- **Help Plugin**: Command help and plugin information
-- **Music Plugin**: Full-featured music bot with queue management
-
-Each plugin has its own README with detailed command documentation. See the `plugins/` directory for specific plugin documentation.
+## Troubleshooting
+| Issue | Resolution |
+| --- | --- |
+| Bot starts but does nothing | Ensure `DISCORD_TOKEN` is valid and the bot has gateway intents enabled. |
+| Music commands fail | Verify Lavalink server is running and credentials match `.env`. |
+| Permissions not visible in panel | Run `/permission refresh` or restart the bot to trigger permission discovery. |
+| Miru interactions do not respond | Confirm `miru` is installed and the bot initialises the global Miru client. |
 
 ## Contributing
+1. Fork the repository and create a feature branch: `git checkout -b feature/my-change`.
+2. Follow the repository coding standards (Black 135 char line length, Ruff lint rules).
+3. Add or update tests covering your changes.
+4. Run `uv run pytest` and lint/format commands before submitting.
+5. Open a pull request describing the change and referencing relevant issues.
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure code passes linting
-5. Submit a pull request
-
-## License
-
-[MIT License](LICENSE)
-
-## Support
-
-- Create an issue for bugs or feature requests
-- Check the wiki for detailed documentation
-- Join our Discord server for community support
+## Documentation & Support
+- Plugin-specific implementation notes live in `plugins/<name>/AGENTS.md`.
+- Permission reference and migration steps reside in `docs/permissions/`.
+- The top-level [AGENTS.md](AGENTS.md) file outlines repository-wide expectations.
+- For questions or feature requests, open a GitHub issue.

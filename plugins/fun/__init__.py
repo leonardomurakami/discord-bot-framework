@@ -6,7 +6,7 @@ PLUGIN_METADATA = {
     "author": "Bot Framework",
     "description": "Fun commands and games for entertainment",
     "dependencies": [],
-    "permissions": ["fun.games", "fun.images"],
+    "permissions": ["basic.fun.games.play", "basic.fun.images.view"],
 }
 
 

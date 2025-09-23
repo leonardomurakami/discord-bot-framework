@@ -32,7 +32,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     @command(
         name="permission",
         description="Manage role permissions",
-        permission_node="admin.permissions",
+        permission_node="admin.permissions.manage",
         arguments=[
             CommandArgument(
                 "action",
@@ -188,7 +188,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     @command(
         name="prefix",
         description="View or set the bot's prefix for this server",
-        permission_node="admin.config",
+        permission_node="admin.config.manage",
         arguments=[
             CommandArgument(
                 "new_prefix",
@@ -294,7 +294,7 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
     @command(
         name="autorole",
         description="Configure roles automatically assigned to new members",
-        permission_node="admin.config",
+        permission_node="admin.config.manage",
         arguments=[
             CommandArgument(
                 "action",

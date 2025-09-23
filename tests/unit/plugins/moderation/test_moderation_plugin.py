@@ -254,9 +254,10 @@ class TestModerationPluginMetadata:
         """Test plugin metadata structure."""
         assert PLUGIN_METADATA["name"] == "Moderation"
         assert PLUGIN_METADATA["version"] == "1.0.0"
-        assert "moderation.kick" in PLUGIN_METADATA["permissions"]
-        assert "moderation.ban" in PLUGIN_METADATA["permissions"]
-        assert "moderation.timeout" in PLUGIN_METADATA["permissions"]
+        assert "moderation.manage" in PLUGIN_METADATA["permissions"]
+        assert "moderation.members.kick" in PLUGIN_METADATA["permissions"]
+        assert "moderation.members.ban" in PLUGIN_METADATA["permissions"]
+        assert "moderation.members.timeout" in PLUGIN_METADATA["permissions"]
 
 
 class TestKickMemberExtended:

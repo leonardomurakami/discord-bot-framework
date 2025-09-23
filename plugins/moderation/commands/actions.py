@@ -79,7 +79,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     @command(
         name="kick",
         description="Kick a member from the server",
-        permission_node="moderation.kick",
+        permission_node="moderation.members.kick",
     )
     async def kick_member(ctx: lightbulb.Context) -> None:
         member, reason = _extract_member_from_context(ctx)
@@ -160,7 +160,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     @command(
         name="ban",
         description="Ban a member from the server",
-        permission_node="moderation.ban",
+        permission_node="moderation.members.ban",
     )
     async def ban_member(ctx: lightbulb.Context) -> None:
         user_id, user, delete_days, reason = _extract_user_from_context(ctx)
@@ -254,7 +254,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     @command(
         name="timeout",
         description="Timeout a member for a specified duration",
-        permission_node="moderation.timeout",
+        permission_node="moderation.members.timeout",
     )
     async def timeout_member(ctx: lightbulb.Context) -> None:
         member = None
@@ -353,7 +353,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     @command(
         name="unban",
         description="Unban a user from the server",
-        permission_node="moderation.ban",
+        permission_node="moderation.members.ban",
         arguments=[
             CommandArgument("user_id", hikari.OptionType.STRING, "User ID to unban"),
             CommandArgument(
@@ -446,7 +446,7 @@ def setup_action_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]:
     @command(
         name="nickname",
         description="Change a member's server nickname",
-        permission_node="moderation.nickname",
+        permission_node="moderation.members.nickname",
         arguments=[
             CommandArgument(
                 "member",
