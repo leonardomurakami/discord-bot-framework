@@ -23,7 +23,7 @@ from ..config import (
 )
 
 if TYPE_CHECKING:
-    from ..utility_plugin import UtilityPlugin
+    from ..plugin import UtilityPlugin
 
 logger = logging.getLogger(__name__)
 

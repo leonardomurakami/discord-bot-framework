@@ -76,6 +76,6 @@ class AdminPlugin(BasePlugin, WebPanelMixin):
 
     def register_web_routes(self, app) -> None:
         """Register web routes for the admin plugin."""
-        from .web_panel import register_admin_routes
+        from .web import register_admin_routes
 
         register_admin_routes(app, self)

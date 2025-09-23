@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from .config import music_settings
 
 if TYPE_CHECKING:
-    from .music_plugin import MusicPlugin
+    from .plugin import MusicPlugin
 
 logger = logging.getLogger(__name__)
 

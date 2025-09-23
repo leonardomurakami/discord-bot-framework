@@ -10,7 +10,7 @@ from typing import Any
 import hikari
 import miru
 
-from .config import fun_settings
+from ..config import fun_settings
 
 logger = logging.getLogger(__name__)
 

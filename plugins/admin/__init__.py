@@ -1,4 +1,4 @@
-from .admin_plugin import AdminPlugin
+from .plugin import AdminPlugin
 
 PLUGIN_METADATA = {
     "name": "Admin",

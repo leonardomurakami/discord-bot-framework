@@ -23,7 +23,7 @@ from ..config import (
 )
 
 if TYPE_CHECKING:
-    from ..moderation_plugin import ModerationPlugin
+    from ..plugin import ModerationPlugin
 
 logger = logging.getLogger(__name__)
 

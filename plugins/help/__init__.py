@@ -1,4 +1,4 @@
-from .help import HelpPlugin
+from .plugin import HelpPlugin
 
 PLUGIN_METADATA = {
     "name": "Help",

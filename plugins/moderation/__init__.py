@@ -1,4 +1,4 @@
-from .moderation_plugin import ModerationPlugin
+from .plugin import ModerationPlugin
 
 PLUGIN_METADATA = {
     "name": "Moderation",

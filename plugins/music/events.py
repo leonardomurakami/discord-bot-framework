@@ -53,7 +53,7 @@ class MusicEventHandler:
     async def _broadcast_music_update(self, guild_id: int, update_type: str):
         """Broadcast music update to WebSocket clients."""
         try:
-            from .web_panel import broadcast_music_update
+            from .web import broadcast_music_update
             await broadcast_music_update(guild_id, self.music_plugin, update_type)
         except Exception as e:
             logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")

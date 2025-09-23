@@ -146,6 +146,6 @@ class MusicPlugin(DatabaseMixin, BasePlugin, WebPanelMixin):
 
     def register_web_routes(self, app) -> None:
         """Register web routes for the music plugin."""
-        from .web_panel import register_music_routes
+        from .web import register_music_routes
 
         register_music_routes(app, self)

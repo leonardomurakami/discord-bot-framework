@@ -3,7 +3,7 @@ import logging
 import hikari
 import miru
 
-from .config import help_settings
+from ..config import help_settings
 
 logger = logging.getLogger(__name__)
 

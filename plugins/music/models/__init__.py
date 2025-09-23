@@ -54,3 +54,6 @@ class MusicSession(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (Index("idx_last_activity", "last_activity"),)
+
+
+__all__ = ["MusicQueue", "MusicSession"]

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -7,10 +7,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from bot.database.manager import db_manager
 from bot.database.models import Guild, Permission, RolePermission
 
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    from ..plugin import AdminPlugin
+
 logger = logging.getLogger(__name__)
 
 
-async def ensure_guild_exists(guild_id: int, plugin) -> bool:
+async def ensure_guild_exists(guild_id: int, plugin: "AdminPlugin") -> bool:
     """Ensure the guild exists in the database."""
     try:
         async with db_manager.session() as session:
@@ -97,7 +100,7 @@ async def get_role_permissions(guild_id: int, role_id: int) -> List[str]:
         return []
 
 
-def register_admin_routes(app: FastAPI, plugin) -> None:
+def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
     """Register all admin web routes."""
 
     @app.get("/plugin/admin", response_class=HTMLResponse)
@@ -210,12 +213,14 @@ def register_admin_routes(app: FastAPI, plugin) -> None:
                 # Generate HTML for roles
                 roles_html = '<div class="roles-list">'
                 for role in roles:
-                    roles_html += f'''
-                    <div class="role-item" data-role-id="{role['id']}" onclick="selectRole('{role['id']}', '{role['name']}', '{role['color']}')">
-                        <div class="role-color" style="background-color: {role['color']};"></div>
-                        <div class="role-name">{role['name']}</div>
-                    </div>
-                    '''
+                    roles_html += (
+                        '<div class="role-item" '
+                        f'data-role-id="{role["id"]}" '
+                        f'onclick="selectRole(\'{role["id"]}\', \'{role["name"]}\', \'{role["color"]}\')">'
+                        f"\n                        <div class=\"role-color\" style=\"background-color: {role['color']};\"></div>"
+                        f"\n                        <div class=\"role-name\">{role['name']}</div>"
+                        "\n                    </div>"
+                    )
                 roles_html += '</div>'
 
                 return HTMLResponse(roles_html)

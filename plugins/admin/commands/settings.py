@@ -21,7 +21,7 @@ from ..config import (
 )
 
 if TYPE_CHECKING:
-    from ..admin_plugin import AdminPlugin
+    from ..plugin import AdminPlugin
 
 logger = logging.getLogger(__name__)
 

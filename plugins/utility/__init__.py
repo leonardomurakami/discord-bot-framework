@@ -1,4 +1,4 @@
-from .utility_plugin import UtilityPlugin
+from .plugin import UtilityPlugin
 
 PLUGIN_METADATA = {
     "name": "Utility",
