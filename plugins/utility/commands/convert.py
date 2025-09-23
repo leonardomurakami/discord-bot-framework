@@ -38,7 +38,7 @@ def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="timestamp",
         description="Convert time to Discord timestamp formats",
         aliases=["time", "ts"],
-        permission_node="basic.convert",
+        permission_node="basic.utility.convert.use",
         arguments=[
             CommandArgument(
                 "time_input",
@@ -101,7 +101,7 @@ def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="color",
         description="Display information about a color",
         aliases=["colour"],
-        permission_node="basic.tools",
+        permission_node="basic.utility.tools.use",
         arguments=[
             CommandArgument(
                 "color_input",
@@ -168,7 +168,7 @@ def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="base64",
         description="Encode or decode base64 text",
         aliases=["b64"],
-        permission_node="basic.convert",
+        permission_node="basic.utility.convert.use",
         arguments=[
             CommandArgument("action", hikari.OptionType.STRING, "encode or decode"),
             CommandArgument("text", hikari.OptionType.STRING, "Text to encode/decode"),
@@ -226,7 +226,7 @@ def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
     @command(
         name="hash",
         description="Generate hash of text (MD5, SHA1, SHA256)",
-        permission_node="basic.tools",
+        permission_node="basic.utility.tools.use",
         arguments=[
             CommandArgument(
                 "algorithm",
@@ -275,7 +275,7 @@ def setup_convert_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
         name="translate",
         description="Translate text to different languages",
         aliases=["tr"],
-        permission_node="basic.convert",
+        permission_node="basic.utility.convert.use",
         arguments=[
             CommandArgument(
                 "target_language",

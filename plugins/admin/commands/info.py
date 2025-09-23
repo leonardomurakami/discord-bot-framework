@@ -29,6 +29,7 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
         name="bot-info",
         description="Display bot information and statistics",
         aliases=["info"],
+        permission_node="basic.admin.info.view",
     )
     async def bot_info(ctx: lightbulb.Context) -> None:
         try:
@@ -71,6 +72,7 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
         name="server-info",
         description="Display server information and statistics",
         aliases=["serverinfo", "guild-info"],
+        permission_node="basic.admin.info.view",
     )
     async def server_info(ctx: lightbulb.Context) -> None:
         try:
@@ -150,6 +152,7 @@ def setup_info_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
         name="uptime",
         description="Display bot uptime and system information",
         aliases=["up", "status"],
+        permission_node="basic.admin.status.view",
     )
     async def uptime(ctx: lightbulb.Context) -> None:
         try:

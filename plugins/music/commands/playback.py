@@ -23,7 +23,7 @@ def setup_playback_commands(plugin):
     @command(
         name="play",
         description="Play a song",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
         aliases=["p"],
         arguments=[CommandArgument("query", hikari.OptionType.STRING, "Song name or URL to play")],
     )
@@ -133,7 +133,7 @@ def setup_playback_commands(plugin):
     @command(
         name="pause",
         description="Pause the current track",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
     )
     async def pause(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -161,7 +161,7 @@ def setup_playback_commands(plugin):
     @command(
         name="resume",
         description="Resume the current track",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
     )
     async def resume(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -191,7 +191,7 @@ def setup_playback_commands(plugin):
     @command(
         name="stop",
         description="Stop the music and clear the queue",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
     )
     async def stop(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -223,7 +223,7 @@ def setup_playback_commands(plugin):
     @command(
         name="skip",
         description="Skip the current track",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
     )
     async def skip(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:
@@ -310,7 +310,7 @@ def setup_playback_commands(plugin):
     @command(
         name="seek",
         description="Seek to a specific position in the track (format: mm:ss or seconds)",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
         arguments=[CommandArgument("position", hikari.OptionType.STRING, "Position to seek to (mm:ss or seconds)")],
     )
     async def seek(ctx: lightbulb.Context, position: str) -> None:
@@ -356,7 +356,7 @@ def setup_playback_commands(plugin):
     @command(
         name="position",
         description="Show current position in the track",
-        permission_node="basic.music.play",
+        permission_node="basic.music.playback.control",
     )
     async def position(ctx: lightbulb.Context) -> None:
         if not ctx.guild_id:

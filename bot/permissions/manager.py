@@ -34,7 +34,11 @@ class PermissionManager:
             new_permissions = []
             for node, description in discovered_permissions.items():
                 if node not in existing_nodes:
-                    category = node.split(".")[0]
+                    parts = node.split(".")
+                    if parts and parts[0] == "basic" and len(parts) > 1:
+                        category = parts[1]
+                    else:
+                        category = parts[0] if parts else "general"
                     new_permissions.append(Permission(node=node, description=description, category=category))
 
             if new_permissions:
@@ -50,8 +54,10 @@ class PermissionManager:
             logger.warning("Bot or plugin loader not available for permission discovery")
             return permissions
 
+        plugin_loader = self._bot.plugin_loader
+
         # Iterate through all loaded plugins
-        for plugin_name, plugin in self._bot.plugin_loader.plugins.items():
+        for plugin_name, plugin in plugin_loader.plugins.items():
             try:
                 # Look for methods with _unified_command metadata
                 for attr_name in dir(plugin):
@@ -81,6 +87,29 @@ class PermissionManager:
             except Exception as e:
                 logger.error(f"Error discovering permissions from plugin {plugin_name}: {e}")
 
+            metadata = plugin_loader.plugin_metadata.get(plugin_name)
+            if metadata:
+                for meta_permission in metadata.permissions:
+                    if not meta_permission:
+                        continue
+
+                    description = permissions.get(meta_permission)
+                    if not description:
+                        if meta_permission.startswith("basic."):
+                            description = f"Default access for {metadata.name} plugin ({meta_permission})"
+                        elif meta_permission.endswith(".manage"):
+                            scope = meta_permission.rsplit(".", 1)[0]
+                            description = f"{metadata.name} management access for {scope}"
+                        elif meta_permission.endswith(".admin"):
+                            scope = meta_permission.rsplit(".", 1)[0]
+                            description = f"{metadata.name} administrative access for {scope}"
+                        else:
+                            description = f"{metadata.name} permission: {meta_permission}"
+
+                    if meta_permission not in permissions:
+                        permissions[meta_permission] = description
+                        logger.debug(f"Registered metadata permission: {meta_permission} - {description}")
+
         logger.info(f"Discovered {len(permissions)} permissions from plugins")
         return permissions
 
@@ -99,7 +128,12 @@ class PermissionManager:
         if pattern.endswith(".*"):
             # Pattern like "moderation.*" matches "moderation.kick", "moderation.ban", etc.
             prefix = pattern[:-2]
-            return permission_node.startswith(prefix + ".")
+            if permission_node.startswith(prefix + "."):
+                return True
+            # Allow wildcard patterns without the ``basic.`` prefix to match nodes that include it
+            if permission_node.startswith(f"basic.{prefix}."):
+                return True
+            return False
         elif pattern.startswith("*."):
             # Pattern like "*.play" matches "music.play", "audio.play", etc.
             suffix = pattern[2:]
@@ -343,32 +377,12 @@ class PermissionManager:
 
     def _has_default_permission(self, permission_node: str) -> bool:
         """Check if this permission should be granted by default to all users."""
-        if permission_node.startswith("basic."):
-            return True
-        # Permissions that are available to everyone by default
-        default_permissions = {
-            # Fun commands - available to all
-            "fun.games",
-            "fun.images",
-            # Basic utility commands - available to all
-            "utility.info",
-            "utility.stats",
-            # Music commands (basic usage) - available to all
-            "music.play",
-            "music.queue",
-        }
-
-        return permission_node in default_permissions
+        return permission_node.startswith("basic.")
 
     async def _has_hierarchical_permission(self, guild_id: int, role_ids: list[int], permission_node: str) -> bool:
         """Check if user has permission through role hierarchy."""
         try:
-            # Permission hierarchy rules:
-            # 1. admin.* permissions grant all permissions
-            # 2. moderation.* permissions grant utility.* and fun.* permissions
-            # 3. Higher-level permissions inherit lower-level ones
-
-            # Get all permissions for user's roles
+            # Gather all permissions granted to the supplied roles
             permissions = await self._get_role_permissions(guild_id, role_ids)
             all_user_permissions = set()
 
@@ -379,23 +393,19 @@ class PermissionManager:
             if permission_node in all_user_permissions:
                 return True
 
-            # Check hierarchy rules
-            permission_parts = permission_node.split(".")
-            if len(permission_parts) >= 2:
-                category, _action = permission_parts[0], permission_parts[1]
-
-                # Admin permissions grant everything
-                if any(perm.startswith("admin.") for perm in all_user_permissions):
+            # Handle wildcard permissions that may have been granted explicitly
+            for granted in all_user_permissions:
+                if "*" in granted and self._match_wildcard_pattern(granted, permission_node):
                     return True
 
-                # Moderation permissions grant utility and fun permissions
-                if category in ["utility", "fun"] and any(perm.startswith("moderation.") for perm in all_user_permissions):
-                    return True
-
-                # Category-wide permissions (e.g., "admin.*" grants "admin.config")
-                category_wildcard = f"{category}.*"
-                if category_wildcard in all_user_permissions:
-                    return True
+            # Treat `.manage` and `.admin` nodes as granting access to their namespace
+            for granted in all_user_permissions:
+                if granted.endswith((".manage", ".admin")):
+                    scope = granted.rsplit(".", 1)[0]
+                    if permission_node.startswith(f"{scope}."):
+                        return True
+                    if permission_node.startswith(f"basic.{scope}."):
+                        return True
 
             return False
 

@@ -34,7 +34,7 @@ def setup_discipline_commands(plugin: ModerationPlugin) -> list[Callable[..., An
     @command(
         name="warn",
         description="Issue a warning to a member",
-        permission_node="moderation.warn",
+        permission_node="moderation.members.warn",
         arguments=[
             CommandArgument(
                 "member",
@@ -124,7 +124,7 @@ def setup_discipline_commands(plugin: ModerationPlugin) -> list[Callable[..., An
         name="warnings",
         description="View warnings for a member",
         aliases=["warns"],
-        permission_node="moderation.warn",
+        permission_node="moderation.members.warn",
         arguments=[
             CommandArgument(
                 "member",
@@ -194,7 +194,7 @@ def setup_discipline_commands(plugin: ModerationPlugin) -> list[Callable[..., An
     @command(
         name="modnote",
         description="Add or view private moderator notes on users",
-        permission_node="moderation.warn",
+        permission_node="moderation.members.warn",
         arguments=[
             CommandArgument(
                 "action",

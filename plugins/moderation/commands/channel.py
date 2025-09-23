@@ -35,7 +35,7 @@ def setup_channel_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]
         name="purge",
         description="Delete multiple messages from a channel",
         aliases=["clear"],
-        permission_node="moderation.purge",
+        permission_node="moderation.channels.purge",
         arguments=[
             CommandArgument(
                 "amount",
@@ -122,7 +122,7 @@ def setup_channel_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]
         name="slowmode",
         description="Set channel slowmode (rate limit)",
         aliases=["slow"],
-        permission_node="moderation.slowmode",
+        permission_node="moderation.channels.slowmode",
         arguments=[
             CommandArgument(
                 "seconds",
@@ -230,7 +230,7 @@ def setup_channel_commands(plugin: ModerationPlugin) -> list[Callable[..., Any]]
         name="lockdown",
         description="Lock or unlock a channel temporarily",
         aliases=["lock", "unlock"],
-        permission_node="moderation.slowmode",
+        permission_node="moderation.channels.slowmode",
         arguments=[
             CommandArgument(
                 "action",

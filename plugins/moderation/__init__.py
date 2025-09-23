@@ -7,13 +7,15 @@ PLUGIN_METADATA = {
     "description": "Moderation commands for server management",
     "dependencies": [],
     "permissions": [
-        "moderation.kick",
-        "moderation.ban",
-        "moderation.mute",
-        "moderation.warn",
-        "moderation.purge",
-        "moderation.timeout",
-        "moderation.slowmode",
+        "moderation.manage",
+        "moderation.members.kick",
+        "moderation.members.ban",
+        "moderation.members.mute",
+        "moderation.members.warn",
+        "moderation.members.timeout",
+        "moderation.members.nickname",
+        "moderation.channels.purge",
+        "moderation.channels.slowmode",
     ],
 }
 
