@@ -44,7 +44,7 @@ Plugins can reach shared infrastructure through either cached attributes on `Bas
 | Key              | Object                                  | Usage |
 | ---------------- | ---------------------------------------- | ----- |
 | `gateway`        | `hikari.GatewayBot`                      | Raw Discord gateway client (REST, cache, voice). |
-| `command_client` | `lightbulb.LightbulbApp`                 | Slash and application command router. |
+| `command_client` | `lightbulb.Client`                       | Slash and application command router. |
 | `miru`           | `miru.Client`                            | Component and view handling. |
 | `db`             | `DatabaseManager`                        | Async SQLAlchemy engine, sessions, and model registry. |
 | `events`         | `EventSystem`                            | Publish/subscribe bus for framework events. |

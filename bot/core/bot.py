@@ -177,13 +177,13 @@ class DiscordBot:
                 await self.event_system.emit("message_create", event)
 
     @property
-    def command_client(self) -> lightbulb.LightbulbApp:
+    def command_client(self) -> lightbulb.Client:
         """Return the Lightbulb command client."""
 
         return self._command_client
 
     @property
-    def bot(self) -> lightbulb.LightbulbApp:
+    def bot(self) -> lightbulb.Client:
         """Deprecated alias for :pyattr:`command_client`."""
 
         if not self._bot_attr_warning_emitted:

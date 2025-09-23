@@ -101,7 +101,7 @@ Every plugin instance receives cached references to the most common services. Us
 | `self.events`    | `EventSystem`             | Publish or listen for framework level events. |
 | `self.permissions` | `PermissionManager`     | Query and mutate permission grants. |
 | `self.web_panel` | `WebPanelManager` or `None` | Register FastAPI routes when using `WebPanelMixin`. |
-| `self.command_client` | `lightbulb.LightbulbApp` | Slash command registration and introspection. |
+| `self.command_client` | `lightbulb.Client` | Slash command registration and introspection. |
 | `self.gateway`   | `hikari.GatewayBot`       | Access REST, cache, and voice helpers via `self.rest` and `self.cache`. |
 | `self.rest`      | `hikari.api.RESTClient`   | Perform REST calls such as `fetch_user`. |
 | `self.cache`     | `hikari.api.CacheView`    | Inspect cached guild, member, and voice state objects. |
