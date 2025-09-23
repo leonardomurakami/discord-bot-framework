@@ -29,8 +29,8 @@ async def ensure_guild_exists(guild_id: int, plugin: "AdminPlugin") -> bool:
                 guild_name = "Unknown Guild"
 
                 # Try to get guild name from bot cache
-                if hasattr(plugin.bot, 'hikari_bot'):
-                    hikari_guild = plugin.bot.hikari_bot.cache.get_guild(guild_id)
+                if plugin.cache:
+                    hikari_guild = plugin.cache.get_guild(guild_id)
                     if hikari_guild:
                         guild_name = hikari_guild.name
 
@@ -107,9 +107,8 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
     async def admin_panel(request: Request):
         """Main admin panel interface."""
         # Get auth instance from web app
-        auth = None
-        if hasattr(plugin.bot, 'web_panel_manager') and hasattr(plugin.bot.web_panel_manager, 'web_app'):
-            auth = plugin.bot.web_panel_manager.web_app.auth
+        web_app = getattr(plugin.web_panel, "web_app", None)
+        auth = getattr(web_app, "auth", None)
 
         # Check if user is authenticated
         if not auth or not auth.is_authenticated(request):
@@ -134,9 +133,8 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
     async def check_guild_access(request: Request, guild_id: int):
         """Check if user has admin access to a guild."""
         # Get auth instance from web app
-        auth = None
-        if hasattr(plugin.bot, 'web_panel_manager') and hasattr(plugin.bot.web_panel_manager, 'web_app'):
-            auth = plugin.bot.web_panel_manager.web_app.auth
+        web_app = getattr(plugin.web_panel, "web_app", None)
+        auth = getattr(web_app, "auth", None)
 
         if not auth or not auth.is_authenticated(request):
             return JSONResponse({"error": "Not authenticated"}, status_code=401)
@@ -166,8 +164,8 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
 
             # Get additional guild info from bot cache
             bot_guild_info = None
-            if hasattr(plugin.bot, 'hikari_bot'):
-                guild = plugin.bot.hikari_bot.cache.get_guild(guild_id)
+            if plugin.cache:
+                guild = plugin.cache.get_guild(guild_id)
                 if guild:
                     bot_guild_info = {
                         "id": guild.id,
@@ -190,8 +188,7 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
         """Get roles for a specific guild - returns HTML for HTMX."""
         try:
             # Get guild from bot's Discord client
-            if hasattr(plugin.bot, 'hikari_bot'):
-                hikari_bot = plugin.bot.hikari_bot
+            hikari_bot = plugin.gateway
                 guild = hikari_bot.cache.get_guild(guild_id)
                 if not guild:
                     return HTMLResponse('<div class="error-message">Guild not found</div>')
@@ -254,7 +251,7 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
                 raise HTTPException(status_code=500, detail="Failed to ensure guild exists in database")
 
             # Use the bot's permission manager
-            permission_manager = plugin.bot.permission_manager
+            permission_manager = plugin.permissions
             success, granted, failed = await permission_manager.grant_permission(
                 guild_id, role_id, permission_node
             )
@@ -291,7 +288,7 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
                 raise HTTPException(status_code=500, detail="Failed to ensure guild exists in database")
 
             # Use the bot's permission manager
-            permission_manager = plugin.bot.permission_manager
+            permission_manager = plugin.permissions
             success, revoked, failed = await permission_manager.revoke_permission(
                 guild_id, role_id, permission_node
             )

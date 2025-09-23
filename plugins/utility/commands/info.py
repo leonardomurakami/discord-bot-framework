@@ -55,7 +55,7 @@ def setup_info_commands(plugin: UtilityPlugin) -> list[Callable[..., Any]]:
 
             if guild:
                 try:
-                    member = plugin.bot.hikari_bot.cache.get_member(guild.id, target_user.id)
+                    member = plugin.cache.get_member(guild.id, target_user.id) if plugin.cache else None
                     if not member:
                         member = await guild.fetch_member(target_user.id)
 

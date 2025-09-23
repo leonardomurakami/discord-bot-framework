@@ -32,7 +32,7 @@ def setup_playback_commands(plugin):
             await plugin.smart_respond(ctx, "This command can only be used in a server.", flags=hikari.MessageFlag.EPHEMERAL)
             return
 
-        voice_state = ctx.bot.hikari_bot.cache.get_voice_state(ctx.guild_id, ctx.author.id)
+        voice_state = plugin.get_voice_state(ctx.guild_id, ctx.author.id)
         if not voice_state or not voice_state.channel_id:
             await plugin.smart_respond(ctx, "You must be in a voice channel to use this command.", flags=hikari.MessageFlag.EPHEMERAL)
             return
@@ -40,7 +40,7 @@ def setup_playback_commands(plugin):
         player = plugin.lavalink_client.player_manager.create(ctx.guild_id)
 
         if not player.is_connected:
-            await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, voice_state.channel_id)
+            await plugin.update_voice_state(ctx.guild_id, voice_state.channel_id)
 
         if query.startswith(("http://", "https://")):
             search_result = await plugin.lavalink_client.get_tracks(query)
@@ -206,7 +206,7 @@ def setup_playback_commands(plugin):
 
         player.queue.clear()
         await player.stop()
-        await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, None)
+        await plugin.update_voice_state(ctx.guild_id, None)
 
         from ..utils import clear_queue_from_db
 
@@ -275,7 +275,7 @@ def setup_playback_commands(plugin):
             next_duration_seconds = (next_track.duration % 60000) // 1000
 
             try:
-                next_user = await ctx.bot.hikari_bot.rest.fetch_user(next_track.requester)
+                next_user = await plugin.fetch_user(next_track.requester)
                 next_requester = next_user.display_name or next_user.username
             except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 next_requester = "Unknown"

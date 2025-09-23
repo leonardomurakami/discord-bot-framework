@@ -34,7 +34,9 @@ class TestDiscordBot:
         bot = DiscordBot()
 
         assert bot.hikari_bot == mock_hikari_bot
-        assert bot.bot == mock_lightbulb_client
+        assert bot.command_client == mock_lightbulb_client
+        with pytest.deprecated_call():
+            assert bot.bot == mock_lightbulb_client
         assert bot.plugin_loader is not None
         assert bot.permission_manager is not None
         assert bot.is_ready is False
@@ -194,7 +196,7 @@ class TestDiscordBot:
 
         # Test that properties are accessible
         assert hasattr(bot, "hikari_bot")
-        assert hasattr(bot, "bot")
+        assert hasattr(bot, "command_client")
         assert hasattr(bot, "plugin_loader")
         assert hasattr(bot, "permission_manager")
         assert hasattr(bot, "db")

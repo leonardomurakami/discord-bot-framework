@@ -50,7 +50,7 @@ class MusicControlView(miru.View):
 
         player.queue.clear()
         await player.stop()
-        await self.music_plugin.bot.hikari_bot.update_voice_state(self.guild_id, None)
+        await self.music_plugin.update_voice_state(self.guild_id, None)
         await ctx.respond("⏹️ Stopped and disconnected", flags=hikari.MessageFlag.EPHEMERAL)
 
     @miru.button(emoji="🔀", style=hikari.ButtonStyle.SECONDARY)
@@ -150,7 +150,7 @@ class SearchResultView(miru.View):
 
             selected_track = self.tracks[selected_index]
 
-            voice_state = self.music_plugin.bot.hikari_bot.cache.get_voice_state(self.guild_id, self.user_id)
+            voice_state = self.music_plugin.get_voice_state(self.guild_id, self.user_id)
             if not voice_state or not voice_state.channel_id:
                 await ctx.respond("You must be in a voice channel to play music.", flags=hikari.MessageFlag.EPHEMERAL)
                 return
@@ -158,7 +158,7 @@ class SearchResultView(miru.View):
             player = self.music_plugin.lavalink_client.player_manager.create(self.guild_id)
 
             if not player.is_connected:
-                await self.music_plugin.bot.hikari_bot.update_voice_state(self.guild_id, voice_state.channel_id)
+                await self.music_plugin.update_voice_state(self.guild_id, voice_state.channel_id)
 
             player.add(requester=self.user_id, track=selected_track)
 

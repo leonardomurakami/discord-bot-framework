@@ -30,7 +30,7 @@ def setup_voice_commands(plugin):
             await plugin.smart_respond(ctx, "This command can only be used in a server.", ephemeral=True)
             return
 
-        voice_state = ctx.bot.hikari_bot.cache.get_voice_state(ctx.guild_id, ctx.author.id)
+        voice_state = plugin.get_voice_state(ctx.guild_id, ctx.author.id)
         if not voice_state or not voice_state.channel_id:
             await plugin.smart_respond(ctx, "You must be in a voice channel for me to join.", ephemeral=True)
             return
@@ -41,10 +41,10 @@ def setup_voice_commands(plugin):
             await plugin.smart_respond(ctx, "I'm already in your voice channel.", ephemeral=True)
             return
 
-        await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, voice_state.channel_id)
+        await plugin.update_voice_state(ctx.guild_id, voice_state.channel_id)
 
         try:
-            channel = await ctx.bot.hikari_bot.rest.fetch_channel(voice_state.channel_id)
+            channel = await plugin.fetch_channel(voice_state.channel_id)
             channel_name = channel.name
         except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
             channel_name = "Unknown Channel"
@@ -79,14 +79,14 @@ def setup_voice_commands(plugin):
         channel_name = "Unknown Channel"
         if player.channel_id:
             try:
-                channel = await ctx.bot.hikari_bot.rest.fetch_channel(player.channel_id)
+                channel = await plugin.fetch_channel(player.channel_id)
                 channel_name = channel.name
             except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
                 pass
 
         await player.stop()
         player.queue.clear()
-        await ctx.bot.hikari_bot.update_voice_state(ctx.guild_id, None)
+        await plugin.update_voice_state(ctx.guild_id, None)
 
         embed = plugin.create_embed(
             title="👋 Disconnected", description=f"Left **{channel_name}** and cleared the queue", color=hikari.Color(0xFF9800)

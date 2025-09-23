@@ -122,12 +122,12 @@ class PrefixContext:
         self.channel_id = event.channel_id
 
     def get_guild(self) -> hikari.Guild | None:
-        if self.guild_id:
-            return self.bot.hikari_bot.cache.get_guild(self.guild_id)
+        if self.guild_id and self.bot.cache:
+            return self.bot.cache.get_guild(self.guild_id)
         return None
 
     def get_channel(self) -> hikari.GuildChannel | None:
         return self.event.get_channel()
 
     async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> None:
-        await self.bot.hikari_bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)
+        await self.bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)

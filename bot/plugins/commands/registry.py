@@ -159,7 +159,7 @@ class CommandRegistry:
                         setattr(cmd_class, arg_def.name, option_descriptor)
 
                 # Register with lightbulb
-                self.bot.bot.register(cmd_class)
+                self.bot.command_client.register(cmd_class)
                 self._commands.append(attr)
                 self.logger.info(f"Registered slash command: {cmd_meta['name']} from plugin {self.plugin.name}")
 
