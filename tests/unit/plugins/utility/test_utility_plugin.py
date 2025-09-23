@@ -6,7 +6,7 @@ from unittest.mock import patch
 import hikari
 import pytest
 
-from plugins.utility.utility_plugin import UtilityPlugin
+from plugins.utility.plugin import UtilityPlugin
 
 
 class TestUtilityPlugin:

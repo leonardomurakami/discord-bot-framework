@@ -174,7 +174,7 @@ The plugin expects a Lavalink server configuration file at `lavalink/application
 ### Plugin Architecture
 The Music plugin follows a modular architecture pattern:
 ```
-music_plugin.py          # Main plugin class and initialization
+plugin.py               # Main plugin class and initialization
 events.py               # Event handlers for playback events
 utils.py                # Utility functions for queue and history management
 views.py                # Interactive Discord UI components

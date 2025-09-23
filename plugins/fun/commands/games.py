@@ -21,7 +21,7 @@ from ..config import (
 from ..views import TriviaView, WouldYouRatherView
 
 if TYPE_CHECKING:
-    from ..fun_plugin import FunPlugin
+    from ..plugin import FunPlugin
 
 logger = logging.getLogger(__name__)
 

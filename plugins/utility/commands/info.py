@@ -12,7 +12,7 @@ from bot.plugins.commands import CommandArgument, command
 from ..config import ERROR_COLOR, INFO_COLOR, WEATHER_COLOR, WEATHER_FALLBACK_COLOR
 
 if TYPE_CHECKING:
-    from ..utility_plugin import UtilityPlugin
+    from ..plugin import UtilityPlugin
 
 logger = logging.getLogger(__name__)
 

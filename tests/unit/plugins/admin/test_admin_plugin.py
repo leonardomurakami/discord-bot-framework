@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import hikari
 import pytest
 
-from plugins.admin.admin_plugin import AdminPlugin
+from plugins.admin.plugin import AdminPlugin
 
 
 class TestAdminPlugin:

@@ -1,4 +1,4 @@
-from .links_plugin import LinksPlugin
+from .plugin import LinksPlugin
 
 PLUGIN_METADATA = {
     "name": "Links",

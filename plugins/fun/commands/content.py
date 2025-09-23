@@ -20,7 +20,7 @@ from ..config import (
 )
 
 if TYPE_CHECKING:
-    from ..fun_plugin import FunPlugin
+    from ..plugin import FunPlugin
 
 logger = logging.getLogger(__name__)
 

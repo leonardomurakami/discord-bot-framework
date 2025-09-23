@@ -26,3 +26,6 @@ class Link(Base):
         UniqueConstraint("guild_id", "name"),
         Index("idx_guild_name", "guild_id", "name"),
     )
+
+
+__all__ = ["Link"]

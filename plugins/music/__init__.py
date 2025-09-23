@@ -1,4 +1,4 @@
-from .music_plugin import MusicPlugin
+from .plugin import MusicPlugin
 
 PLUGIN_METADATA = {
     "name": "Music",

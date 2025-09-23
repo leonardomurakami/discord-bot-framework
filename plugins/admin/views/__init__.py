@@ -7,7 +7,7 @@ import hikari
 import miru
 
 if TYPE_CHECKING:
-    from .admin_plugin import AdminPlugin
+    from ..plugin import AdminPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class PermissionsPaginationView(miru.View):
         end_idx = min(start_idx + self.page_size, len(self.permissions))
         current_perms = self.permissions[start_idx:end_idx]
 
-        from .config import SERVER_INFO_COLOR
+        from ..config import SERVER_INFO_COLOR
 
         if not current_perms:
             return self.admin_plugin.create_embed(
@@ -211,7 +211,7 @@ class RolePermissionsPaginationView(miru.View):
         end_idx = min(start_idx + self.page_size, len(self.permissions))
         current_perms = self.permissions[start_idx:end_idx]
 
-        from .config import SERVER_INFO_COLOR, WARNING_COLOR
+        from ..config import SERVER_INFO_COLOR, WARNING_COLOR
 
         if not current_perms:
             return self.admin_plugin.create_embed(

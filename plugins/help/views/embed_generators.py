@@ -14,7 +14,7 @@ class EmbedGenerators:
 
     async def get_general_help(self, guild_id: int = None) -> hikari.Embed:
         """Generate the main help embed with improved design."""
-        from .command_info import CommandInfoManager
+        from ..models.command_info import CommandInfoManager
 
         info_manager = CommandInfoManager(self.help_plugin)
 
@@ -73,7 +73,7 @@ class EmbedGenerators:
 
     async def get_command_help(self, command_name: str, guild_id: int = None) -> hikari.Embed | None:
         """Get detailed help for a specific command."""
-        from .command_info import CommandInfoManager
+        from ..models.command_info import CommandInfoManager
 
         info_manager = CommandInfoManager(self.help_plugin)
         prefix = await info_manager.get_prefix(guild_id)
@@ -236,7 +236,7 @@ class EmbedGenerators:
 
     async def get_plugin_commands_embed(self, plugin_name: str, guild_id: int = None, page: int = 0) -> hikari.Embed | None:
         """Generate a user-friendly embed showing all commands for a specific plugin."""
-        from .command_info import CommandInfoManager
+        from ..models.command_info import CommandInfoManager
 
         info_manager = CommandInfoManager(self.help_plugin)
 

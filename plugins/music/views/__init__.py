@@ -3,7 +3,7 @@ import random
 import hikari
 import miru
 
-from .config import music_settings
+from ..config import music_settings
 
 
 class MusicControlView(miru.View):

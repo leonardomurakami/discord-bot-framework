@@ -1,13 +1,16 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Set
+from typing import Dict, Set, TYPE_CHECKING
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from bot.database.manager import db_manager
-from .models import MusicQueue, MusicSession
+from ..models import MusicQueue, MusicSession
+
+if TYPE_CHECKING:  # pragma: no cover - typing helper
+    from ..plugin import MusicPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,7 @@ class MusicWebSocketManager:
 music_ws_manager = MusicWebSocketManager()
 
 
-async def get_music_status_data(guild_id: int, plugin) -> dict:
+async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
     """Get music status data for a guild. Used by both REST API and WebSocket."""
     try:
         # Check if lavalink client is available
@@ -180,7 +183,7 @@ async def get_music_status_data(guild_id: int, plugin) -> dict:
         }
 
 
-async def broadcast_music_update(guild_id: int, plugin, update_type: str = "status_update"):
+async def broadcast_music_update(guild_id: int, plugin: "MusicPlugin", update_type: str = "status_update") -> None:
     """Broadcast music status update to all connected WebSocket clients for a guild."""
     try:
         status = await get_music_status_data(guild_id, plugin)
@@ -192,7 +195,7 @@ async def broadcast_music_update(guild_id: int, plugin, update_type: str = "stat
         logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
 
 
-def register_music_routes(app: FastAPI, plugin) -> None:
+def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
     """Register all music web routes."""
 
     @app.get("/plugin/music", response_class=HTMLResponse)
@@ -679,7 +682,11 @@ def register_music_routes(app: FastAPI, plugin) -> None:
                 if track.uri:
                     import re
                     if "youtube" in track.uri:
-                        youtube_id_match = re.search(r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})', track.uri)
+                        youtube_pattern = (
+                            "(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)"
+                            "([^\\\"&?\\/\\s]{11})"
+                        )
+                        youtube_id_match = re.search(youtube_pattern, track.uri)
                         if youtube_id_match:
                             video_id = youtube_id_match.group(1)
                             thumbnail_url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
