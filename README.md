@@ -1,4 +1,4 @@
-<img src="https://gist.github.com/user-attachments/assets/d4064ee3-3a72-4b93-aa48-7dc41e699adc" alt="Discord Bot Framework Banner" width="100%">
+<img src="https://github.com/user-attachments/assets/58ea8aa1-583a-45a1-a087-ee369177587b" alt="Discord Bot Framework Banner" width="100%">
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![Status](https://img.shields.io/badge/status-active-success.svg)
 
