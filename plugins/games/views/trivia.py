@@ -81,64 +81,22 @@ class EnhancedTriviaView(miru.View):
         elif getattr(self, "message", None) is not None:
             self.trivia_message = self.message
 
-        if not self.trivia_message:
-            logger.warning("Cannot start countdown - no message reference available")
-            return
-
         # Set start time if not already set
         if self.start_time is None:
             self.start_time = time.time()
 
+        # Start countdown even without message reference initially
+        # The countdown task will try to get the message reference later
         logger.debug("Starting enhanced trivia countdown")
         self._countdown_task = asyncio.create_task(self._countdown_task_impl())
 
     async def _countdown_task_impl(self) -> None:
-        """Background task to update the timer and end trivia when time runs out."""
+        """Background task to end trivia when time runs out."""
         try:
             timeout_seconds = games_settings.trivia_timeout_seconds
-            # Update every 5 seconds, then end when time is up
-            elapsed = 0
 
-            while elapsed < timeout_seconds:
-                if self.is_finished:
-                    return
-
-                await asyncio.sleep(5)
-                elapsed += 5
-
-                if self.is_finished:
-                    return
-
-                remaining = max(0, timeout_seconds - elapsed)
-
-                # Update the embed with remaining time
-                updated_embed = hikari.Embed(
-                    title=self.initial_embed.title,
-                    description=self.initial_embed.description,
-                    color=self.initial_embed.color,
-                )
-
-                participant_count = len(self.participants)
-                if remaining > 0:
-                    timer_text = f"⏱️ {remaining}s remaining"
-                    if participant_count > 0:
-                        timer_text += f" • {participant_count} participant{'s' if participant_count != 1 else ''}"
-
-                    if self.is_time_attack and remaining <= 10:
-                        timer_text += f" • ⚡ SPEED BONUS ACTIVE!"
-                else:
-                    timer_text = "⏰ Time's up!"
-
-                updated_embed.set_footer(timer_text)
-
-                message_to_edit = self.trivia_message or getattr(self, "message", None)
-
-                if message_to_edit:
-                    try:
-                        await message_to_edit.edit(embed=updated_embed, components=self)
-                    except Exception as exc:
-                        logger.debug("Failed to update countdown: %s", exc)
-                        return
+            # Wait for the full timeout duration
+            await asyncio.sleep(timeout_seconds)
 
             # Time is up - manually end the trivia
             if not self.is_finished:
@@ -149,6 +107,7 @@ class EnhancedTriviaView(miru.View):
             logger.debug("Countdown task was cancelled")
         except Exception as exc:
             logger.error("Countdown task error: %s", exc)
+
 
     async def _end_trivia(self) -> None:
         """Manually end the trivia and show results."""
@@ -324,15 +283,30 @@ class EnhancedTriviaView(miru.View):
                 item.disabled = True
                 item.style = hikari.ButtonStyle.SECONDARY
 
-        # Update message
-        message_to_edit = self.trivia_message or getattr(self, "message", None)
+        # Update message - try multiple methods to get message reference
+        message_to_edit = None
+
+        # Try various ways to get the message reference
+        for attr_name in ["message", "_message", "trivia_message", "from_message"]:
+            msg = getattr(self, attr_name, None)
+            logger.debug(f"Checking {attr_name}: {type(msg)} = {msg}")
+            if msg is not None:
+                message_to_edit = msg
+                logger.debug(f"Found message reference via {attr_name}: {type(msg)}")
+                break
 
         if message_to_edit:
             try:
-                await message_to_edit.edit(embed=embed, components=self)
-                logger.info("Successfully updated trivia results with enhanced features")
+                if hasattr(message_to_edit, 'edit'):
+                    await message_to_edit.edit(embed=embed, components=self)
+                    logger.info("Successfully updated trivia results with enhanced features")
+                else:
+                    logger.error(f"Message object {type(message_to_edit)} does not have edit method")
             except Exception as exc:
                 logger.error("Failed to update trivia results: %s", exc)
+        else:
+            logger.error("No message reference available to display trivia results! Available attributes: %s",
+                        [attr for attr in dir(self) if 'message' in attr.lower()])
 
         if self._countdown_task and not self._countdown_task.done():
             self._countdown_task.cancel()

@@ -140,49 +140,73 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             if is_time_attack:
                 title = "⚡ Time Attack Trivia!"
 
+            # Create description with Discord timestamp countdown
+            import time as time_module
+            end_time = int(time_module.time()) + games_settings.trivia_timeout_seconds
+
+            base_description = (f"**Category:** {question_category}\n"
+                               f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
+                               f"**Question:**\n{question_text}")
+
+            initial_timer = f"\n\n⏱️ **Ends <t:{end_time}:R>** • Click the correct answer!"
+            if is_time_attack:
+                initial_timer += f"\n⚡ **Time Attack: Extra points for speed!**"
+
             embed = plugin.create_embed(
                 title=title,
-                description=f"**Category:** {question_category}\n"
-                           f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
-                           f"**Question:**\n{question_text}",
+                description=base_description + initial_timer,
                 color=hikari.Color(EMBED_COLORS["trivia"]),
             )
-
-            timeout_text = f"⏱️ {games_settings.trivia_timeout_seconds}s remaining • Click the correct answer!"
-            if is_time_attack:
-                timeout_text += f"\n⚡ Time Attack: Extra points for speed!"
-
-            embed.set_footer(timeout_text)
 
             view = EnhancedTriviaView(question_data, embed, plugin, ctx.guild_id, is_time_attack)
 
             miru_client = getattr(plugin.bot, "miru_client", None)
             if miru_client:
-                message = await ctx.respond(embed=embed, components=view)
+                response = await ctx.respond(embed=embed, components=view)
+
+                # Get the message object for editing
+                message = None
+                logger.debug(f"ctx.respond() returned: {type(response)}")
+
+                if hasattr(ctx, 'interaction') and ctx.interaction:
+                    # For slash commands, we need to fetch the response message
+                    try:
+                        message = await ctx.interaction.fetch_initial_response()
+                        logger.debug(f"Fetched slash command response: {type(message)}")
+                    except Exception as e:
+                        logger.error(f"Failed to fetch initial response: {e}")
+                        message = None
+                elif hasattr(response, 'message') and hasattr(response.message, 'edit'):
+                    message = response.message
+                    logger.debug(f"Got message from response.message: {type(message)}")
+                elif hasattr(response, 'edit'):
+                    message = response
+                    logger.debug(f"Using response as message: {type(response)}")
+                else:
+                    logger.warning(f"Cannot get editable message object. Response type: {type(response)}, has edit: {hasattr(response, 'edit')}")
+                    message = None
 
                 # Set start time immediately after message is sent
                 view.start_time = time.time()
 
                 miru_client.start_view(view)
 
-                # Set message reference for countdown
-                if message is None:
-                    logger.debug("ctx.respond() returned None - miru will set view.message later")
-                elif hasattr(message, "message"):
-                    view.trivia_message = message.message
-                    view.message = message.message
-                    logger.debug("Set trivia_message from message.message: %s", type(message.message))
-                elif hasattr(message, "id"):
+                # Set the message reference directly
+                if message:
                     view.trivia_message = message
-                    view.message = message
-                    logger.debug("Set trivia_message from message: %s", type(message))
+                    logger.debug(f"Set trivia_message to: {type(message)}")
                 else:
-                    logger.warning("Message object has no 'message' or 'id' attribute. Type: %s", type(message))
+                    logger.warning("No message object available to set as trivia_message")
 
-                if view.trivia_message:
-                    view.start_countdown(view.trivia_message)
-                else:
-                    logger.debug("No immediate message reference - countdown will start when miru sets view.message")
+                # Give a small delay for miru to process the view
+                import asyncio
+                await asyncio.sleep(0.2)
+
+                # Log final status
+                logger.debug(f"Final trivia_message: {type(getattr(view, 'trivia_message', None))}")
+
+                # Always start countdown, now with better chance of having message reference
+                view.start_countdown(view.trivia_message)
             else:
                 await ctx.respond(embed=embed)
 
