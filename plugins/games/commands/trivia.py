@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import html
-import json
 import logging
 import random
 import time
@@ -14,14 +13,14 @@ import lightbulb
 from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
+    DEFAULT_TRIVIA_QUESTIONS,
+    DIFFICULTY_EMOJIS,
+    EMBED_COLORS,
     TRIVIA_CATEGORIES,
     TRIVIA_DIFFICULTIES,
-    DEFAULT_TRIVIA_QUESTIONS,
     games_settings,
-    EMBED_COLORS,
-    DIFFICULTY_EMOJIS,
 )
-from ..views import EnhancedTriviaView
+from ..views import TriviaView
 
 if TYPE_CHECKING:
     from ..plugin import GamesPlugin
@@ -35,7 +34,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
     @command(
         name="trivia",
         description="Start an interactive trivia question with difficulty and category options",
-        permission_node="games.trivia.play",
+        permission_node="basic.games.trivia.play",
         arguments=[
             CommandArgument(
                 "difficulty",
@@ -140,49 +139,39 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             if is_time_attack:
                 title = "⚡ Time Attack Trivia!"
 
+            # Create description with Discord timestamp countdown
+            import time as time_module
+            end_time = int(time_module.time()) + games_settings.trivia_timeout_seconds
+
+            base_description = (f"**Category:** {question_category}\n"
+                               f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
+                               f"**Question:**\n{question_text}")
+
+            initial_timer = f"\n\n⏱️ **Ends <t:{end_time}:R>** • Click the correct answer!"
+            if is_time_attack:
+                initial_timer += "\n⚡ **Time Attack: Extra points for speed!**"
+
             embed = plugin.create_embed(
                 title=title,
-                description=f"**Category:** {question_category}\n"
-                           f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
-                           f"**Question:**\n{question_text}",
+                description=base_description + initial_timer,
                 color=hikari.Color(EMBED_COLORS["trivia"]),
             )
 
-            timeout_text = f"⏱️ {games_settings.trivia_timeout_seconds}s remaining • Click the correct answer!"
-            if is_time_attack:
-                timeout_text += f"\n⚡ Time Attack: Extra points for speed!"
-
-            embed.set_footer(timeout_text)
-
-            view = EnhancedTriviaView(question_data, embed, plugin, ctx.guild_id, is_time_attack)
+            view = TriviaView(question_data, embed, plugin, ctx.guild_id, ctx.author.id, is_time_attack)
 
             miru_client = getattr(plugin.bot, "miru_client", None)
             if miru_client:
-                message = await ctx.respond(embed=embed, components=view)
-
-                # Set start time immediately after message is sent
+                # Set start time before sending
                 view.start_time = time.time()
 
-                miru_client.start_view(view)
+                # Send the message and get the snowflake
+                response_snowflake = await ctx.respond(embed=embed, components=view)
 
-                # Set message reference for countdown
-                if message is None:
-                    logger.debug("ctx.respond() returned None - miru will set view.message later")
-                elif hasattr(message, "message"):
-                    view.trivia_message = message.message
-                    view.message = message.message
-                    logger.debug("Set trivia_message from message.message: %s", type(message.message))
-                elif hasattr(message, "id"):
-                    view.trivia_message = message
-                    view.message = message
-                    logger.debug("Set trivia_message from message: %s", type(message))
-                else:
-                    logger.warning("Message object has no 'message' or 'id' attribute. Type: %s", type(message))
+                # Bind the view to the message using the snowflake
+                miru_client.start_view(view, bind_to=response_snowflake)
 
-                if view.trivia_message:
-                    view.start_countdown(view.trivia_message)
-                else:
-                    logger.debug("No immediate message reference - countdown will start when miru sets view.message")
+                # Start the countdown timer
+                view.start_countdown()
             else:
                 await ctx.respond(embed=embed)
 
@@ -201,7 +190,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
     @command(
         name="trivia-stats",
         description="View your trivia statistics",
-        permission_node="games.trivia.play",
+        permission_node="basic.games.trivia.play",
         arguments=[
             CommandArgument(
                 "user",
@@ -265,10 +254,10 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
     @command(
         name="trivia-leaderboard",
         description="View the trivia leaderboard for this server",
-        permission_node="games.trivia.play",
+        permission_node="basic.games.trivia.play",
         arguments=[
             CommandArgument(
-                "type",
+                "leaderboard_type",
                 hikari.OptionType.STRING,
                 "Leaderboard type",
                 required=False,
@@ -281,9 +270,9 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             ),
         ],
     )
-    async def trivia_leaderboard(ctx: lightbulb.Context, type: str = "points") -> None:
+    async def trivia_leaderboard(ctx: lightbulb.Context, leaderboard_type: str = "points") -> None:
         try:
-            leaderboard_data = await plugin.get_leaderboard(ctx.guild_id, type)
+            leaderboard_data = await plugin.get_leaderboard(ctx.guild_id, leaderboard_type)
 
             if not leaderboard_data:
                 embed = plugin.create_embed(
@@ -292,9 +281,9 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                     color=hikari.Color(EMBED_COLORS["info"]),
                 )
             else:
-                type_emoji = {"points": "💎", "accuracy": "🎯", "streak": "🔥"}.get(type, "🏆")
+                type_emoji = {"points": "💎", "accuracy": "🎯", "streak": "🔥"}.get(leaderboard_type, "🏆")
                 embed = plugin.create_embed(
-                    title=f"{type_emoji} Trivia Leaderboard - {type.title()}",
+                    title=f"{type_emoji} Trivia Leaderboard - {leaderboard_type.title()}",
                     color=hikari.Color(EMBED_COLORS["trivia"]),
                 )
 
@@ -309,9 +298,9 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                         medal = "🥉"
 
                     user_mention = f"<@{entry['user_id']}>"
-                    value = entry[type]
+                    value = entry[leaderboard_type]
 
-                    if type == "accuracy":
+                    if leaderboard_type == "accuracy":
                         value_str = f"{value:.1f}%"
                     else:
                         value_str = f"{value:,}"
@@ -320,7 +309,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
 
                 embed.description = leaderboard_text or "No data available"
 
-                embed.set_footer(f"Showing top 10 players • Use /trivia-stats to see your detailed stats")
+                embed.set_footer("Showing top 10 players • Use /trivia-stats to see your detailed stats")
 
             await ctx.respond(embed=embed)
             await plugin.log_command_usage(ctx, "trivia-leaderboard", True)

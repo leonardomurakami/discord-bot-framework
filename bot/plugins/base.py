@@ -168,7 +168,7 @@ class BasePlugin:
         embed: hikari.Embed = None,
         ephemeral: bool = False,
         **kwargs,
-    ) -> None:
+    ) -> hikari.SnowflakeishOr:
         """Context-aware respond that handles flags properly for both slash and prefix commands."""
         try:
             # For slash commands (InteractionContext), we can use flags
@@ -181,15 +181,16 @@ class BasePlugin:
             if embed:
                 kwargs["embed"] = embed
 
-            await ctx.respond(**kwargs)
+            snowflake = await ctx.respond(**kwargs)
+            return snowflake
         except Exception:
-            # Fallback: try without flags if the first attempt fails
             kwargs.pop("flags", None)
             if content:
                 kwargs["content"] = content
             if embed:
                 kwargs["embed"] = embed
-            await ctx.respond(**kwargs)
+            snowflake = await ctx.respond(**kwargs)
+            return snowflake
 
     async def log_command_usage(
         self,
