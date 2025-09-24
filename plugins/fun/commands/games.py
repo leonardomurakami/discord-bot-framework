@@ -13,12 +13,11 @@ from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
     API_ENDPOINTS,
-    DEFAULT_TRIVIA_QUESTIONS,
     DEFAULT_WYR_QUESTIONS,
     DICE_LIMITS,
     RANDOM_NUMBER_LIMIT,
 )
-from ..views import TriviaView, WouldYouRatherView
+from ..views import WouldYouRatherView
 
 if TYPE_CHECKING:
     from ..plugin import FunPlugin
@@ -293,75 +292,6 @@ def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
             await plugin.log_command_usage(ctx, "random", False, str(exc))
 
-    @command(
-        name="trivia",
-        description="Start an interactive trivia question",
-        permission_node="basic.fun.games.play",
-    )
-    async def trivia_question(ctx: lightbulb.Context) -> None:
-        try:
-            question_data: dict[str, Any] | None = None
-            if plugin.session:
-                try:
-                    async with plugin.session.get(API_ENDPOINTS["trivia"]) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            if data["response_code"] == 0 and data["results"]:
-                                question_data = data["results"][0]
-                except Exception:
-                    pass
-
-            if not question_data:
-                question_data = random.choice(DEFAULT_TRIVIA_QUESTIONS)
-
-            question_text = html.unescape(question_data["question"])
-
-            embed = plugin.create_embed(
-                title="🧠 Trivia Time!",
-                description=f"**Category:** {question_data.get('category', 'General')}\n\n**Question:**\n{question_text}",
-                color=hikari.Color(0x9932CC),
-            )
-
-            embed.set_footer("⏱️ 30s remaining • Click the correct answer!")
-
-            view = TriviaView(question_data, embed)
-
-            miru_client = getattr(plugin.bot, "miru_client", None)
-            if miru_client:
-                message = await ctx.respond(embed=embed, components=view)
-                miru_client.start_view(view)
-
-                if message is None:
-                    logger.debug("ctx.respond() returned None - miru will set view.message later")
-                elif hasattr(message, "message"):
-                    view.trivia_message = message.message
-                    view.message = message.message
-                    logger.debug("Set trivia_message from message.message: %s", type(message.message))
-                elif hasattr(message, "id"):
-                    view.trivia_message = message
-                    view.message = message
-                    logger.debug("Set trivia_message from message: %s", type(message))
-                else:
-                    logger.warning("Message object has no 'message' or 'id' attribute. Type: %s", type(message))
-
-                if view.trivia_message:
-                    view.start_countdown(view.trivia_message)
-                else:
-                    logger.debug("No immediate message reference - countdown will start when miru sets view.message")
-            else:
-                await ctx.respond(embed=embed)
-
-            await plugin.log_command_usage(ctx, "trivia", True)
-
-        except Exception as exc:
-            logger.error("Error in trivia command: %s", exc)
-            embed = plugin.create_embed(
-                title="❌ Error",
-                description="Failed to start trivia question. Try again later!",
-                color=hikari.Color(0xFF0000),
-            )
-            await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-            await plugin.log_command_usage(ctx, "trivia", False, str(exc))
 
     @command(
         name="would-you-rather",
@@ -409,6 +339,5 @@ def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
         magic_8ball,
         choose_option,
         random_number,
-        trivia_question,
         would_you_rather,
     ]

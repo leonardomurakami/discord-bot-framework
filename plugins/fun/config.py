@@ -30,10 +30,6 @@ class FunSettings(BaseSettings):
         default="https://uselessfacts.jsph.pl/random.json?language=en",
         description="API endpoint for facts",
     )
-    trivia_api_url: str = Field(
-        default="https://opentdb.com/api.php?amount=1&type=multiple",
-        description="API endpoint for trivia questions",
-    )
 
     # Dice game limits
     min_dice: int = Field(default=1, description="Minimum number of dice")
@@ -79,7 +75,6 @@ class FunSettings(BaseSettings):
             "meme_primary": self.meme_primary_api_url,
             "meme_secondary": self.meme_secondary_api_url,
             "fact": self.fact_api_url,
-            "trivia": self.trivia_api_url,
         }
 
     @property
@@ -145,38 +140,6 @@ DEFAULT_FACTS = [
     "Sea otters hold hands while sleeping to prevent themselves from drifting apart.",
 ]
 
-DEFAULT_TRIVIA_QUESTIONS = [
-    {
-        "question": "What is the capital of Japan?",
-        "correct_answer": "Tokyo",
-        "incorrect_answers": ["Osaka", "Kyoto", "Hiroshima"],
-        "category": "Geography",
-    },
-    {
-        "question": "Which planet is known as the Red Planet?",
-        "correct_answer": "Mars",
-        "incorrect_answers": ["Venus", "Jupiter", "Saturn"],
-        "category": "Science",
-    },
-    {
-        "question": "Who painted the Mona Lisa?",
-        "correct_answer": "Leonardo da Vinci",
-        "incorrect_answers": ["Pablo Picasso", "Vincent van Gogh", "Michelangelo"],
-        "category": "Art",
-    },
-    {
-        "question": "What is the largest mammal in the world?",
-        "correct_answer": "Blue Whale",
-        "incorrect_answers": ["Elephant", "Giraffe", "Hippopotamus"],
-        "category": "Nature",
-    },
-    {
-        "question": "In which year did World War II end?",
-        "correct_answer": "1945",
-        "incorrect_answers": ["1944", "1946", "1943"],
-        "category": "History",
-    },
-]
 
 DEFAULT_WYR_QUESTIONS = [
     ("Have the ability to fly", "Have the ability to become invisible"),
