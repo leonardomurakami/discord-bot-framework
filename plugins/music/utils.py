@@ -41,7 +41,9 @@ async def save_queue_to_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
                 )
                 session.add(queue_entry)
 
-            session_data = await session.get(MusicSession, guild_id)
+            # Query by guild_id, not by primary key id
+            result = await session.execute(select(MusicSession).where(MusicSession.guild_id == guild_id))
+            session_data = result.scalars().first()
             if session_data:
                 session_data.is_playing = player.is_playing
                 session_data.is_paused = player.paused
@@ -84,7 +86,9 @@ async def restore_queue_from_db(music_plugin: "MusicPlugin", guild_id: int) -> b
 
             from .models import MusicQueue, MusicSession
 
-            session_data = await session.get(MusicSession, guild_id)
+            # Query by guild_id, not by primary key id
+            result = await session.execute(select(MusicSession).where(MusicSession.guild_id == guild_id))
+            session_data = result.scalars().first()
             if not session_data:
                 return False
 

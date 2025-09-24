@@ -148,7 +148,20 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
             stats = result.scalars().first()
 
             if not stats:
-                stats = TriviaStats(user_id=user_id, guild_id=guild_id)
+                stats = TriviaStats(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    total_questions=0,
+                    correct_answers=0,
+                    total_points=0,
+                    easy_correct=0,
+                    medium_correct=0,
+                    hard_correct=0,
+                    current_streak=0,
+                    best_streak=0,
+                    fast_answers=0,
+                    hints_used=0,
+                )
                 session.add(stats)
 
             # Update stats
