@@ -5,12 +5,12 @@ import html
 import logging
 import random
 import time
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import hikari
 import miru
 
-from ..config import games_settings, EMBED_COLORS
+from ..config import EMBED_COLORS, games_settings
 
 if TYPE_CHECKING:
     from ..plugin import GamesPlugin
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class EnhancedTriviaView(miru.View):
-    """Enhanced interactive trivia view with scoring, hints, and achievements."""
+class TriviaView(miru.View):
+    """Interactive trivia view with scoring, hints, and achievements."""
 
     def __init__(
         self,
@@ -27,6 +27,7 @@ class EnhancedTriviaView(miru.View):
         initial_embed: hikari.Embed,
         plugin: GamesPlugin,
         guild_id: int,
+        trigger_user_id: int,
         is_time_attack: bool = False,
         *args: Any,
         **kwargs: Any,
@@ -35,12 +36,12 @@ class EnhancedTriviaView(miru.View):
         super().__init__(timeout=games_settings.trivia_timeout_seconds + 10, *args, **kwargs)
         self.plugin = plugin
         self.guild_id = guild_id
+        self.trigger_user_id = trigger_user_id
         self.question_data = question_data
         self.participants: dict[int, tuple[str, int, float]] = {}
         self.is_finished = False
         self.initial_embed = initial_embed
         self.start_time: float | None = None
-        self.trivia_message: hikari.Message | None = None
         self._countdown_task: asyncio.Task[None] | None = None
         self.is_time_attack = is_time_attack
         self.hints_given: set[int] = set()  # Track users who used hints
@@ -53,41 +54,37 @@ class EnhancedTriviaView(miru.View):
         self.correct_position = all_answers.index(correct_answer)
         self.all_answers = all_answers
 
-        # Create answer buttons
+        # Create answer buttons organized in rows (2-2 layout)
         for i, answer in enumerate(all_answers):
             clean_answer = html.unescape(answer)
+            row = i // 2  # Row 0 for buttons 0,1 and Row 1 for buttons 2,3
             button = miru.Button(
                 style=hikari.ButtonStyle.SECONDARY,
                 label=clean_answer[:80],
                 custom_id=f"trivia_answer_{i}",
+                row=row,
             )
             button.callback = self._create_answer_callback(i)
             self.add_item(button)
 
-        # Add hint button
+        # Add hint button on row 2
         hint_button = miru.Button(
             style=hikari.ButtonStyle.PRIMARY,
             label="💡 Hint",
             custom_id="trivia_hint",
             emoji="💡",
+            row=2,
         )
         hint_button.callback = self._hint_callback
         self.add_item(hint_button)
 
-    def start_countdown(self, message: hikari.Message | None = None) -> None:
+    def start_countdown(self) -> None:
         """Start the countdown timer."""
-        if message is not None:
-            self.trivia_message = message
-        elif getattr(self, "message", None) is not None:
-            self.trivia_message = self.message
-
         # Set start time if not already set
         if self.start_time is None:
             self.start_time = time.time()
 
-        # Start countdown even without message reference initially
-        # The countdown task will try to get the message reference later
-        logger.debug("Starting enhanced trivia countdown")
+        logger.debug("Starting trivia countdown")
         self._countdown_task = asyncio.create_task(self._countdown_task_impl())
 
     async def _countdown_task_impl(self) -> None:
@@ -125,7 +122,7 @@ class EnhancedTriviaView(miru.View):
                 await ctx.respond("This trivia has already ended!", flags=hikari.MessageFlag.EPHEMERAL)
                 return
 
-            if not self._countdown_task and not self.trivia_message:
+            if not self._countdown_task:
                 self.start_countdown()
 
             username = ctx.user.display_name or ctx.user.username
@@ -186,7 +183,7 @@ class EnhancedTriviaView(miru.View):
             return
 
         self.is_finished = True
-        logger.info("Enhanced trivia timeout reached with %s participants", len(self.participants))
+        logger.info("Trivia timeout reached with %s participants", len(self.participants))
 
         correct_answer = html.unescape(self.question_data["correct_answer"])
         question_text = html.unescape(self.question_data["question"])
@@ -199,6 +196,8 @@ class EnhancedTriviaView(miru.View):
         )
 
         if not self.participants:
+            # Count as failure for the user who triggered the trivia
+            await self._award_points(self.trigger_user_id, self.guild_id, difficulty, 0, False, is_failure=True)
             embed.add_field("Participants", "No one participated! 😢", inline=False)
         else:
             # Process participants and award points
@@ -212,8 +211,15 @@ class EnhancedTriviaView(miru.View):
                     correct_participants.append((username, timestamp, user_id))
 
             # Award points to correct participants
-            for username, timestamp, user_id in correct_participants:
+            for _username, timestamp, user_id in correct_participants:
                 await self._award_points(user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given)
+
+            # Award failures to incorrect participants
+            for user_id, (_username, answer_index, timestamp) in self.participants.items():
+                if answer_index != self.correct_position:
+                    await self._award_points(
+                        user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, is_failure=True
+                    )
 
             # Display results by answer
             for answer_index, participants in answer_groups.items():
@@ -263,7 +269,7 @@ class EnhancedTriviaView(miru.View):
                 )
 
             if self.is_time_attack:
-                summary_value += f"\n⚡ **Time Attack Question!**"
+                summary_value += "\n⚡ **Time Attack Question!**"
 
             embed.add_field("📊 Summary", summary_value, inline=False)
 
@@ -283,57 +289,49 @@ class EnhancedTriviaView(miru.View):
                 item.disabled = True
                 item.style = hikari.ButtonStyle.SECONDARY
 
-        # Update message - try multiple methods to get message reference
-        message_to_edit = None
-
-        # Try various ways to get the message reference
-        for attr_name in ["message", "_message", "trivia_message", "from_message"]:
-            msg = getattr(self, attr_name, None)
-            logger.debug(f"Checking {attr_name}: {type(msg)} = {msg}")
-            if msg is not None:
-                message_to_edit = msg
-                logger.debug(f"Found message reference via {attr_name}: {type(msg)}")
-                break
-
-        if message_to_edit:
-            try:
-                if hasattr(message_to_edit, 'edit'):
-                    await message_to_edit.edit(embed=embed, components=self)
-                    logger.info("Successfully updated trivia results with enhanced features")
-                else:
-                    logger.error(f"Message object {type(message_to_edit)} does not have edit method")
-            except Exception as exc:
-                logger.error("Failed to update trivia results: %s", exc)
-        else:
-            logger.error("No message reference available to display trivia results! Available attributes: %s",
-                        [attr for attr in dir(self) if 'message' in attr.lower()])
+        # Update the message with results
+        try:
+            await self.message.edit(embed=embed, components=self)
+            logger.info("Successfully updated trivia results")
+        except Exception as exc:
+            logger.error("Failed to update trivia results: %s", exc)
 
         if self._countdown_task and not self._countdown_task.done():
             self._countdown_task.cancel()
 
         self.stop()
 
-    async def _award_points(self, user_id: int, guild_id: int | None, difficulty: str, answer_time: float, used_hint: bool) -> None:
-        """Award points to a user for correct answer."""
+    async def _award_points(
+        self, user_id: int, guild_id: int | None, difficulty: str, answer_time: float, used_hint: bool, is_failure: bool = False
+    ) -> None:
+        """Award points to a user for correct answer or track failure."""
         try:
             if not guild_id:
                 logger.warning("Cannot award points - no guild_id available")
                 return
 
-            # Calculate base points
-            base_points = games_settings.trivia_base_points.get(difficulty, 20)
+            if is_failure:
+                # Track failure - register user and increment failure stats
+                await self.plugin.award_points(
+                    user_id, guild_id, 0, difficulty, used_hint, answer_time - (self.start_time or 0), is_correct=False
+                )
+            else:
+                # Calculate base points
+                base_points = games_settings.trivia_base_points.get(difficulty, 20)
 
-            # Apply hint penalty
-            if used_hint:
-                base_points = int(base_points * games_settings.trivia_hint_penalty)
+                # Apply hint penalty
+                if used_hint:
+                    base_points = int(base_points * games_settings.trivia_hint_penalty)
 
-            # Time bonus for time attack questions
-            if self.is_time_attack and self.start_time:
-                response_time = answer_time - self.start_time
-                if response_time <= games_settings.trivia_time_bonus_threshold:
-                    base_points = int(base_points * games_settings.trivia_time_bonus_multiplier)
+                # Time bonus for time attack questions
+                if self.is_time_attack and self.start_time:
+                    response_time = answer_time - self.start_time
+                    if response_time <= games_settings.trivia_time_bonus_threshold:
+                        base_points = int(base_points * games_settings.trivia_time_bonus_multiplier)
 
-            await self.plugin.award_points(user_id, guild_id, base_points, difficulty, used_hint, answer_time - (self.start_time or 0))
+                await self.plugin.award_points(
+                    user_id, guild_id, base_points, difficulty, used_hint, answer_time - (self.start_time or 0), is_correct=True
+                )
 
         except Exception as exc:
             logger.error("Error awarding points: %s", exc)

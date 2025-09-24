@@ -113,6 +113,7 @@ class PrefixContext:
     def __init__(self, event: hikari.GuildMessageCreateEvent, bot: Any, args: list[str]):
         self.event = event
         self.bot = bot
+        self.client = bot #lightbulb compatibility
         self.args = args
 
         # Mirror Arc context properties
@@ -129,5 +130,6 @@ class PrefixContext:
     def get_channel(self) -> hikari.GuildChannel | None:
         return self.event.get_channel()
 
-    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> None:
-        await self.bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)
+    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> hikari.SnowflakeishOr:
+        snowflake = await self.bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)
+        return snowflake

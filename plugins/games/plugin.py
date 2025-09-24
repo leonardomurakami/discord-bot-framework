@@ -25,7 +25,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         self.session: aiohttp.ClientSession | None = None
 
         # Register database models
-        from .models import TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard
+        from .models import CustomQuestion, GuildLeaderboard, TriviaAchievement, TriviaStats
         self.register_models(TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard)
 
         # Register commands
@@ -79,7 +79,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
             from sqlalchemy import select
             query = select(CustomQuestion).where(
                 CustomQuestion.guild_id == guild_id,
-                CustomQuestion.is_active == True
+                CustomQuestion.is_active
             )
 
             if category:
@@ -95,7 +95,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         from .models import TriviaStats
 
         async with self.db_session() as session:
-            from sqlalchemy import select, desc
+            from sqlalchemy import desc, select
 
             if leaderboard_type == "points":
                 query = select(TriviaStats).where(
@@ -130,10 +130,11 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
             return leaderboard_data
 
-    async def award_points(self, user_id: int, guild_id: int, points: int, difficulty: str, used_hint: bool, response_time: float):
+    async def award_points(
+        self, user_id: int, guild_id: int, points: int, difficulty: str, used_hint: bool, response_time: float, is_correct: bool = True
+    ):
         """Award points to a user and update their statistics."""
-        from .models import TriviaStats, TriviaAchievement
-        from .config import TRIVIA_ACHIEVEMENTS
+        from .models import TriviaStats
 
         async with self.db_session() as session:
             from sqlalchemy import select
@@ -164,29 +165,35 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 )
                 session.add(stats)
 
-            # Update stats
+            # Update stats - always increment total questions
             stats.total_questions += 1
-            stats.correct_answers += 1
-            stats.total_points += points
-            stats.current_streak += 1
 
-            # Update difficulty stats
-            if difficulty == "easy":
-                stats.easy_correct += 1
-            elif difficulty == "medium":
-                stats.medium_correct += 1
-            elif difficulty == "hard":
-                stats.hard_correct += 1
+            if is_correct:
+                # Correct answer
+                stats.correct_answers += 1
+                stats.total_points += points
+                stats.current_streak += 1
+
+                # Update difficulty stats
+                if difficulty == "easy":
+                    stats.easy_correct += 1
+                elif difficulty == "medium":
+                    stats.medium_correct += 1
+                elif difficulty == "hard":
+                    stats.hard_correct += 1
+            else:
+                # Wrong answer or no answer - reset streak
+                stats.current_streak = 0
 
             # Update best streak
             if stats.current_streak > stats.best_streak:
                 stats.best_streak = stats.current_streak
 
-            # Track fast answers (under 5 seconds)
-            if response_time <= 5.0:
+            # Track fast answers (under 5 seconds) - only for correct answers
+            if is_correct and response_time <= 5.0:
                 stats.fast_answers += 1
 
-            # Track hints used
+            # Track hints used - for all attempts
             if used_hint:
                 stats.hints_used += 1
 
@@ -197,9 +204,10 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
     async def _check_achievements(self, user_id: int, guild_id: int, stats, session):
         """Check and award any new achievements."""
-        from .models import TriviaAchievement
-        from .config import TRIVIA_ACHIEVEMENTS
         from sqlalchemy import select
+
+        from .config import TRIVIA_ACHIEVEMENTS
+        from .models import TriviaAchievement
 
         # Get existing achievements
         result = await session.execute(

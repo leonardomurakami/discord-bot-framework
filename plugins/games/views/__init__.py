@@ -1,3 +1,3 @@
-from .trivia import EnhancedTriviaView
+from .trivia import TriviaView
 
-__all__ = ['EnhancedTriviaView']
+__all__ = ['TriviaView']
