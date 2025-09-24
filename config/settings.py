@@ -12,7 +12,7 @@ class BotSettings(BaseSettings):
 
     # Plugin configuration
     enabled_plugins: list[str] = Field(
-        default=["admin", "fun", "moderation", "help", "utility", "music", "links"],
+        default=["admin", "fun", "games", "moderation", "help", "utility", "music", "links"],
         description="List of enabled plugins",
     )
     plugin_directories: list[str] = Field(
