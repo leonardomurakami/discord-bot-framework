@@ -209,9 +209,9 @@ class DiscordBot:
 
     async def _initialize_systems(self) -> None:
         try:
-            # Initialize database
-            await self.db.create_tables()
-            logger.info("Database initialized")
+            # Initialize core database tables
+            await self.db.create_core_tables()
+            logger.info("Core database initialized")
 
             # Initialize permissions (without plugin discovery first)
             self.permission_manager.set_bot(self)
@@ -221,6 +221,9 @@ class DiscordBot:
             # Load plugins
             await self._load_plugins()
             logger.info("Plugins loaded")
+
+            # Create plugin tables now that models are registered
+            await self.db.create_plugin_tables()
 
             # Refresh permissions to discover plugin-defined permissions
             await self.permission_manager.refresh_permissions()

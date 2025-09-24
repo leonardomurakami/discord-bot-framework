@@ -102,15 +102,37 @@ class DatabaseManager:
             all_models.extend(models)
         return all_models
 
-    async def create_tables(self) -> None:
+    async def create_core_tables(self) -> None:
+        """Create tables for core framework models."""
         if not self.engine:
             raise RuntimeError("Database engine not initialized")
 
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-        total_models = len(self.get_plugin_models())
-        logger.info(f"Database tables created successfully (including {total_models} plugin models)")
+        logger.info("Core database tables created successfully")
+
+    async def create_plugin_tables(self) -> None:
+        """Create tables for plugin models that have been registered."""
+        if not self.engine:
+            raise RuntimeError("Database engine not initialized")
+
+        plugin_models = self.get_plugin_models()
+        if not plugin_models:
+            logger.debug("No plugin models registered, skipping plugin table creation")
+            return
+
+        async with self.engine.begin() as conn:
+            # Create tables for each plugin model individually
+            for model_class in plugin_models:
+                await conn.run_sync(model_class.metadata.create_all)
+
+        logger.info(f"Plugin database tables created successfully ({len(plugin_models)} models)")
+
+    async def create_tables(self) -> None:
+        """Create tables for both core and plugin models."""
+        await self.create_core_tables()
+        await self.create_plugin_tables()
 
     async def drop_tables(self) -> None:
         if not self.engine:
