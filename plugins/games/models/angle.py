@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, date, datetime
 
-from sqlalchemy import BigInteger, Boolean, Date, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from bot.database.models import Base
@@ -31,7 +31,7 @@ class AngleGame(Base):
     points_eligible: Mapped[bool] = mapped_column(Boolean, default=True)  # False after first play of the day
 
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(UTC)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     @property
@@ -73,10 +73,10 @@ class AngleStats(Base):
     best_win_streak: Mapped[int] = mapped_column(Integer, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(UTC)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
 
     @property
