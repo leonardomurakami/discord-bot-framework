@@ -4,98 +4,91 @@ from __future__ import annotations
 import io
 
 import matplotlib
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
 matplotlib.use("Agg")  # non-interactive backend
 
-# Discord dark theme palette
 BG_COLOR = "#2b2d31"
-CIRCLE_COLOR = "#5865f2"  # Discord blurple
-TARGET_COLOR = "#faa61a"  # gold — the mystery ray
-TEXT_COLOR = "#dcddde"
-GRID_COLOR = "#40444b"
+REF_COLOR = "#ffffff"       # reference arm — white
+MYSTERY_COLOR = "#faa61a"   # mystery arm — gold
 
 
 def generate_angle_image(target: int) -> bytes:
     """
-    Render a protractor showing the mystery angle as an unlabeled ray.
+    Render two arrows forming the mystery angle — no degree labels anywhere.
 
-    The user must visually estimate the angle and submit their numeric guess.
+    The reference arm points east (0°). The mystery arm points at *target*
+    degrees counterclockwise. A subtle wedge fills the angle between them.
 
     Args:
-        target: The correct angle (degrees, 0-360). Drawn without a degree label.
+        target: The angle to display (1–360 degrees).
 
     Returns:
         PNG image bytes.
     """
-    fig, ax = plt.subplots(figsize=(6, 6), facecolor=BG_COLOR)
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor=BG_COLOR)
     ax.set_facecolor(BG_COLOR)
     ax.set_aspect("equal")
     ax.set_xlim(-1.5, 1.5)
     ax.set_ylim(-1.5, 1.5)
     ax.axis("off")
 
-    # --- outer decorative ring ---
-    outer = plt.Circle((0, 0), 1.18, fill=False, color=CIRCLE_COLOR, linewidth=1.5, alpha=0.3)
-    ax.add_patch(outer)
-
-    # --- main circle ---
-    main = plt.Circle((0, 0), 1.0, fill=False, color=CIRCLE_COLOR, linewidth=2.5)
-    ax.add_patch(main)
-
-    # --- degree tick marks and labels every 30° ---
-    for deg in range(0, 360, 30):
-        rad = np.radians(deg)
-        inner_r, outer_r = 0.92, 1.0
-        ax.plot(
-            [inner_r * np.cos(rad), outer_r * np.cos(rad)],
-            [inner_r * np.sin(rad), outer_r * np.sin(rad)],
-            color=GRID_COLOR, linewidth=1.2,
-        )
-        label_r = 1.28
-        ax.text(
-            label_r * np.cos(rad),
-            label_r * np.sin(rad),
-            f"{deg}°",
-            ha="center", va="center",
-            fontsize=7, color=TEXT_COLOR, fontfamily="monospace",
-        )
-
-    # --- faint grid spokes every 90° ---
-    for deg in (0, 90, 180, 270):
-        rad = np.radians(deg)
-        ax.plot([0, 0.9 * np.cos(rad)], [0, 0.9 * np.sin(rad)],
-                color=GRID_COLOR, linewidth=0.8, linestyle="--", alpha=0.5)
-
-    # --- reference dot at origin ---
-    ax.plot(0, 0, "o", color=TEXT_COLOR, markersize=5, zorder=5)
-
-    # --- mystery target ray (no degree label) ---
+    arm_len = 1.2
     rad = np.radians(target)
-    tip_x, tip_y = 0.88 * np.cos(rad), 0.88 * np.sin(rad)
+
+    # --- reference arm (white, pointing east) ---
     ax.annotate(
         "",
-        xy=(tip_x, tip_y),
+        xy=(arm_len, 0),
         xytext=(0, 0),
         arrowprops=dict(
             arrowstyle="-|>",
-            color=TARGET_COLOR,
-            lw=2.8,
+            color=REF_COLOR,
+            lw=2.5,
             mutation_scale=18,
         ),
-        zorder=7,
+        zorder=5,
     )
 
-    # --- prompt label ---
-    ax.text(
-        0, -1.42,
-        "What angle is this?",
-        ha="center", va="center",
-        fontsize=9, color=TEXT_COLOR, fontfamily="monospace",
+    # --- mystery arm (gold, at target angle) ---
+    tx, ty = arm_len * np.cos(rad), arm_len * np.sin(rad)
+    ax.annotate(
+        "",
+        xy=(tx, ty),
+        xytext=(0, 0),
+        arrowprops=dict(
+            arrowstyle="-|>",
+            color=MYSTERY_COLOR,
+            lw=2.5,
+            mutation_scale=18,
+        ),
+        zorder=5,
     )
 
-    plt.tight_layout(pad=0.2)
+    # --- subtle filled wedge to indicate the angle ---
+    wedge = mpatches.Wedge(
+        (0, 0), 0.35,
+        theta1=0, theta2=target,
+        color=MYSTERY_COLOR, alpha=0.18,
+        zorder=3,
+    )
+    ax.add_patch(wedge)
+
+    # --- arc edge of the wedge ---
+    arc = mpatches.Arc(
+        (0, 0), 0.7, 0.7,
+        angle=0, theta1=0, theta2=target,
+        color=MYSTERY_COLOR, linewidth=1.5, alpha=0.6,
+        zorder=4,
+    )
+    ax.add_patch(arc)
+
+    # --- center dot ---
+    ax.plot(0, 0, "o", color=REF_COLOR, markersize=6, zorder=6)
+
+    plt.tight_layout(pad=0.1)
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", facecolor=BG_COLOR, bbox_inches="tight", dpi=120)
