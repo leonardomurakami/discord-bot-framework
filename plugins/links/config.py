@@ -1,5 +1,5 @@
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class LinksSettings(BaseSettings):
@@ -15,12 +15,13 @@ class LinksSettings(BaseSettings):
         description="Default links available to all guilds",
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_prefix = "LINKS_"
-        case_sensitive = False
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="LINKS_",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 # Plugin settings instance

@@ -30,7 +30,7 @@ def setup_search_commands(plugin):
             return
 
         try:
-            search_result = await plugin.lavalink_client.get_tracks(f"ytsearch:{query}")
+            search_result = await plugin.lavalink_client.get_tracks(f"ytmsearch:{query}")
 
             if not search_result.tracks:
                 embed = plugin.create_embed(
