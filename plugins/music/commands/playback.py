@@ -4,6 +4,7 @@ import lightbulb
 from bot.plugins.commands import CommandArgument, command
 
 from ..utils import handle_playlist_add, save_queue_to_db
+from ..views import SourceSelectView
 
 
 async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
@@ -55,10 +56,25 @@ def setup_playback_commands(plugin):
 
             track = search_result.tracks[0]
         else:
-            search_result = await plugin.lavalink_client.get_tracks(f"ytsearch:{query}")
+            search_result = await plugin.lavalink_client.get_tracks(f"ytmsearch:{query}")
 
             if not search_result.tracks:
-                await plugin.smart_respond(ctx, f"No tracks found for: `{query}`", flags=hikari.MessageFlag.EPHEMERAL)
+                embed = plugin.create_embed(
+                    title="🔍 No Results on YouTube Music",
+                    description=f"Nothing found for: **{query}**\n\nTry a different source:",
+                    color=hikari.Color(0xFF9800),
+                )
+                view = SourceSelectView(plugin, ctx.guild_id, query, ctx.author.id, voice_state.channel_id)
+                miru_client = getattr(plugin.bot, "miru_client", None)
+                if miru_client and view.children:
+                    message = await ctx.respond(embed=embed, components=view)
+                    miru_client.start_view(view)
+                    if hasattr(message, "message"):
+                        view.message = message.message
+                    elif hasattr(message, "id"):
+                        view.message = message
+                else:
+                    await plugin.smart_respond(ctx, embed=embed)
                 return
 
             track = search_result.tracks[0]

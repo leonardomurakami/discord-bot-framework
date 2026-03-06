@@ -1,9 +1,12 @@
+import logging
 import random
 
 import hikari
 import miru
 
 from ..config import music_settings
+
+logger = logging.getLogger(__name__)
 
 
 class MusicControlView(miru.View):
@@ -210,6 +213,144 @@ class SearchResultView(miru.View):
                 timeout_embed = self.music_plugin.create_embed(
                     title="⏰ Search Timeout",
                     description="Track selection timed out. Please use `/search` again.",
+                    color=hikari.Color(0xFF9800),
+                )
+                await self.message.edit(embed=timeout_embed, components=self)
+            except (hikari.NotFoundError, hikari.ForbiddenError, hikari.HTTPError):
+                pass
+
+
+class SourceSelectView(miru.View):
+    """Shown when the default ytmsearch returns no results, letting the user retry on another source."""
+
+    SOURCES = [
+        ("ytsearch", "YouTube", "▶️"),
+        ("scsearch", "SoundCloud", "🔈"),
+        ("spsearch", "Spotify", "💚"),
+    ]
+
+    def __init__(
+        self,
+        music_plugin,
+        guild_id: int,
+        query: str,
+        user_id: int,
+        voice_channel_id: int,
+        *,
+        timeout: float = 60,
+    ) -> None:
+        super().__init__(timeout=timeout)
+        self.music_plugin = music_plugin
+        self.guild_id = guild_id
+        self.query = query
+        self.user_id = user_id
+        self.voice_channel_id = voice_channel_id
+        self._setup_select_menu()
+
+    def _setup_select_menu(self) -> None:
+        options = [
+            miru.SelectOption(label=label, value=prefix, emoji=emoji)
+            for prefix, label, emoji in self.SOURCES
+        ]
+        select = miru.TextSelect(
+            placeholder="Choose a source to retry...",
+            options=options,
+            custom_id="source_select",
+        )
+        select.callback = self.on_source_select
+        self.add_item(select)
+
+    async def on_source_select(self, ctx: miru.ViewContext) -> None:
+        if ctx.user.id != self.user_id:
+            await ctx.respond("Only the person who started this search can pick a source.", flags=hikari.MessageFlag.EPHEMERAL)
+            return
+
+        select = None
+        for item in self.children:
+            if isinstance(item, miru.TextSelect) and item.custom_id == "source_select":
+                select = item
+                break
+
+        if not select or not select.values:
+            return
+
+        source_prefix = select.values[0]
+        source_name = next((label for p, label, _ in self.SOURCES if p == source_prefix), source_prefix)
+
+        for item in self.children:
+            item.disabled = True
+
+        searching_embed = self.music_plugin.create_embed(
+            title=f"🔍 Searching {source_name}…",
+            description=f"Looking for: **{self.query}**",
+            color=hikari.Color(0x0099FF),
+        )
+        await ctx.edit_response(embed=searching_embed, components=self)
+
+        try:
+            search_result = await self.music_plugin.lavalink_client.get_tracks(f"{source_prefix}:{self.query}")
+
+            if not search_result.tracks:
+                no_results_embed = self.music_plugin.create_embed(
+                    title="❌ No Results",
+                    description=f"Nothing found on {source_name} for: `{self.query}`",
+                    color=hikari.Color(0xFF6B6B),
+                )
+                await ctx.edit_response(embed=no_results_embed, components=[])
+                return
+
+            player = self.music_plugin.lavalink_client.player_manager.create(self.guild_id)
+            if not player.is_connected:
+                await self.music_plugin.update_voice_state(self.guild_id, self.voice_channel_id)
+
+            track = search_result.tracks[0]
+            player.add(requester=self.user_id, track=track)
+
+            was_playing = player.is_playing
+            if not was_playing:
+                await player.play()
+
+            from ..utils import save_queue_to_db
+            await save_queue_to_db(self.music_plugin, self.guild_id)
+
+            duration_minutes = track.duration // 60000
+            duration_seconds = (track.duration % 60000) // 1000
+
+            if was_playing:
+                embed = self.music_plugin.create_embed(title="🎵 Added to Queue", color=hikari.Color(0x00FF00))
+                embed.add_field(name="🎶 Track", value=f"**[{track.title}]({track.uri})**\nBy: {track.author}", inline=False)
+                embed.add_field(name="📍 Position", value=f"#{len(player.queue)} in queue", inline=True)
+                embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
+                embed.add_field(name="🔎 Source", value=source_name, inline=True)
+            else:
+                embed = self.music_plugin.create_embed(title="🎵 Now Playing", color=hikari.Color(0x00FF00))
+                embed.add_field(name="🎶 Track", value=f"**[{track.title}]({track.uri})**\nBy: {track.author}", inline=False)
+                embed.add_field(name="⏱️ Duration", value=f"`{duration_minutes}:{duration_seconds:02d}`", inline=True)
+                embed.add_field(name="🔎 Source", value=source_name, inline=True)
+
+            if hasattr(track, "artwork_url") and track.artwork_url:
+                embed.set_thumbnail(track.artwork_url)
+
+            await ctx.edit_response(embed=embed, components=[])
+
+        except Exception as e:
+            logger.error(f"Error in source select for guild {self.guild_id}: {e}")
+            error_embed = self.music_plugin.create_embed(
+                title="❌ Error",
+                description="Failed to search that source. Please try again.",
+                color=hikari.Color(0xFF0000),
+            )
+            await ctx.edit_response(embed=error_embed, components=[])
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True
+
+        if hasattr(self, "message") and self.message:
+            try:
+                timeout_embed = self.music_plugin.create_embed(
+                    title="⏰ Source Selection Timed Out",
+                    description="Please run the command again.",
                     color=hikari.Color(0xFF9800),
                 )
                 await self.message.edit(embed=timeout_embed, components=self)
