@@ -91,7 +91,6 @@ def _build_angle_embed(plugin: GamesPlugin, state: dict[str, Any], user_mention:
             remaining_text += " *(no points — already played today)*"
         embed.set_footer(remaining_text)
 
-    embed.set_image("attachment://angle.png")
     return embed
 
 
@@ -147,12 +146,12 @@ class AngleGuessModal(miru.Modal, title="Guess the Angle"):
             new_view = AngleView(self.plugin, self.user_id, self.guild_id, state)
 
         attachment = hikari.Bytes(image_bytes, "angle.png")
+        embed.set_image(attachment)
 
         try:
             if new_view:
                 await self.angle_view.message.edit(
                     embed=embed,
-                    attachments=[attachment],
                     components=new_view,
                 )
                 # Re-bind the new view so its button works
@@ -162,7 +161,6 @@ class AngleGuessModal(miru.Modal, title="Guess the Angle"):
             else:
                 await self.angle_view.message.edit(
                     embed=embed,
-                    attachments=[attachment],
                     components=[],
                 )
             # Acknowledge the modal interaction silently
