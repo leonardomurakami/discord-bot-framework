@@ -130,6 +130,9 @@ class PrefixContext:
     def get_channel(self) -> hikari.GuildChannel | None:
         return self.event.get_channel()
 
-    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None) -> hikari.SnowflakeishOr:
-        snowflake = await self.bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components)
+    async def respond(self, content: str = None, *, embed: hikari.Embed = None, components=None, attachment=hikari.UNDEFINED, attachments=hikari.UNDEFINED, **kwargs) -> hikari.SnowflakeishOr:
+        # Normalise attachment(s) — rest.create_message accepts `attachment` (singular)
+        if attachments is not hikari.UNDEFINED and attachment is hikari.UNDEFINED:
+            attachment = attachments[0] if attachments else hikari.UNDEFINED
+        snowflake = await self.bot.rest.create_message(self.channel_id, content=content, embed=embed, components=components, attachment=attachment)
         return snowflake
