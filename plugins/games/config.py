@@ -186,11 +186,11 @@ TRIVIA_ACHIEVEMENTS = {
         "emoji": "💪",
         "requirement": {"type": "hard_correct", "value": 50},
     },
-    "category_master": {
-        "name": "Category Master",
-        "description": "Get 25 correct answers in a single category",
-        "emoji": "🏆",
-        "requirement": {"type": "category_mastery", "value": 25},
+    "perfectionist": {
+        "name": "Perfectionist",
+        "description": "Achieve 100% accuracy over at least 20 questions",
+        "emoji": "💯",
+        "requirement": {"type": "perfect_accuracy", "value": 20},
     },
     "high_scorer": {
         "name": "High Scorer",
@@ -208,6 +208,8 @@ EMBED_COLORS = {
     "info": 0x3498DB,
     "warning": 0xFFD700,
     "achievement": 0xFF6B35,
+    "angle": 0xE67E22,
+    "rps": 0x1ABC9C,
 }
 
 # Emojis
@@ -218,3 +220,11 @@ DIFFICULTY_EMOJIS = {
 }
 
 GAME_EMOJIS = ["🎮", "🎯", "🧠", "🎲", "🏆", "⭐", "🔥", "💎"]
+
+# Angle game settings
+ANGLE_MAX_ATTEMPTS = 4
+ANGLE_POINTS = {
+    "exact": 100,   # 0° off
+    "close": 75,    # 1° off
+    "near": 50,     # 2° off
+}

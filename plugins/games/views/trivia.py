@@ -197,7 +197,8 @@ class TriviaView(miru.View):
 
         if not self.participants:
             # Count as failure for the user who triggered the trivia
-            await self._award_points(self.trigger_user_id, self.guild_id, difficulty, 0, False, is_failure=True)
+            channel_id = self.message.channel_id if self.message else None
+            await self._award_points(self.trigger_user_id, self.guild_id, difficulty, 0, False, is_failure=True, channel_id=channel_id)
             embed.add_field("Participants", "No one participated! 😢", inline=False)
         else:
             # Process participants and award points
@@ -211,14 +212,15 @@ class TriviaView(miru.View):
                     correct_participants.append((username, timestamp, user_id))
 
             # Award points to correct participants
+            channel_id = self.message.channel_id if self.message else None
             for _username, timestamp, user_id in correct_participants:
-                await self._award_points(user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given)
+                await self._award_points(user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, channel_id=channel_id)
 
             # Award failures to incorrect participants
             for user_id, (_username, answer_index, timestamp) in self.participants.items():
                 if answer_index != self.correct_position:
                     await self._award_points(
-                        user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, is_failure=True
+                        user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, is_failure=True, channel_id=channel_id
                     )
 
             # Display results by answer
@@ -302,7 +304,14 @@ class TriviaView(miru.View):
         self.stop()
 
     async def _award_points(
-        self, user_id: int, guild_id: int | None, difficulty: str, answer_time: float, used_hint: bool, is_failure: bool = False
+        self,
+        user_id: int,
+        guild_id: int | None,
+        difficulty: str,
+        answer_time: float,
+        used_hint: bool,
+        is_failure: bool = False,
+        channel_id: int | None = None,
     ) -> None:
         """Award points to a user for correct answer or track failure."""
         try:
@@ -311,26 +320,26 @@ class TriviaView(miru.View):
                 return
 
             if is_failure:
-                # Track failure - register user and increment failure stats
                 await self.plugin.award_points(
-                    user_id, guild_id, 0, difficulty, used_hint, answer_time - (self.start_time or 0), is_correct=False
+                    user_id, guild_id, 0, difficulty, used_hint,
+                    answer_time - (self.start_time or 0), is_correct=False,
+                    channel_id=channel_id,
                 )
             else:
-                # Calculate base points
                 base_points = games_settings.trivia_base_points.get(difficulty, 20)
 
-                # Apply hint penalty
                 if used_hint:
                     base_points = int(base_points * games_settings.trivia_hint_penalty)
 
-                # Time bonus for time attack questions
                 if self.is_time_attack and self.start_time:
                     response_time = answer_time - self.start_time
                     if response_time <= games_settings.trivia_time_bonus_threshold:
                         base_points = int(base_points * games_settings.trivia_time_bonus_multiplier)
 
                 await self.plugin.award_points(
-                    user_id, guild_id, base_points, difficulty, used_hint, answer_time - (self.start_time or 0), is_correct=True
+                    user_id, guild_id, base_points, difficulty, used_hint,
+                    answer_time - (self.start_time or 0), is_correct=True,
+                    channel_id=channel_id,
                 )
 
         except Exception as exc:
