@@ -1,7 +1,7 @@
 """FastAPI routes for the games plugin web panel."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -10,6 +10,12 @@ from ..config import ANGLE_ACHIEVEMENTS, RPS_ACHIEVEMENTS, TRIVIA_ACHIEVEMENTS
 
 if TYPE_CHECKING:
     from ..plugin import GamesPlugin
+
+
+def _get_auth(plugin: "GamesPlugin"):
+    """Return the DiscordAuth instance or None."""
+    web_app = getattr(getattr(plugin, "web_panel", None), "web_app", None)
+    return getattr(web_app, "auth", None)
 
 
 def register_games_routes(app: FastAPI, plugin: "GamesPlugin") -> None:
@@ -22,23 +28,34 @@ def register_games_routes(app: FastAPI, plugin: "GamesPlugin") -> None:
     @app.get("/plugin/games/api/achievements", response_class=HTMLResponse)
     async def api_achievements(
         request: Request,
-        user_id: str = "",
         guild_id: str = "",
         game_filter: str = "all",
     ) -> HTMLResponse:
-        """Return an HTMX fragment showing all achievements with attained/progress info."""
-        if not user_id or not guild_id:
+        """Return an HTMX fragment with achievements for the current user in the selected guild."""
+        # Require authentication to identify the user
+        auth = _get_auth(plugin)
+        if not auth or not auth.is_authenticated(request):
             return HTMLResponse(
-                '<p class="ach-placeholder">Enter a User ID and Guild ID above, then click Load.</p>'
+                '<p class="ach-msg ach-error">Please <a href="/auth/login">log in</a> to view your achievements.</p>'
+            )
+
+        current_user = auth.get_current_user(request)
+        try:
+            uid = int(current_user["id"])
+        except (KeyError, ValueError, TypeError):
+            return HTMLResponse('<p class="ach-msg ach-error">Could not determine your user ID.</p>')
+
+        if not guild_id:
+            return HTMLResponse(
+                '<p class="ach-msg">Select a server from the sidebar to view your achievements.</p>'
             )
 
         try:
-            uid = int(user_id)
             gid = int(guild_id)
         except ValueError:
-            return HTMLResponse('<p class="ach-error">Invalid User ID or Guild ID — must be integers.</p>')
+            return HTMLResponse('<p class="ach-msg ach-error">Invalid Guild ID.</p>')
 
-        # --- Fetch stats + unlocked achievements ---
+        # --- Fetch stats + unlocked achievement IDs ---
         trivia_stats = await plugin.get_trivia_stats(uid, gid)
         angle_stats = await plugin.get_angle_stats(uid, gid)
         rps_stats = await plugin.get_rps_stats(uid, gid)
@@ -47,7 +64,7 @@ def register_games_routes(app: FastAPI, plugin: "GamesPlugin") -> None:
         angle_unlocked = {a.achievement_id for a in await plugin.get_angle_achievements(uid, gid)}
         rps_unlocked = {a.achievement_id for a in await plugin.get_rps_achievements(uid, gid)}
 
-        # --- Build section data ---
+        # --- Build sections ---
         sections: list[dict] = []
 
         if game_filter in ("all", "trivia"):
@@ -88,12 +105,11 @@ def _pct(current: int, goal: int) -> int:
     return min(100, int(current / max(goal, 1) * 100))
 
 
-def _build_trivia_items(definitions: dict, unlocked: set, stats: object | None) -> list[dict]:
+def _build_trivia_items(definitions: dict, unlocked: set, stats: Any) -> list[dict]:
     items = []
     for ach_id, data in definitions.items():
         req = data["requirement"]
         req_type, req_value = req["type"], req["value"]
-
         current = 0
         if stats:
             if req_type == "correct_answers":
@@ -108,28 +124,21 @@ def _build_trivia_items(definitions: dict, unlocked: set, stats: object | None) 
                 current = stats.total_points
             elif req_type == "perfect_accuracy":
                 current = 20 if stats.recent_perfect else 0
-
         label = req_type.replace("_", " ").title()
         items.append({
-            "id": ach_id,
-            "name": data["name"],
-            "description": data["description"],
-            "emoji": data["emoji"],
-            "unlocked": ach_id in unlocked,
-            "current": current,
-            "goal": req_value,
-            "pct": _pct(current, req_value),
+            "id": ach_id, "name": data["name"], "description": data["description"],
+            "emoji": data["emoji"], "unlocked": ach_id in unlocked,
+            "current": current, "goal": req_value, "pct": _pct(current, req_value),
             "progress_label": f"{label}: {current:,} / {req_value:,}",
         })
     return items
 
 
-def _build_angle_items(definitions: dict, unlocked: set, stats: object | None) -> list[dict]:
+def _build_angle_items(definitions: dict, unlocked: set, stats: Any) -> list[dict]:
     items = []
     for ach_id, data in definitions.items():
         req = data["requirement"]
         req_type, req_value = req["type"], req["value"]
-
         current = 0
         if stats:
             if req_type == "wins":
@@ -144,28 +153,21 @@ def _build_angle_items(definitions: dict, unlocked: set, stats: object | None) -
                 current = stats.best_win_streak
             elif req_type == "total_points":
                 current = stats.total_points
-
         label = req_type.replace("_", " ").title()
         items.append({
-            "id": ach_id,
-            "name": data["name"],
-            "description": data["description"],
-            "emoji": data["emoji"],
-            "unlocked": ach_id in unlocked,
-            "current": current,
-            "goal": req_value,
-            "pct": _pct(current, req_value),
+            "id": ach_id, "name": data["name"], "description": data["description"],
+            "emoji": data["emoji"], "unlocked": ach_id in unlocked,
+            "current": current, "goal": req_value, "pct": _pct(current, req_value),
             "progress_label": f"{label}: {current:,} / {req_value:,}",
         })
     return items
 
 
-def _build_rps_items(definitions: dict, unlocked: set, stats: object | None) -> list[dict]:
+def _build_rps_items(definitions: dict, unlocked: set, stats: Any) -> list[dict]:
     items = []
     for ach_id, data in definitions.items():
         req = data["requirement"]
         req_type, req_value = req["type"], req["value"]
-
         current = 0
         if stats:
             if req_type == "wins":
@@ -182,17 +184,11 @@ def _build_rps_items(definitions: dict, unlocked: set, stats: object | None) -> 
                 current = stats.scissors_wins
             elif req_type == "draws":
                 current = stats.draws
-
         label = req_type.replace("_", " ").title()
         items.append({
-            "id": ach_id,
-            "name": data["name"],
-            "description": data["description"],
-            "emoji": data["emoji"],
-            "unlocked": ach_id in unlocked,
-            "current": current,
-            "goal": req_value,
-            "pct": _pct(current, req_value),
+            "id": ach_id, "name": data["name"], "description": data["description"],
+            "emoji": data["emoji"], "unlocked": ach_id in unlocked,
+            "current": current, "goal": req_value, "pct": _pct(current, req_value),
             "progress_label": f"{label}: {current:,} / {req_value:,}",
         })
     return items
@@ -256,5 +252,4 @@ def _render_achievements(sections: list[dict], total_unlocked: int, total_all: i
     </div>
 """
         html += "  </div>\n</div>\n"
-
     return html

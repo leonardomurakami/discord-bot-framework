@@ -4,58 +4,53 @@
 
 {% block extra_styles %}
 /* ── Achievement panel styles ── */
-.ach-lookup-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--card-radius);
-  padding: 1.6rem 1.8rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.ach-lookup-card h2 {
-  margin: 0 0 1.2rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-primary);
+.ach-toolbar {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.ach-form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto auto;
-  gap: 0.85rem;
-  align-items: end;
+.ach-toolbar label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
-@media (max-width: 768px) {
-  .ach-form-row {
-    grid-template-columns: 1fr 1fr;
-  }
+.ach-toolbar select {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 10px 25px rgba(15,23,42,0.08);
+  transition: border 0.2s, box-shadow 0.2s;
+  cursor: pointer;
 }
 
-@media (max-width: 540px) {
-  .ach-form-row {
-    grid-template-columns: 1fr;
-  }
+.ach-toolbar select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 /* Results area */
 #ach-results {
-  min-height: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-.ach-placeholder, .ach-error {
+.ach-msg {
   color: var(--text-secondary);
   text-align: center;
   padding: 2.5rem 1rem;
   font-size: 1rem;
 }
 
-.ach-error {
-  color: var(--danger-color);
-}
+.ach-error { color: var(--danger-color); }
 
 /* Overall progress summary */
 .ach-summary {
@@ -64,7 +59,6 @@
   border-radius: var(--card-radius);
   padding: 1.25rem 1.6rem;
   box-shadow: var(--shadow-sm);
-  margin-bottom: 0.25rem;
 }
 
 .ach-summary-bar-wrap {
@@ -100,14 +94,8 @@
   transition: width 0.5s ease;
 }
 
-.ach-progress-bar-sm {
-  height: 6px;
-  margin-top: 0.35rem;
-}
-
-.ach-progress-bar-locked {
-  background: linear-gradient(90deg, #64748b, #94a3b8);
-}
+.ach-progress-bar-sm { height: 6px; margin-top: 0.35rem; }
+.ach-progress-bar-locked { background: linear-gradient(90deg, #64748b, #94a3b8); }
 
 /* Sections */
 .ach-section {
@@ -141,7 +129,7 @@
 /* Achievement grid */
 .ach-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   gap: 0.9rem;
 }
 
@@ -153,16 +141,13 @@
   padding: 1rem 1.1rem;
   border-radius: 12px;
   border: 1px solid var(--border-color);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.ach-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
+.ach-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
 .ach-unlocked {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.06));
+  background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.06));
   border-color: rgba(16, 185, 129, 0.35);
 }
 
@@ -171,21 +156,10 @@
   border-color: rgba(148, 163, 184, 0.18);
 }
 
-.ach-emoji {
-  font-size: 1.9rem;
-  line-height: 1;
-  flex-shrink: 0;
-}
+.ach-emoji { font-size: 1.9rem; line-height: 1; flex-shrink: 0; }
+.ach-emoji-locked { filter: grayscale(1); opacity: 0.4; }
 
-.ach-emoji-locked {
-  filter: grayscale(1);
-  opacity: 0.45;
-}
-
-.ach-body {
-  min-width: 0;
-  flex: 1;
-}
+.ach-body { min-width: 0; flex: 1; }
 
 .ach-name {
   font-weight: 700;
@@ -197,9 +171,7 @@
   text-overflow: ellipsis;
 }
 
-.ach-locked .ach-name {
-  color: var(--text-secondary);
-}
+.ach-locked .ach-name { color: var(--text-secondary); }
 
 .ach-desc {
   font-size: 0.82rem;
@@ -215,78 +187,60 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #059669;
-  background: rgba(16, 185, 129, 0.18);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(16,185,129,0.18);
+  border: 1px solid rgba(16,185,129,0.3);
   border-radius: 999px;
   padding: 0.15rem 0.55rem;
 }
 
-.ach-progress-wrap {
-  margin-top: 0.2rem;
-}
-
-.ach-progress-label {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
+.ach-progress-wrap { margin-top: 0.2rem; }
+.ach-progress-label { font-size: 0.78rem; color: var(--text-secondary); }
 
 /* Dark mode tweaks */
-[data-theme="dark"] .ach-lookup-card,
 [data-theme="dark"] .ach-summary,
-[data-theme="dark"] .ach-section {
-  background: rgba(15, 23, 42, 0.92);
-}
+[data-theme="dark"] .ach-section { background: rgba(15,23,42,0.92); }
 
 [data-theme="dark"] .ach-unlocked {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.13), rgba(5, 150, 105, 0.08));
-  border-color: rgba(52, 211, 153, 0.3);
+  background: linear-gradient(135deg, rgba(16,185,129,0.13), rgba(5,150,105,0.08));
+  border-color: rgba(52,211,153,0.3);
 }
 
 [data-theme="dark"] .ach-badge-unlocked {
   color: #34d399;
-  background: rgba(52, 211, 153, 0.15);
-  border-color: rgba(52, 211, 153, 0.3);
+  background: rgba(52,211,153,0.15);
+  border-color: rgba(52,211,153,0.3);
 }
 {% endblock %}
 
 {% block content %}
-<!-- Lookup form -->
-<div class="ach-lookup-card">
-  <h2><i class="fa-solid fa-magnifying-glass"></i> Look up achievements</h2>
-  <div class="ach-form-row">
-    <div class="input-group">
-      <label for="ach-user-id">User ID</label>
-      <input id="ach-user-id" name="user_id" type="text" placeholder="e.g. 123456789012345678">
-    </div>
-    <div class="input-group">
-      <label for="ach-guild-id">Guild ID</label>
-      <input id="ach-guild-id" name="guild_id" type="text" placeholder="e.g. 987654321098765432">
-    </div>
-    <div class="input-group">
-      <label for="ach-filter">Game</label>
-      <select id="ach-filter" name="game_filter">
-        <option value="all">All games</option>
-        <option value="trivia">Trivia</option>
-        <option value="angle">Angle</option>
-        <option value="rps">Rock Paper Scissors</option>
-      </select>
-    </div>
-    <button
-      class="btn"
+<!-- Toolbar: game filter only -->
+<div class="feature-card" style="padding:1.2rem 1.6rem;">
+  <div class="ach-toolbar">
+    <i class="fa-solid fa-trophy" style="color:var(--accent-color);font-size:1.15rem;"></i>
+    <label for="ach-filter">Show:</label>
+    <select id="ach-filter" name="game_filter"
       hx-get="/plugin/games/api/achievements"
+      hx-trigger="change, guild-changed from:body"
       hx-target="#ach-results"
       hx-swap="innerHTML"
-      hx-include="#ach-user-id, #ach-guild-id, #ach-filter"
-      hx-indicator="#ach-spinner"
+      hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
     >
-      <i class="fa-solid fa-search"></i> Load
-      <span id="ach-spinner" class="htmx-indicator">…</span>
-    </button>
+      <option value="all">All games</option>
+      <option value="trivia">Trivia</option>
+      <option value="angle">Angle</option>
+      <option value="rps">Rock Paper Scissors</option>
+    </select>
+    <span class="htmx-indicator" style="color:var(--text-secondary);font-style:italic;">Loading…</span>
   </div>
 </div>
 
-<!-- Results -->
-<div id="ach-results">
-  <p class="ach-placeholder">Enter a User ID and Guild ID above, then click Load.</p>
+<!-- Results (auto-loaded on page load and on guild/filter change) -->
+<div id="ach-results"
+  hx-get="/plugin/games/api/achievements"
+  hx-trigger="load"
+  hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || '', game_filter: document.getElementById('ach-filter')?.value || 'all'}"
+  hx-swap="innerHTML"
+>
+  <p class="ach-msg">Loading…</p>
 </div>
 {% endblock %}
