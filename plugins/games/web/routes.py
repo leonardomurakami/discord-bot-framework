@@ -41,7 +41,7 @@ def register_games_routes(app: FastAPI, plugin: "GamesPlugin") -> None:
 
         current_user = auth.get_current_user(request)
         try:
-            uid = int(current_user["id"])
+            uid = int(current_user["user"]["id"])
         except (KeyError, ValueError, TypeError):
             return HTMLResponse('<p class="ach-msg ach-error">Could not determine your user ID.</p>')
 
