@@ -1,5 +1,5 @@
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class MusicSettings(BaseSettings):
@@ -51,12 +51,13 @@ class MusicSettings(BaseSettings):
         description="Maximum allowed volume",
     )
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        env_prefix = "MUSIC_"
-        case_sensitive = False
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="MUSIC_",
+        case_sensitive=False,
+        extra="ignore",
+    )
 
 
 # Plugin settings instance
