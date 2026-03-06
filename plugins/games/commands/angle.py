@@ -48,18 +48,19 @@ def setup_angle_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             user_mention = ctx.author.mention
             embed = _build_angle_embed(plugin, state, user_mention)
             attachment = hikari.Bytes(image_bytes, "angle.png")
+            embed.set_image(attachment)
 
             miru_client = getattr(plugin.bot, "miru_client", None)
 
             if is_complete:
                 # Game already finished — just show the result, no button
-                await ctx.respond(embed=embed, attachments=[attachment])
+                await ctx.respond(embed=embed)
             elif miru_client:
                 view = AngleView(plugin, ctx.author.id, ctx.guild_id, state)
-                response = await ctx.respond(embed=embed, attachments=[attachment], components=view)
+                response = await ctx.respond(embed=embed, components=view)
                 miru_client.start_view(view, bind_to=response)
             else:
-                await ctx.respond(embed=embed, attachments=[attachment])
+                await ctx.respond(embed=embed)
 
             await plugin.log_command_usage(ctx, "angle", True)
 
