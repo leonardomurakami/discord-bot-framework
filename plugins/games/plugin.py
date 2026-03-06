@@ -52,11 +52,28 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
     async def on_load(self) -> None:
         """Initialize the plugin and start HTTP session."""
         await super().on_load()
+        await self._run_schema_migrations()
 
         timeout = aiohttp.ClientTimeout(total=games_settings.api_request_timeout_seconds)
         self.session = aiohttp.ClientSession(timeout=timeout)
 
         logger.info("Games plugin loaded successfully")
+
+    async def _run_schema_migrations(self) -> None:
+        """Apply additive column migrations that CREATE TABLE IF NOT EXISTS won't cover."""
+        from sqlalchemy import text
+
+        # Each entry is an idempotent DDL statement safe to run on every startup.
+        migrations = [
+            "ALTER TABLE trivia_stats ADD COLUMN IF NOT EXISTS recent_results_json TEXT DEFAULT '[]'",
+        ]
+        try:
+            async with self.db.engine.begin() as conn:
+                for sql in migrations:
+                    await conn.execute(text(sql))
+            logger.info("Games schema migrations applied")
+        except Exception as exc:
+            logger.warning("Games schema migration error (non-fatal): %s", exc)
 
     async def on_unload(self) -> None:
         """Clean up resources and close HTTP session."""
