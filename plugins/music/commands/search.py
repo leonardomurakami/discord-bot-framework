@@ -77,9 +77,9 @@ def setup_search_commands(plugin):
                 miru_client.start_view(view)
 
                 if hasattr(message, "message"):
-                    view.message = message.message
+                    view._message = message.message
                 elif hasattr(message, "id"):
-                    view.message = message
+                    view._message = message
             else:
                 first_track = search_result.tracks[0]
 
