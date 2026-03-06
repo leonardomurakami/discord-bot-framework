@@ -42,8 +42,7 @@ def setup_angle_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             state = await plugin.get_or_create_angle_game(ctx.author.id, ctx.guild_id)
 
             is_complete = state.get("is_complete", False)
-            target_reveal = state["target"] if is_complete else None
-            image_bytes = generate_angle_image(state["guesses"], target=target_reveal)
+            image_bytes = generate_angle_image(state["target"])
 
             user_mention = ctx.author.mention
             embed = _build_angle_embed(plugin, state, user_mention)
