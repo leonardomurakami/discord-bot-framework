@@ -4,7 +4,6 @@ from __future__ import annotations
 import io
 
 import matplotlib
-import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -13,25 +12,19 @@ matplotlib.use("Agg")  # non-interactive backend
 # Discord dark theme palette
 BG_COLOR = "#2b2d31"
 CIRCLE_COLOR = "#5865f2"  # Discord blurple
-REF_COLOR = "#ffffff"
-GUESS_COLORS = ["#faa61a", "#eb459e", "#ed4245", "#3ba55c"]  # yellow, pink, red, green
-TARGET_COLOR = "#57f287"  # Discord green
+TARGET_COLOR = "#faa61a"  # gold — the mystery ray
 TEXT_COLOR = "#dcddde"
 GRID_COLOR = "#40444b"
 
 
-def generate_angle_image(
-    guesses: list[int],
-    target: int | None = None,
-    max_attempts: int = 4,
-) -> bytes:
+def generate_angle_image(target: int) -> bytes:
     """
-    Render a protractor image showing each guess as a labeled ray.
+    Render a protractor showing the mystery angle as an unlabeled ray.
+
+    The user must visually estimate the angle and submit their numeric guess.
 
     Args:
-        guesses: List of angle guesses (degrees, 0-360).
-        target: The correct answer; only drawn when the game is over (not None).
-        max_attempts: Total allowed attempts (for legend spacing).
+        target: The correct angle (degrees, 0-360). Drawn without a degree label.
 
     Returns:
         PNG image bytes.
@@ -76,60 +69,31 @@ def generate_angle_image(
                 color=GRID_COLOR, linewidth=0.8, linestyle="--", alpha=0.5)
 
     # --- reference dot at origin ---
-    ax.plot(0, 0, "o", color=REF_COLOR, markersize=5, zorder=5)
+    ax.plot(0, 0, "o", color=TEXT_COLOR, markersize=5, zorder=5)
 
-    # --- draw each guess ray ---
-    legend_handles = []
-    for i, guess in enumerate(guesses):
-        color = GUESS_COLORS[i % len(GUESS_COLORS)]
-        rad = np.radians(guess)
-        tip_x, tip_y = 0.85 * np.cos(rad), 0.85 * np.sin(rad)
-        ax.annotate(
-            "",
-            xy=(tip_x, tip_y),
-            xytext=(0, 0),
-            arrowprops=dict(
-                arrowstyle="-|>",
-                color=color,
-                lw=2.2,
-                mutation_scale=16,
-            ),
-            zorder=6,
-        )
-        label = f"#{i + 1}: {guess}°"
-        legend_handles.append(mpatches.Patch(color=color, label=label))
+    # --- mystery target ray (no degree label) ---
+    rad = np.radians(target)
+    tip_x, tip_y = 0.88 * np.cos(rad), 0.88 * np.sin(rad)
+    ax.annotate(
+        "",
+        xy=(tip_x, tip_y),
+        xytext=(0, 0),
+        arrowprops=dict(
+            arrowstyle="-|>",
+            color=TARGET_COLOR,
+            lw=2.8,
+            mutation_scale=18,
+        ),
+        zorder=7,
+    )
 
-    # --- draw target ray (only when game is over) ---
-    if target is not None:
-        rad = np.radians(target)
-        tip_x, tip_y = 0.88 * np.cos(rad), 0.88 * np.sin(rad)
-        ax.annotate(
-            "",
-            xy=(tip_x, tip_y),
-            xytext=(0, 0),
-            arrowprops=dict(
-                arrowstyle="-|>",
-                color=TARGET_COLOR,
-                lw=2.8,
-                mutation_scale=18,
-            ),
-            zorder=7,
-        )
-        legend_handles.append(mpatches.Patch(color=TARGET_COLOR, label=f"Answer: {target}°"))
-
-    # --- legend ---
-    if legend_handles:
-        legend = ax.legend(
-            handles=legend_handles,
-            loc="lower center",
-            bbox_to_anchor=(0.5, -0.08),
-            ncol=min(len(legend_handles), 3),
-            framealpha=0.0,
-            fontsize=9,
-            labelcolor=TEXT_COLOR,
-        )
-        for text in legend.get_texts():
-            text.set_fontfamily("monospace")
+    # --- prompt label ---
+    ax.text(
+        0, -1.42,
+        "What angle is this?",
+        ha="center", va="center",
+        fontsize=9, color=TEXT_COLOR, fontfamily="monospace",
+    )
 
     plt.tight_layout(pad=0.2)
 

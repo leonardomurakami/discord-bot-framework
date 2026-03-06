@@ -49,15 +49,9 @@ def _build_angle_embed(plugin: GamesPlugin, state: dict[str, Any], user_mention:
 
         if dist == 0:
             feedback = "✅ **Exact!**"
-        elif dist == 1:
-            arrow = "⬆️" if direction == "higher" else "⬇️"
-            feedback = f"{arrow} **{dist}° off** — go {direction}"
-        elif dist == 2:
-            arrow = "⬆️" if direction == "higher" else "⬇️"
-            feedback = f"{arrow} **{dist}° off** — go {direction}"
         else:
             arrow = "⬆️" if direction == "higher" else "⬇️"
-            feedback = f"{arrow} {dist}° off — go {direction}"
+            feedback = f"{arrow} Go {direction}"
 
         history_lines.append(f"{color_dot} Guess #{i + 1}: **{guess}°** — {feedback}")
 
@@ -133,20 +127,16 @@ class AngleGuessModal(miru.Modal, title="Guess the Angle"):
 
         is_complete = state.get("is_complete", False)
 
-        # Generate image (reveal target only when game over)
-        target_reveal = state["target"] if is_complete else None
-        image_bytes = generate_angle_image(state["guesses"], target=target_reveal)
+        image_bytes = generate_angle_image(state["target"])
 
         user_mention = f"<@{self.user_id}>"
         embed = _build_angle_embed(self.plugin, state, user_mention)
+        embed.set_image(hikari.Bytes(image_bytes, "angle.png"))
 
         # Build the updated view (remove button if game over)
         new_view: AngleView | None = None
         if not is_complete:
             new_view = AngleView(self.plugin, self.user_id, self.guild_id, state)
-
-        attachment = hikari.Bytes(image_bytes, "angle.png")
-        embed.set_image(attachment)
 
         try:
             if new_view:

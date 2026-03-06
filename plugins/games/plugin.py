@@ -422,7 +422,17 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 )
                 stats = stats_result.scalars().first()
                 if not stats:
-                    stats = AngleStats(user_id=user_id, guild_id=guild_id)
+                    stats = AngleStats(
+                        user_id=user_id,
+                        guild_id=guild_id,
+                        total_games=0,
+                        wins=0,
+                        total_points=0,
+                        exact_wins=0,
+                        close_wins=0,
+                        current_win_streak=0,
+                        best_win_streak=0,
+                    )
                     session.add(stats)
 
                 stats.total_games += 1
