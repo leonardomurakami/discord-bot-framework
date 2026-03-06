@@ -188,7 +188,7 @@ TRIVIA_ACHIEVEMENTS = {
     },
     "perfectionist": {
         "name": "Perfectionist",
-        "description": "Achieve 100% accuracy over at least 20 questions",
+        "description": "Get 20 correct answers in a row (any 20 consecutive questions)",
         "emoji": "💯",
         "requirement": {"type": "perfect_accuracy", "value": 20},
     },

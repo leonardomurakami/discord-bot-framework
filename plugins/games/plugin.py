@@ -199,6 +199,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
             stats.total_questions += 1
 
+            stats.record_result(is_correct)
+
             if is_correct:
                 stats.correct_answers += 1
                 stats.total_points += points
@@ -269,7 +271,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 earned = True
             elif req_type == "total_points" and stats.total_points >= req_value:
                 earned = True
-            elif req_type == "perfect_accuracy" and stats.total_questions >= req_value and stats.accuracy == 100.0:
+            elif req_type == "perfect_accuracy" and stats.recent_perfect:
                 earned = True
 
             if earned:
@@ -305,10 +307,11 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def get_daily_angle() -> int:
-        """Return a deterministic daily angle (1-360) seeded by today's UTC date."""
+    def get_daily_angle(user_id: int) -> int:
+        """Return a deterministic daily angle (1-360) unique per user per UTC day."""
         today = datetime.now(UTC).date().isoformat()
-        hash_bytes = hashlib.md5(today.encode()).digest()  # noqa: S324
+        seed = f"{today}:{user_id}"
+        hash_bytes = hashlib.md5(seed.encode()).digest()  # noqa: S324
         value = int.from_bytes(hash_bytes[:2], "big")
         return (value % 360) + 1  # 1–360
 
@@ -329,7 +332,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         from .models.angle import AngleGame
 
         today = datetime.now(UTC).date()
-        target = self.get_daily_angle()
+        target = self.get_daily_angle(user_id)
 
         async with self.db_session() as session:
             from sqlalchemy import select
