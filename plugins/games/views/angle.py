@@ -140,21 +140,13 @@ class AngleGuessModal(miru.Modal, title="Guess the Angle"):
 
         try:
             if new_view:
-                await self.angle_view.message.edit(
-                    embed=embed,
-                    components=new_view,
-                )
+                await ctx.edit_response(embed=embed, components=new_view)
                 # Re-bind the new view so its button works
                 miru_client = getattr(self.plugin.bot, "miru_client", None)
                 if miru_client:
                     miru_client.start_view(new_view, bind_to=self.angle_view.message)
             else:
-                await self.angle_view.message.edit(
-                    embed=embed,
-                    components=[],
-                )
-            # Acknowledge the modal interaction silently
-            await ctx.respond(flags=hikari.MessageFlag.EPHEMERAL, content="\u200b")
+                await ctx.edit_response(embed=embed, components=[])
         except Exception as exc:
             logger.error("Failed to update angle message: %s", exc)
             await ctx.respond("Guess recorded! Run `/angle` to see your updated board.", flags=hikari.MessageFlag.EPHEMERAL)

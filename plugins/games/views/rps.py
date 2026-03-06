@@ -84,7 +84,7 @@ class RPSView(miru.View):
                 item.disabled = True
 
         try:
-            await self.message.edit(embed=embed, components=self)
+            await ctx.edit_response(embed=embed, components=self)
         except Exception as exc:
             logger.error("Failed to edit RPS message: %s", exc)
 
@@ -98,7 +98,6 @@ class RPSView(miru.View):
             except Exception as exc:
                 logger.warning("Failed to record RPS result: %s", exc)
 
-        await ctx.respond(flags=hikari.MessageFlag.EPHEMERAL, content="\u200b")
         self.stop()
 
     @miru.button(label="Rock", emoji="🪨", style=hikari.ButtonStyle.SECONDARY, custom_id="rps_rock")
