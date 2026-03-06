@@ -228,3 +228,101 @@ ANGLE_POINTS = {
     "close": 75,    # 1° off
     "near": 50,     # 2° off
 }
+
+# Angle achievement definitions
+ANGLE_ACHIEVEMENTS = {
+    "angle_first_win": {
+        "name": "Bullseye!",
+        "description": "Win your first angle game",
+        "emoji": "🎯",
+        "requirement": {"type": "wins", "value": 1},
+    },
+    "angle_sharpshooter": {
+        "name": "Sharpshooter",
+        "description": "Get an exact guess (0° off) for the first time",
+        "emoji": "🏹",
+        "requirement": {"type": "exact_wins", "value": 1},
+    },
+    "angle_precision": {
+        "name": "Precision Master",
+        "description": "Get 10 exact wins (0° off)",
+        "emoji": "🔭",
+        "requirement": {"type": "exact_wins", "value": 10},
+    },
+    "angle_veteran": {
+        "name": "Angle Veteran",
+        "description": "Play 30 angle games",
+        "emoji": "📐",
+        "requirement": {"type": "total_games", "value": 30},
+    },
+    "angle_streak": {
+        "name": "On a Roll",
+        "description": "Win 5 angle games in a row",
+        "emoji": "🔥",
+        "requirement": {"type": "win_streak", "value": 5},
+    },
+    "angle_collector": {
+        "name": "Point Collector",
+        "description": "Earn 500 angle points",
+        "emoji": "💎",
+        "requirement": {"type": "total_points", "value": 500},
+    },
+    "angle_close_enough": {
+        "name": "Close Enough",
+        "description": "Win 10 games within 2° of the target",
+        "emoji": "🎪",
+        "requirement": {"type": "close_wins", "value": 10},
+    },
+}
+
+# RPS achievement definitions
+RPS_ACHIEVEMENTS = {
+    "rps_first_win": {
+        "name": "First Blood",
+        "description": "Win your first RPS game",
+        "emoji": "✊",
+        "requirement": {"type": "wins", "value": 1},
+    },
+    "rps_veteran": {
+        "name": "RPS Veteran",
+        "description": "Play 50 RPS games",
+        "emoji": "🎮",
+        "requirement": {"type": "total_games", "value": 50},
+    },
+    "rps_champion": {
+        "name": "RPS Champion",
+        "description": "Win 25 RPS games",
+        "emoji": "🏆",
+        "requirement": {"type": "wins", "value": 25},
+    },
+    "rps_streak": {
+        "name": "Unstoppable",
+        "description": "Win 5 RPS games in a row",
+        "emoji": "⚡",
+        "requirement": {"type": "win_streak", "value": 5},
+    },
+    "rps_rock_solid": {
+        "name": "Rock Solid",
+        "description": "Win 20 games with Rock",
+        "emoji": "🪨",
+        "requirement": {"type": "rock_wins", "value": 20},
+    },
+    "rps_paper_trail": {
+        "name": "Paper Trail",
+        "description": "Win 20 games with Paper",
+        "emoji": "📄",
+        "requirement": {"type": "paper_wins", "value": 20},
+    },
+    "rps_scissor_happy": {
+        "name": "Scissor Happy",
+        "description": "Win 20 games with Scissors",
+        "emoji": "✂️",
+        "requirement": {"type": "scissors_wins", "value": 20},
+    },
+    "rps_draw_master": {
+        "name": "Draw Master",
+        "description": "Draw 15 RPS games",
+        "emoji": "🤝",
+        "requirement": {"type": "draws", "value": 15},
+    },
+}

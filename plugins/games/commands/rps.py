@@ -35,9 +35,10 @@ def setup_rps_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 color=hikari.Color(EMBED_COLORS["rps"]),
             )
 
+            guild_id = ctx.guild_id or 0
             miru_client = getattr(plugin.bot, "miru_client", None)
             if miru_client:
-                view = RPSView(plugin, ctx.author.id)
+                view = RPSView(plugin, ctx.author.id, guild_id)
                 response = await ctx.respond(embed=embed, components=view)
                 miru_client.start_view(view, bind_to=response)
             else:

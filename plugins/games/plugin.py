@@ -9,9 +9,11 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import hikari
+from fastapi import FastAPI
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.mixins import DatabaseMixin
+from bot.web.mixins import WebPanelMixin
 
 from .commands.trivia import setup_trivia_commands
 from .config import ANGLE_MAX_ATTEMPTS, ANGLE_POINTS, EMBED_COLORS, games_settings
@@ -22,7 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class GamesPlugin(DatabaseMixin, BasePlugin):
+class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
     """Interactive games plugin with trivia, angle game, RPS, scoring, and achievements."""
 
     def __init__(self, bot: DiscordBot) -> None:
@@ -32,9 +34,17 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         self._replay_games: dict[tuple[int, int], dict[str, Any]] = {}
 
         # Register database models
-        from .models import CustomQuestion, GuildLeaderboard, TriviaAchievement, TriviaStats
-        from .models.angle import AngleGame, AngleStats
-        self.register_models(TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard, AngleGame, AngleStats)
+        from .models import (
+            AngleAchievement, AngleGame, AngleStats,
+            CustomQuestion, GuildLeaderboard,
+            RPSAchievement, RPSStats,
+            TriviaAchievement, TriviaStats,
+        )
+        self.register_models(
+            TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard,
+            AngleGame, AngleStats, AngleAchievement,
+            RPSStats, RPSAchievement,
+        )
 
         # Register commands
         self._register_commands()
@@ -494,6 +504,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                     stats.current_win_streak = 0
 
                 await session.commit()
+                if game.is_complete:
+                    await self._check_angle_achievements(user_id, guild_id, stats, session)
 
             await session.refresh(game)
             return self._angle_game_to_dict(game)
@@ -525,3 +537,250 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 )
             )
             return result.scalars().first()
+
+    async def get_angle_achievements(self, user_id: int, guild_id: int) -> list[Any]:
+        """Return all unlocked AngleAchievements for a user in a guild."""
+        from .models.angle import AngleAchievement
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(AngleAchievement).where(
+                    AngleAchievement.user_id == user_id,
+                    AngleAchievement.guild_id == guild_id,
+                ).order_by(AngleAchievement.unlocked_at)
+            )
+            return list(result.scalars().all())
+
+    async def _check_angle_achievements(
+        self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None
+    ) -> None:
+        """Award any new angle achievements earned based on current stats."""
+        from sqlalchemy import select
+
+        from .config import ANGLE_ACHIEVEMENTS
+        from .models.angle import AngleAchievement
+
+        result = await session.execute(
+            select(AngleAchievement).where(
+                AngleAchievement.user_id == user_id,
+                AngleAchievement.guild_id == guild_id,
+            )
+        )
+        existing = {ach.achievement_id for ach in result.scalars().all()}
+
+        for achievement_id, data in ANGLE_ACHIEVEMENTS.items():
+            if achievement_id in existing:
+                continue
+
+            req = data["requirement"]
+            req_type, req_value = req["type"], req["value"]
+
+            earned = False
+            if req_type == "wins" and stats.wins >= req_value:
+                earned = True
+            elif req_type == "exact_wins" and stats.exact_wins >= req_value:
+                earned = True
+            elif req_type == "close_wins" and stats.close_wins >= req_value:
+                earned = True
+            elif req_type == "total_games" and stats.total_games >= req_value:
+                earned = True
+            elif req_type == "win_streak" and stats.best_win_streak >= req_value:
+                earned = True
+            elif req_type == "total_points" and stats.total_points >= req_value:
+                earned = True
+
+            if earned:
+                achievement = AngleAchievement(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    achievement_id=achievement_id,
+                    name=data["name"],
+                    description=data["description"],
+                    emoji=data["emoji"],
+                )
+                session.add(achievement)
+                await session.commit()
+                logger.info("Awarded angle achievement '%s' to user %s", achievement_id, user_id)
+
+                if channel_id:
+                    try:
+                        embed = hikari.Embed(
+                            title=f"{data['emoji']} Achievement Unlocked!",
+                            description=(
+                                f"<@{user_id}> earned **{data['name']}**\n{data['description']}"
+                            ),
+                            color=hikari.Color(EMBED_COLORS["achievement"]),
+                        )
+                        await self.bot.rest.create_message(channel_id, embed=embed)
+                    except Exception as exc:
+                        logger.warning("Failed to send angle achievement notification: %s", exc)
+
+    # -------------------------------------------------------------------------
+    # RPS helpers
+    # -------------------------------------------------------------------------
+
+    async def record_rps_result(
+        self,
+        user_id: int,
+        guild_id: int,
+        player_choice: str,
+        result: str,
+        channel_id: int | None = None,
+    ) -> None:
+        """Update RPSStats and check for new achievements after a game."""
+        from .models.rps import RPSAchievement, RPSStats
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+
+            res = await session.execute(
+                select(RPSStats).where(
+                    RPSStats.user_id == user_id,
+                    RPSStats.guild_id == guild_id,
+                )
+            )
+            stats = res.scalars().first()
+            if not stats:
+                stats = RPSStats(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    total_games=0, wins=0, losses=0, draws=0,
+                    rock_wins=0, paper_wins=0, scissors_wins=0,
+                    current_win_streak=0, best_win_streak=0,
+                )
+                session.add(stats)
+
+            stats.total_games += 1
+            if result == "win":
+                stats.wins += 1
+                stats.current_win_streak += 1
+                if stats.current_win_streak > stats.best_win_streak:
+                    stats.best_win_streak = stats.current_win_streak
+                if player_choice == "rock":
+                    stats.rock_wins += 1
+                elif player_choice == "paper":
+                    stats.paper_wins += 1
+                elif player_choice == "scissors":
+                    stats.scissors_wins += 1
+            elif result == "lose":
+                stats.losses += 1
+                stats.current_win_streak = 0
+            else:  # draw
+                stats.draws += 1
+                stats.current_win_streak = 0
+
+            await session.commit()
+            await self._check_rps_achievements(user_id, guild_id, stats, session, channel_id=channel_id)
+
+    async def _check_rps_achievements(
+        self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None
+    ) -> None:
+        """Award any new RPS achievements earned based on current stats."""
+        from sqlalchemy import select
+
+        from .config import RPS_ACHIEVEMENTS
+        from .models.rps import RPSAchievement
+
+        result = await session.execute(
+            select(RPSAchievement).where(
+                RPSAchievement.user_id == user_id,
+                RPSAchievement.guild_id == guild_id,
+            )
+        )
+        existing = {ach.achievement_id for ach in result.scalars().all()}
+
+        for achievement_id, data in RPS_ACHIEVEMENTS.items():
+            if achievement_id in existing:
+                continue
+
+            req = data["requirement"]
+            req_type, req_value = req["type"], req["value"]
+
+            earned = False
+            if req_type == "wins" and stats.wins >= req_value:
+                earned = True
+            elif req_type == "total_games" and stats.total_games >= req_value:
+                earned = True
+            elif req_type == "win_streak" and stats.best_win_streak >= req_value:
+                earned = True
+            elif req_type == "rock_wins" and stats.rock_wins >= req_value:
+                earned = True
+            elif req_type == "paper_wins" and stats.paper_wins >= req_value:
+                earned = True
+            elif req_type == "scissors_wins" and stats.scissors_wins >= req_value:
+                earned = True
+            elif req_type == "draws" and stats.draws >= req_value:
+                earned = True
+
+            if earned:
+                achievement = RPSAchievement(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    achievement_id=achievement_id,
+                    name=data["name"],
+                    description=data["description"],
+                    emoji=data["emoji"],
+                )
+                session.add(achievement)
+                await session.commit()
+                logger.info("Awarded RPS achievement '%s' to user %s", achievement_id, user_id)
+
+                if channel_id:
+                    try:
+                        embed = hikari.Embed(
+                            title=f"{data['emoji']} Achievement Unlocked!",
+                            description=(
+                                f"<@{user_id}> earned **{data['name']}**\n{data['description']}"
+                            ),
+                            color=hikari.Color(EMBED_COLORS["achievement"]),
+                        )
+                        await self.bot.rest.create_message(channel_id, embed=embed)
+                    except Exception as exc:
+                        logger.warning("Failed to send RPS achievement notification: %s", exc)
+
+    async def get_rps_stats(self, user_id: int, guild_id: int) -> Any:
+        """Return RPSStats for a user in a guild, or None."""
+        from .models.rps import RPSStats
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(RPSStats).where(
+                    RPSStats.user_id == user_id,
+                    RPSStats.guild_id == guild_id,
+                )
+            )
+            return result.scalars().first()
+
+    async def get_rps_achievements(self, user_id: int, guild_id: int) -> list[Any]:
+        """Return all unlocked RPSAchievements for a user in a guild."""
+        from .models.rps import RPSAchievement
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(RPSAchievement).where(
+                    RPSAchievement.user_id == user_id,
+                    RPSAchievement.guild_id == guild_id,
+                ).order_by(RPSAchievement.unlocked_at)
+            )
+            return list(result.scalars().all())
+
+    # -------------------------------------------------------------------------
+    # Web panel
+    # -------------------------------------------------------------------------
+
+    def get_panel_info(self) -> dict[str, Any]:
+        """Return metadata for this plugin's web panel."""
+        return {
+            "name": "Games",
+            "description": "View achievements for Trivia, Angle, and RPS games",
+            "route": "/plugin/games",
+            "icon": "fa-solid fa-trophy",
+            "nav_order": 20,
+        }
+
+    def register_web_routes(self, app: FastAPI) -> None:
+        from .web import register_games_routes
+        register_games_routes(app, self)
