@@ -22,7 +22,7 @@ async def save_queue_to_db(music_plugin: "MusicPlugin", guild_id: int) -> None:
             return
 
         async with music_plugin.db_session() as session:
-            from sqlalchemy import text
+            from sqlalchemy import select, text
 
             from .models import MusicQueue, MusicSession
 
