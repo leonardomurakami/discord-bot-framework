@@ -188,10 +188,11 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
             if plugin.cache:
                 cached = plugin.cache.get_guild(guild_id)
                 if cached:
+                    icon_url = cached.make_icon_url()
                     bot_guild_info = {
                         "id": str(cached.id),
                         "name": cached.name,
-                        "icon": str(cached.icon_url) if cached.icon_url else None,
+                        "icon": str(icon_url) if icon_url else None,
                     }
 
             return JSONResponse({"success": True, "guild_info": bot_guild_info or guild_info})
