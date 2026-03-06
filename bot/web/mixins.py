@@ -4,6 +4,17 @@ from typing import Any
 from fastapi import APIRouter, FastAPI
 
 
+def _user_has_any_guild_admin(current_user: dict | None) -> bool:
+    """Return True if the current user has Discord Administrator or Manage Guild in any guild."""
+    if not current_user:
+        return False
+    for guild in current_user.get("guilds", []):
+        perms = int(guild.get("permissions", 0))
+        if perms & 0x8 or perms & 0x20:  # Administrator | Manage Guild
+            return True
+    return False
+
+
 class WebPanelMixin(ABC):
     """
     Mixin for plugins that want to provide web panel functionality.
@@ -164,11 +175,15 @@ class WebPanelMixin(ABC):
             "auth_configured": auth_configured,
         }
 
-        # Add plugin panels for sidebar navigation
+        # Add plugin panels for sidebar navigation (filtered by access rights)
         if hasattr(self.bot, "web_panel_manager"):
             all_panels = self.bot.web_panel_manager.get_all_panel_info()
             panels_with_order = []
             for plugin_name, panel_info in all_panels.items():
+                # Skip panels that require Discord admin when the user is not an admin
+                if panel_info.get("requires_discord_admin"):
+                    if not _user_has_any_guild_admin(current_user):
+                        continue
                 panels_with_order.append(
                     {
                         "name": panel_info["name"],

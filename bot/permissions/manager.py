@@ -4,7 +4,7 @@ import hikari
 from sqlalchemy import select
 
 from ..database.manager import DatabaseManager
-from ..database.models import Permission, RolePermission
+from ..database.models import Permission, RolePermission, UserPermission
 
 logger = logging.getLogger(__name__)
 
@@ -368,9 +368,18 @@ class PermissionManager:
         for role_id, role_permissions in permissions.items():
             self._permission_cache[guild_id][role_id] = role_permissions
 
-        # Check if user has permission
+        # Check if user has permission via roles
         for role_id in user_role_ids:
             if role_id in permissions and permission_node in permissions[role_id]:
+                return True
+
+        # Check user-level direct permissions
+        user_direct = await self.get_user_direct_permissions(guild_id, int(user.id))
+        if permission_node in user_direct:
+            return True
+        # Also check wildcard matches in direct permissions
+        for granted in user_direct:
+            if "*" in granted and self._match_wildcard_pattern(granted, permission_node):
                 return True
 
         return False
@@ -463,3 +472,148 @@ class PermissionManager:
     def clear_cache(self) -> None:
         self._permission_cache.clear()
         logger.info("Permission cache cleared")
+
+    # ------------------------------------------------------------------
+    # User-level permission methods
+    # ------------------------------------------------------------------
+
+    async def grant_user_permission(
+        self, guild_id: int, user_id: int, permission_pattern: str
+    ) -> tuple[bool, list[str], list[str]]:
+        """Grant permission(s) directly to a user. Supports wildcard patterns."""
+        try:
+            permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
+            if not permission_nodes:
+                return False, [], [permission_pattern]
+
+            granted_permissions: list[str] = []
+            failed_permissions: list[str] = []
+
+            async with self.db.session() as session:
+                for permission_node in permission_nodes:
+                    try:
+                        perm_result = await session.execute(
+                            select(Permission).where(Permission.node == permission_node)
+                        )
+                        permission = perm_result.scalar_one_or_none()
+                        if not permission:
+                            failed_permissions.append(permission_node)
+                            continue
+
+                        existing = await session.execute(
+                            select(UserPermission).where(
+                                UserPermission.guild_id == guild_id,
+                                UserPermission.user_id == user_id,
+                                UserPermission.permission_id == permission.id,
+                            )
+                        )
+                        user_perm = existing.scalar_one_or_none()
+                        if user_perm:
+                            if not user_perm.granted:
+                                user_perm.granted = True
+                                granted_permissions.append(permission_node)
+                        else:
+                            session.add(
+                                UserPermission(
+                                    guild_id=guild_id,
+                                    user_id=user_id,
+                                    permission_id=permission.id,
+                                    granted=True,
+                                )
+                            )
+                            granted_permissions.append(permission_node)
+                    except Exception as e:
+                        logger.error(f"Error processing user permission {permission_node}: {e}")
+                        failed_permissions.append(permission_node)
+
+                await session.commit()
+
+            success = len(granted_permissions) > 0
+            logger.info(
+                f"Granted {len(granted_permissions)} permissions to user {user_id} in guild {guild_id}"
+            )
+            return success, granted_permissions, failed_permissions
+
+        except Exception as e:
+            logger.error(f"Error in grant_user_permission: {e}")
+            return False, [], [permission_pattern]
+
+    async def revoke_user_permission(
+        self, guild_id: int, user_id: int, permission_pattern: str
+    ) -> tuple[bool, list[str], list[str]]:
+        """Revoke permission(s) from a user. Supports wildcard patterns."""
+        try:
+            permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
+            if not permission_nodes:
+                return False, [], [permission_pattern]
+
+            revoked_permissions: list[str] = []
+            failed_permissions: list[str] = []
+
+            async with self.db.session() as session:
+                for permission_node in permission_nodes:
+                    try:
+                        perm_result = await session.execute(
+                            select(Permission).where(Permission.node == permission_node)
+                        )
+                        permission = perm_result.scalar_one_or_none()
+                        if not permission:
+                            failed_permissions.append(permission_node)
+                            continue
+
+                        existing = await session.execute(
+                            select(UserPermission).where(
+                                UserPermission.guild_id == guild_id,
+                                UserPermission.user_id == user_id,
+                                UserPermission.permission_id == permission.id,
+                            )
+                        )
+                        user_perm = existing.scalar_one_or_none()
+                        if user_perm:
+                            if user_perm.granted:
+                                user_perm.granted = False
+                                revoked_permissions.append(permission_node)
+                        else:
+                            session.add(
+                                UserPermission(
+                                    guild_id=guild_id,
+                                    user_id=user_id,
+                                    permission_id=permission.id,
+                                    granted=False,
+                                )
+                            )
+                            revoked_permissions.append(permission_node)
+                    except Exception as e:
+                        logger.error(f"Error processing user permission {permission_node}: {e}")
+                        failed_permissions.append(permission_node)
+
+                await session.commit()
+
+            success = len(revoked_permissions) > 0
+            logger.info(
+                f"Revoked {len(revoked_permissions)} permissions from user {user_id} in guild {guild_id}"
+            )
+            return success, revoked_permissions, failed_permissions
+
+        except Exception as e:
+            logger.error(f"Error in revoke_user_permission: {e}")
+            return False, [], [permission_pattern]
+
+    async def get_user_direct_permissions(self, guild_id: int, user_id: int) -> list[str]:
+        """Return permission nodes explicitly granted to this user (not via roles)."""
+        try:
+            async with self.db.session() as session:
+                result = await session.execute(
+                    select(Permission.node)
+                    .join(UserPermission)
+                    .where(
+                        UserPermission.guild_id == guild_id,
+                        UserPermission.user_id == user_id,
+                        UserPermission.granted == True,  # noqa: E712
+                    )
+                    .order_by(Permission.node)
+                )
+                return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching user direct permissions: {e}")
+            return []
