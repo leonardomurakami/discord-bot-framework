@@ -34,10 +34,11 @@ def _determine_result(player: str, bot_choice: str) -> str:
 class RPSView(miru.View):
     """Show three buttons (Rock / Paper / Scissors); resolve immediately on click."""
 
-    def __init__(self, plugin: GamesPlugin, invoker_id: int) -> None:
+    def __init__(self, plugin: GamesPlugin, invoker_id: int, guild_id: int = 0) -> None:
         super().__init__(timeout=60)
         self.plugin = plugin
         self.invoker_id = invoker_id
+        self.guild_id = guild_id
 
     async def _handle_choice(self, ctx: miru.ViewContext, player_choice: str) -> None:
         if ctx.user.id != self.invoker_id:
@@ -86,6 +87,16 @@ class RPSView(miru.View):
             await self.message.edit(embed=embed, components=self)
         except Exception as exc:
             logger.error("Failed to edit RPS message: %s", exc)
+
+        # Persist stats and check achievements (fire-and-forget)
+        if self.guild_id:
+            try:
+                channel_id = int(ctx.channel_id) if ctx.channel_id else None
+                await self.plugin.record_rps_result(
+                    int(ctx.user.id), self.guild_id, player_choice, result, channel_id=channel_id
+                )
+            except Exception as exc:
+                logger.warning("Failed to record RPS result: %s", exc)
 
         await ctx.respond(flags=hikari.MessageFlag.EPHEMERAL, content="\u200b")
         self.stop()

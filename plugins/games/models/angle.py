@@ -87,3 +87,26 @@ class AngleStats(Base):
 
     def __repr__(self) -> str:
         return f"<AngleStats(user={self.user_id}, guild={self.guild_id}, wins={self.wins}/{self.total_games})>"
+
+
+class AngleAchievement(Base):
+    """An unlocked angle-game achievement for a user in a guild."""
+
+    __tablename__ = "angle_achievements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "guild_id", "achievement_id", name="uq_angle_achievement_user_guild_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    achievement_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    emoji: Mapped[str] = mapped_column(String(16), nullable=False)
+    unlocked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    def __repr__(self) -> str:
+        return f"<AngleAchievement(user={self.user_id}, id={self.achievement_id})>"

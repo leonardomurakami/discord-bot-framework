@@ -1,0 +1,292 @@
+{% extends "plugin_base.html" %}
+
+{% block title %}Games Achievements — {{ bot_name }}{% endblock %}
+
+{% block extra_styles %}
+/* ── Achievement panel styles ── */
+.ach-lookup-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: 1.6rem 1.8rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.ach-lookup-card h2 {
+  margin: 0 0 1.2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ach-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .ach-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .ach-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Results area */
+#ach-results {
+  min-height: 6rem;
+}
+
+.ach-placeholder, .ach-error {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 2.5rem 1rem;
+  font-size: 1rem;
+}
+
+.ach-error {
+  color: var(--danger-color);
+}
+
+/* Overall progress summary */
+.ach-summary {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: 1.25rem 1.6rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 0.25rem;
+}
+
+.ach-summary-bar-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+}
+
+.ach-summary-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ach-summary-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+/* Progress bars */
+.ach-progress-bar-bg {
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.ach-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+  transition: width 0.5s ease;
+}
+
+.ach-progress-bar-sm {
+  height: 6px;
+  margin-top: 0.35rem;
+}
+
+.ach-progress-bar-locked {
+  background: linear-gradient(90deg, #64748b, #94a3b8);
+}
+
+/* Sections */
+.ach-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: 1.4rem 1.6rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.ach-section-title {
+  margin: 0 0 1.2rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.ach-section-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.2);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+}
+
+/* Achievement grid */
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+/* Achievement card */
+.ach-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ach-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.ach-unlocked {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.06));
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.ach-locked {
+  background: rgba(148, 163, 184, 0.07);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.ach-emoji {
+  font-size: 1.9rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ach-emoji-locked {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.ach-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.ach-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ach-locked .ach-name {
+  color: var(--text-secondary);
+}
+
+.ach-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin-bottom: 0.45rem;
+}
+
+.ach-badge-unlocked {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+.ach-progress-wrap {
+  margin-top: 0.2rem;
+}
+
+.ach-progress-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* Dark mode tweaks */
+[data-theme="dark"] .ach-lookup-card,
+[data-theme="dark"] .ach-summary,
+[data-theme="dark"] .ach-section {
+  background: rgba(15, 23, 42, 0.92);
+}
+
+[data-theme="dark"] .ach-unlocked {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.13), rgba(5, 150, 105, 0.08));
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+[data-theme="dark"] .ach-badge-unlocked {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+{% endblock %}
+
+{% block content %}
+<!-- Lookup form -->
+<div class="ach-lookup-card">
+  <h2><i class="fa-solid fa-magnifying-glass"></i> Look up achievements</h2>
+  <div class="ach-form-row">
+    <div class="input-group">
+      <label for="ach-user-id">User ID</label>
+      <input id="ach-user-id" name="user_id" type="text" placeholder="e.g. 123456789012345678">
+    </div>
+    <div class="input-group">
+      <label for="ach-guild-id">Guild ID</label>
+      <input id="ach-guild-id" name="guild_id" type="text" placeholder="e.g. 987654321098765432">
+    </div>
+    <div class="input-group">
+      <label for="ach-filter">Game</label>
+      <select id="ach-filter" name="game_filter">
+        <option value="all">All games</option>
+        <option value="trivia">Trivia</option>
+        <option value="angle">Angle</option>
+        <option value="rps">Rock Paper Scissors</option>
+      </select>
+    </div>
+    <button
+      class="btn"
+      hx-get="/plugin/games/api/achievements"
+      hx-target="#ach-results"
+      hx-swap="innerHTML"
+      hx-include="#ach-user-id, #ach-guild-id, #ach-filter"
+      hx-indicator="#ach-spinner"
+    >
+      <i class="fa-solid fa-search"></i> Load
+      <span id="ach-spinner" class="htmx-indicator">…</span>
+    </button>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="ach-results">
+  <p class="ach-placeholder">Enter a User ID and Guild ID above, then click Load.</p>
+</div>
+{% endblock %}
