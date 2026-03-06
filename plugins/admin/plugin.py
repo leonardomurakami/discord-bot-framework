@@ -72,6 +72,7 @@ class AdminPlugin(BasePlugin, WebPanelMixin):
             "route": "/plugin/admin",
             "icon": "fa-solid fa-shield-halved",
             "nav_order": 1,
+            "requires_discord_admin": True,
         }
 
     def register_web_routes(self, app) -> None:

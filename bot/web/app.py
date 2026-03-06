@@ -85,13 +85,19 @@ class WebApp:
             bot_user = self.bot.hikari_bot.get_me()
             current_user = self.auth.get_current_user(request)
 
-            # Get plugin panel information
+            # Get plugin panel information (filtered by access rights)
+            from .mixins import _user_has_any_guild_admin
+
             plugin_panels = []
             if hasattr(self.bot, "web_panel_manager"):
                 all_panels = self.bot.web_panel_manager.get_all_panel_info()
                 # Create list of panels with nav_order for sorting
                 panels_with_order = []
                 for plugin_name, panel_info in all_panels.items():
+                    # Skip panels that require Discord admin when the user is not an admin
+                    if panel_info.get("requires_discord_admin"):
+                        if not _user_has_any_guild_admin(current_user):
+                            continue
                     panels_with_order.append(
                         {
                             "name": panel_info["name"],

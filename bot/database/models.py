@@ -34,6 +34,7 @@ class Guild(Base):
     # Relationships
     users: Mapped[list["GuildUser"]] = relationship(back_populates="guild")
     role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="guild")
+    user_permissions: Mapped[list["UserPermission"]] = relationship(back_populates="guild")
     command_usage: Mapped[list["CommandUsage"]] = relationship(back_populates="guild")
     plugin_settings: Mapped[list["PluginSetting"]] = relationship(back_populates="guild")
 
@@ -86,6 +87,7 @@ class Permission(Base):
 
     # Relationships
     role_permissions: Mapped[list["RolePermission"]] = relationship(back_populates="permission")
+    user_permissions: Mapped[list["UserPermission"]] = relationship(back_populates="permission")
 
 
 class RolePermission(Base):
@@ -105,6 +107,26 @@ class RolePermission(Base):
     __table_args__ = (
         UniqueConstraint("guild_id", "role_id", "permission_id"),
         Index("idx_guild_role", "guild_id", "role_id"),
+    )
+
+
+class UserPermission(Base):
+    __tablename__ = "user_permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("guilds.id"))
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    permission_id: Mapped[int] = mapped_column(Integer, ForeignKey("permissions.id"))
+    granted: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    guild: Mapped["Guild"] = relationship(back_populates="user_permissions")
+    permission: Mapped["Permission"] = relationship(back_populates="user_permissions")
+
+    __table_args__ = (
+        UniqueConstraint("guild_id", "user_id", "permission_id"),
+        Index("idx_guild_user", "guild_id", "user_id"),
     )
 
 
