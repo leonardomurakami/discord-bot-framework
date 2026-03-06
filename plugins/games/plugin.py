@@ -199,7 +199,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
             stats.total_questions += 1
 
-            stats.record_result(is_correct)
+            if not used_hint:
+                stats.record_result(is_correct)
 
             if is_correct:
                 stats.correct_answers += 1
@@ -233,7 +234,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
             await session.commit()
 
-            await self._check_achievements(user_id, guild_id, stats, session, channel_id=channel_id)
+            if not used_hint:
+                await self._check_achievements(user_id, guild_id, stats, session, channel_id=channel_id)
 
     async def _check_achievements(
         self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None
