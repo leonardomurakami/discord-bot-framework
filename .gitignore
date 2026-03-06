@@ -69,5 +69,7 @@ htmlcov/
 *.key
 config/secrets/
 
-# Lavalink
-lavalink/
+# Lavalink (ignore runtime data/logs; application.yml is tracked)
+lavalink/logs/
+lavalink/plugins/
+lavalink/*.jar
