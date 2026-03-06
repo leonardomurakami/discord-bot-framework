@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import uuid
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +28,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
     def __init__(self, bot: DiscordBot) -> None:
         super().__init__(bot)
         self.session: aiohttp.ClientSession | None = None
+        # In-memory replay games keyed by (user_id, guild_id); no DB row, no points
+        self._replay_games: dict[tuple[int, int], dict[str, Any]] = {}
 
         # Register database models
         from .models import CustomQuestion, GuildLeaderboard, TriviaAchievement, TriviaStats
@@ -330,7 +333,11 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         return "higher" if diff <= 180 else "lower"
 
     async def get_or_create_angle_game(self, user_id: int, guild_id: int) -> dict[str, Any]:
-        """Load today's angle game for the user, creating it if it doesn't exist."""
+        """Load today's angle game for the user, creating it if it doesn't exist.
+
+        If the canonical (points-eligible) daily game is already complete, a
+        no-points replay is started in memory with a fresh random target.
+        """
         from .models.angle import AngleGame
 
         today = datetime.now(UTC).date()
@@ -363,11 +370,47 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 session.add(game)
                 await session.commit()
                 await session.refresh(game)
+                return self._angle_game_to_dict(game)
 
-            return self._angle_game_to_dict(game)
+            if not game.is_complete:
+                # Canonical game still in progress
+                return self._angle_game_to_dict(game)
+
+            # Canonical game done — start a no-points in-memory replay
+            seed = f"{today}:{user_id}:{uuid.uuid4()}"
+            hash_bytes = hashlib.md5(seed.encode()).digest()  # noqa: S324
+            replay_target = (int.from_bytes(hash_bytes[:2], "big") % 360) + 1
+            replay_state: dict[str, Any] = {
+                "target": replay_target,
+                "guesses": [],
+                "is_complete": False,
+                "won": False,
+                "points_awarded": 0,
+                "points_eligible": False,
+                "attempts_remaining": ANGLE_MAX_ATTEMPTS,
+            }
+            self._replay_games[(user_id, guild_id)] = replay_state
+            return replay_state
 
     async def process_angle_guess(self, user_id: int, guild_id: int, guess: int) -> dict[str, Any]:
         """Record a guess and return the updated game state dict."""
+        # In-memory replay path (no DB, no points)
+        key = (user_id, guild_id)
+        if key in self._replay_games:
+            state = self._replay_games[key]
+            if state["is_complete"]:
+                return state
+            guesses = list(state["guesses"]) + [guess]
+            target = state["target"]
+            dist = self.angle_distance(guess, target)
+            won = dist == 0
+            state["guesses"] = guesses
+            state["attempts_remaining"] = ANGLE_MAX_ATTEMPTS - len(guesses)
+            if won or len(guesses) >= ANGLE_MAX_ATTEMPTS:
+                state["is_complete"] = True
+                state["won"] = won
+            return state
+
         from .models.angle import AngleGame, AngleStats
 
         today = datetime.now(UTC).date()
