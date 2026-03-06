@@ -68,11 +68,7 @@ def setup_playback_commands(plugin):
                 miru_client = getattr(plugin.bot, "miru_client", None)
                 if miru_client and view.children:
                     message = await ctx.respond(embed=embed, components=view)
-                    miru_client.start_view(view)
-                    if hasattr(message, "message"):
-                        view._message = message.message
-                    elif hasattr(message, "id"):
-                        view._message = message
+                    miru_client.start_view(view, bind_to=message)
                 else:
                     await plugin.smart_respond(ctx, embed=embed)
                 return
