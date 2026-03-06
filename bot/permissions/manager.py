@@ -1,7 +1,8 @@
 import logging
 
 import hikari
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 
 from ..database.manager import DatabaseManager
 from ..database.models import Permission, RolePermission, UserPermission
@@ -171,70 +172,76 @@ class PermissionManager:
             tuple: (success, granted_permissions, failed_permissions)
         """
         try:
-            # Resolve wildcard pattern to actual permission nodes
             permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
 
             if not permission_nodes:
                 logger.error(f"No permissions found matching pattern: {permission_pattern}")
                 return False, [], [permission_pattern]
 
-            granted_permissions = []
-            failed_permissions = []
+            granted_permissions: list[str] = []
+            failed_permissions: list[str] = []
 
-            # Use a single transaction for all operations (atomic)
             async with self.db.session() as session:
                 for permission_node in permission_nodes:
                     try:
-                        # Get permission
-                        permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
-                        permission = permission_result.scalar_one_or_none()
-
+                        perm_result = await session.execute(
+                            select(Permission).where(Permission.node == permission_node)
+                        )
+                        permission = perm_result.scalar_one_or_none()
                         if not permission:
                             failed_permissions.append(permission_node)
                             continue
 
-                        # Check if role permission already exists
-                        existing = await session.execute(
-                            select(RolePermission).where(
-                                RolePermission.guild_id == guild_id,
-                                RolePermission.role_id == role_id,
-                                RolePermission.permission_id == permission.id,
-                            )
-                        )
-
-                        role_perm = existing.scalar_one_or_none()
-                        if role_perm:
-                            if not role_perm.granted:
-                                role_perm.granted = True
+                        # Use a savepoint so an IntegrityError from a concurrent INSERT
+                        # doesn't poison the outer transaction.
+                        async with session.begin_nested():
+                            try:
+                                existing = await session.execute(
+                                    select(RolePermission).where(
+                                        RolePermission.guild_id == guild_id,
+                                        RolePermission.role_id == role_id,
+                                        RolePermission.permission_id == permission.id,
+                                    )
+                                )
+                                role_perm = existing.scalar_one_or_none()
+                                if role_perm:
+                                    if not role_perm.granted:
+                                        role_perm.granted = True
+                                        granted_permissions.append(permission_node)
+                                    # already granted — no-op, not a failure
+                                else:
+                                    session.add(RolePermission(
+                                        guild_id=guild_id,
+                                        role_id=role_id,
+                                        permission_id=permission.id,
+                                        granted=True,
+                                    ))
+                                    granted_permissions.append(permission_node)
+                            except IntegrityError:
+                                # Race condition: another request inserted between SELECT and INSERT.
+                                # Savepoint is rolled back; force granted=True via UPDATE.
+                                await session.execute(
+                                    update(RolePermission)
+                                    .where(
+                                        RolePermission.guild_id == guild_id,
+                                        RolePermission.role_id == role_id,
+                                        RolePermission.permission_id == permission.id,
+                                    )
+                                    .values(granted=True)
+                                )
                                 granted_permissions.append(permission_node)
-                            # If already granted, don't add to granted list
-                        else:
-                            role_perm = RolePermission(
-                                guild_id=guild_id,
-                                role_id=role_id,
-                                permission_id=permission.id,
-                                granted=True,
-                            )
-                            session.add(role_perm)
-                            granted_permissions.append(permission_node)
 
                     except Exception as e:
                         logger.error(f"Error processing permission {permission_node}: {e}")
                         failed_permissions.append(permission_node)
 
-                # Commit all changes atomically
                 await session.commit()
-
-                # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                success = len(granted_permissions) > 0
+                success = len(failed_permissions) == 0
                 logger.info(
                     f"Granted {len(granted_permissions)} permissions to role {role_id} in guild {guild_id}: {granted_permissions}"
                 )
-                if failed_permissions:
-                    logger.warning(f"Failed to grant {len(failed_permissions)} permissions: {failed_permissions}")
-
                 return success, granted_permissions, failed_permissions
 
         except Exception as e:
@@ -249,70 +256,72 @@ class PermissionManager:
             tuple: (success, revoked_permissions, failed_permissions)
         """
         try:
-            # Resolve wildcard pattern to actual permission nodes
             permission_nodes = await self._resolve_wildcard_permissions(permission_pattern)
 
             if not permission_nodes:
                 logger.error(f"No permissions found matching pattern: {permission_pattern}")
                 return False, [], [permission_pattern]
 
-            revoked_permissions = []
-            failed_permissions = []
+            revoked_permissions: list[str] = []
+            failed_permissions: list[str] = []
 
-            # Use a single transaction for all operations (atomic)
             async with self.db.session() as session:
                 for permission_node in permission_nodes:
                     try:
-                        # Get permission
-                        permission_result = await session.execute(select(Permission).where(Permission.node == permission_node))
-                        permission = permission_result.scalar_one_or_none()
-
+                        perm_result = await session.execute(
+                            select(Permission).where(Permission.node == permission_node)
+                        )
+                        permission = perm_result.scalar_one_or_none()
                         if not permission:
                             failed_permissions.append(permission_node)
                             continue
 
-                        # Update or create role permission as denied
-                        existing = await session.execute(
-                            select(RolePermission).where(
-                                RolePermission.guild_id == guild_id,
-                                RolePermission.role_id == role_id,
-                                RolePermission.permission_id == permission.id,
-                            )
-                        )
-
-                        role_perm = existing.scalar_one_or_none()
-                        if role_perm:
-                            if role_perm.granted:
-                                role_perm.granted = False
+                        async with session.begin_nested():
+                            try:
+                                existing = await session.execute(
+                                    select(RolePermission).where(
+                                        RolePermission.guild_id == guild_id,
+                                        RolePermission.role_id == role_id,
+                                        RolePermission.permission_id == permission.id,
+                                    )
+                                )
+                                role_perm = existing.scalar_one_or_none()
+                                if role_perm:
+                                    if role_perm.granted:
+                                        role_perm.granted = False
+                                        revoked_permissions.append(permission_node)
+                                    # already revoked — no-op, not a failure
+                                else:
+                                    session.add(RolePermission(
+                                        guild_id=guild_id,
+                                        role_id=role_id,
+                                        permission_id=permission.id,
+                                        granted=False,
+                                    ))
+                                    revoked_permissions.append(permission_node)
+                            except IntegrityError:
+                                await session.execute(
+                                    update(RolePermission)
+                                    .where(
+                                        RolePermission.guild_id == guild_id,
+                                        RolePermission.role_id == role_id,
+                                        RolePermission.permission_id == permission.id,
+                                    )
+                                    .values(granted=False)
+                                )
                                 revoked_permissions.append(permission_node)
-                            # If already revoked, don't add to revoked list
-                        else:
-                            role_perm = RolePermission(
-                                guild_id=guild_id,
-                                role_id=role_id,
-                                permission_id=permission.id,
-                                granted=False,
-                            )
-                            session.add(role_perm)
-                            revoked_permissions.append(permission_node)
 
                     except Exception as e:
                         logger.error(f"Error processing permission {permission_node}: {e}")
                         failed_permissions.append(permission_node)
 
-                # Commit all changes atomically
                 await session.commit()
-
-                # Clear cache
                 self._clear_guild_cache(guild_id)
 
-                success = len(revoked_permissions) > 0
+                success = len(failed_permissions) == 0
                 logger.info(
                     f"Revoked {len(revoked_permissions)} permissions from role {role_id} in guild {guild_id}: {revoked_permissions}"
                 )
-                if failed_permissions:
-                    logger.warning(f"Failed to revoke {len(failed_permissions)} permissions: {failed_permissions}")
-
                 return success, revoked_permissions, failed_permissions
 
         except Exception as e:
@@ -500,38 +509,47 @@ class PermissionManager:
                             failed_permissions.append(permission_node)
                             continue
 
-                        existing = await session.execute(
-                            select(UserPermission).where(
-                                UserPermission.guild_id == guild_id,
-                                UserPermission.user_id == user_id,
-                                UserPermission.permission_id == permission.id,
-                            )
-                        )
-                        user_perm = existing.scalar_one_or_none()
-                        if user_perm:
-                            if not user_perm.granted:
-                                user_perm.granted = True
-                                granted_permissions.append(permission_node)
-                        else:
-                            session.add(
-                                UserPermission(
-                                    guild_id=guild_id,
-                                    user_id=user_id,
-                                    permission_id=permission.id,
-                                    granted=True,
+                        async with session.begin_nested():
+                            try:
+                                existing = await session.execute(
+                                    select(UserPermission).where(
+                                        UserPermission.guild_id == guild_id,
+                                        UserPermission.user_id == user_id,
+                                        UserPermission.permission_id == permission.id,
+                                    )
                                 )
-                            )
-                            granted_permissions.append(permission_node)
+                                user_perm = existing.scalar_one_or_none()
+                                if user_perm:
+                                    if not user_perm.granted:
+                                        user_perm.granted = True
+                                        granted_permissions.append(permission_node)
+                                else:
+                                    session.add(UserPermission(
+                                        guild_id=guild_id,
+                                        user_id=user_id,
+                                        permission_id=permission.id,
+                                        granted=True,
+                                    ))
+                                    granted_permissions.append(permission_node)
+                            except IntegrityError:
+                                await session.execute(
+                                    update(UserPermission)
+                                    .where(
+                                        UserPermission.guild_id == guild_id,
+                                        UserPermission.user_id == user_id,
+                                        UserPermission.permission_id == permission.id,
+                                    )
+                                    .values(granted=True)
+                                )
+                                granted_permissions.append(permission_node)
                     except Exception as e:
                         logger.error(f"Error processing user permission {permission_node}: {e}")
                         failed_permissions.append(permission_node)
 
                 await session.commit()
 
-            success = len(granted_permissions) > 0
-            logger.info(
-                f"Granted {len(granted_permissions)} permissions to user {user_id} in guild {guild_id}"
-            )
+            success = len(failed_permissions) == 0
+            logger.info(f"Granted {len(granted_permissions)} permissions to user {user_id} in guild {guild_id}")
             return success, granted_permissions, failed_permissions
 
         except Exception as e:
@@ -561,38 +579,47 @@ class PermissionManager:
                             failed_permissions.append(permission_node)
                             continue
 
-                        existing = await session.execute(
-                            select(UserPermission).where(
-                                UserPermission.guild_id == guild_id,
-                                UserPermission.user_id == user_id,
-                                UserPermission.permission_id == permission.id,
-                            )
-                        )
-                        user_perm = existing.scalar_one_or_none()
-                        if user_perm:
-                            if user_perm.granted:
-                                user_perm.granted = False
-                                revoked_permissions.append(permission_node)
-                        else:
-                            session.add(
-                                UserPermission(
-                                    guild_id=guild_id,
-                                    user_id=user_id,
-                                    permission_id=permission.id,
-                                    granted=False,
+                        async with session.begin_nested():
+                            try:
+                                existing = await session.execute(
+                                    select(UserPermission).where(
+                                        UserPermission.guild_id == guild_id,
+                                        UserPermission.user_id == user_id,
+                                        UserPermission.permission_id == permission.id,
+                                    )
                                 )
-                            )
-                            revoked_permissions.append(permission_node)
+                                user_perm = existing.scalar_one_or_none()
+                                if user_perm:
+                                    if user_perm.granted:
+                                        user_perm.granted = False
+                                        revoked_permissions.append(permission_node)
+                                else:
+                                    session.add(UserPermission(
+                                        guild_id=guild_id,
+                                        user_id=user_id,
+                                        permission_id=permission.id,
+                                        granted=False,
+                                    ))
+                                    revoked_permissions.append(permission_node)
+                            except IntegrityError:
+                                await session.execute(
+                                    update(UserPermission)
+                                    .where(
+                                        UserPermission.guild_id == guild_id,
+                                        UserPermission.user_id == user_id,
+                                        UserPermission.permission_id == permission.id,
+                                    )
+                                    .values(granted=False)
+                                )
+                                revoked_permissions.append(permission_node)
                     except Exception as e:
                         logger.error(f"Error processing user permission {permission_node}: {e}")
                         failed_permissions.append(permission_node)
 
                 await session.commit()
 
-            success = len(revoked_permissions) > 0
-            logger.info(
-                f"Revoked {len(revoked_permissions)} permissions from user {user_id} in guild {guild_id}"
-            )
+            success = len(failed_permissions) == 0
+            logger.info(f"Revoked {len(revoked_permissions)} permissions from user {user_id} in guild {guild_id}")
             return success, revoked_permissions, failed_permissions
 
         except Exception as e:

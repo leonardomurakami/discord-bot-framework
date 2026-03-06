@@ -280,9 +280,9 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
 
             success, granted, failed = await plugin.permissions.grant_permission(guild_id, role_id, permission_node)
 
-            if success:
-                return JSONResponse({"success": True, "granted": granted, "failed": failed,
-                                     "message": f"Granted {len(granted)} permission(s)"})
+            if not failed:
+                msg = f"Granted {len(granted)} permission(s)" if granted else "Already granted"
+                return JSONResponse({"success": True, "granted": granted, "failed": failed, "message": msg})
             return JSONResponse(
                 {"success": False, "granted": granted, "failed": failed,
                  "message": f"Failed to grant: {', '.join(failed)}"},
@@ -310,9 +310,9 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
 
             success, revoked, failed = await plugin.permissions.revoke_permission(guild_id, role_id, permission_node)
 
-            if success:
-                return JSONResponse({"success": True, "revoked": revoked, "failed": failed,
-                                     "message": f"Revoked {len(revoked)} permission(s)"})
+            if not failed:
+                msg = f"Revoked {len(revoked)} permission(s)" if revoked else "Already revoked"
+                return JSONResponse({"success": True, "revoked": revoked, "failed": failed, "message": msg})
             return JSONResponse(
                 {"success": False, "revoked": revoked, "failed": failed,
                  "message": f"Failed to revoke: {', '.join(failed)}"},
@@ -417,9 +417,9 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
 
             success, granted, failed = await plugin.permissions.grant_user_permission(guild_id, user_id, permission_node)
 
-            if success:
-                return JSONResponse({"success": True, "granted": granted, "failed": failed,
-                                     "message": f"Granted {len(granted)} permission(s)"})
+            if not failed:
+                msg = f"Granted {len(granted)} permission(s)" if granted else "Already granted"
+                return JSONResponse({"success": True, "granted": granted, "failed": failed, "message": msg})
             return JSONResponse(
                 {"success": False, "granted": granted, "failed": failed,
                  "message": f"Failed to grant: {', '.join(failed)}"},
@@ -447,9 +447,9 @@ def register_admin_routes(app: FastAPI, plugin: "AdminPlugin") -> None:
 
             success, revoked, failed = await plugin.permissions.revoke_user_permission(guild_id, user_id, permission_node)
 
-            if success:
-                return JSONResponse({"success": True, "revoked": revoked, "failed": failed,
-                                     "message": f"Revoked {len(revoked)} permission(s)"})
+            if not failed:
+                msg = f"Revoked {len(revoked)} permission(s)" if revoked else "Already revoked"
+                return JSONResponse({"success": True, "revoked": revoked, "failed": failed, "message": msg})
             return JSONResponse(
                 {"success": False, "revoked": revoked, "failed": failed,
                  "message": f"Failed to revoke: {', '.join(failed)}"},
