@@ -318,4 +318,53 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
             logger.error("Error in trivia-leaderboard command: %s", exc)
             await plugin.log_command_usage(ctx, "trivia-leaderboard", False, str(exc))
 
-    return [trivia_question, trivia_stats, trivia_leaderboard]
+    @command(
+        name="trivia-achievements",
+        description="View your unlocked trivia achievements",
+        permission_node="basic.games.trivia.play",
+        arguments=[
+            CommandArgument(
+                "user",
+                hikari.OptionType.USER,
+                "User to view achievements for",
+                required=False,
+            ),
+        ],
+    )
+    async def trivia_achievements(ctx: lightbulb.Context, user: hikari.User | None = None) -> None:
+        target_user = user or ctx.author
+
+        try:
+            achievements = await plugin.get_trivia_achievements(target_user.id, ctx.guild_id)
+
+            if not achievements:
+                embed = plugin.create_embed(
+                    title="🏅 Trivia Achievements",
+                    description=f"{target_user.mention} hasn't unlocked any achievements yet!\nPlay `/trivia` to start earning them.",
+                    color=hikari.Color(EMBED_COLORS["info"]),
+                )
+            else:
+                embed = plugin.create_embed(
+                    title=f"🏅 Trivia Achievements — {target_user.username}",
+                    color=hikari.Color(EMBED_COLORS["achievement"]),
+                )
+
+                lines = []
+                for ach in achievements:
+                    unlock_ts = int(ach.unlocked_at.timestamp())
+                    lines.append(
+                        f"{ach.emoji} **{ach.name}** — {ach.description}\n"
+                        f"  *Unlocked <t:{unlock_ts}:d>*"
+                    )
+
+                embed.description = "\n\n".join(lines)
+                embed.set_footer(f"{len(achievements)} achievement(s) unlocked")
+
+            await ctx.respond(embed=embed)
+            await plugin.log_command_usage(ctx, "trivia-achievements", True)
+
+        except Exception as exc:
+            logger.error("Error in trivia-achievements command: %s", exc)
+            await plugin.log_command_usage(ctx, "trivia-achievements", False, str(exc))
+
+    return [trivia_question, trivia_stats, trivia_leaderboard, trivia_achievements]

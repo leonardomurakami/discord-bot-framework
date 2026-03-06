@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 
 from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text, UniqueConstraint
@@ -36,6 +37,9 @@ class TriviaStats(Base):
     fast_answers: Mapped[int] = mapped_column(Integer, default=0)  # Under 5 seconds
     hints_used: Mapped[int] = mapped_column(Integer, default=0)
 
+    # Rolling window of last 20 outcomes (JSON array of booleans, newest last)
+    recent_results_json: Mapped[str] = mapped_column(Text, default="[]")
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -43,6 +47,23 @@ class TriviaStats(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
+
+    @property
+    def recent_results(self) -> list[bool]:
+        """Last ≤20 question outcomes (True=correct), newest last."""
+        return json.loads(self.recent_results_json or "[]")
+
+    def record_result(self, correct: bool, window: int = 20) -> None:
+        """Append *correct* to the rolling window, keeping only the last *window* entries."""
+        results = self.recent_results
+        results.append(correct)
+        self.recent_results_json = json.dumps(results[-window:])
+
+    @property
+    def recent_perfect(self) -> bool:
+        """True if the last 20 answers are all correct."""
+        results = self.recent_results
+        return len(results) >= 20 and all(results)
 
     @property
     def accuracy(self) -> float:

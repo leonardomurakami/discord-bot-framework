@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
-from typing import TYPE_CHECKING
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any
 
 import aiohttp
+import hikari
 
 from bot.plugins.base import BasePlugin
 from bot.plugins.mixins import DatabaseMixin
 
 from .commands.trivia import setup_trivia_commands
-from .config import games_settings
+from .config import ANGLE_MAX_ATTEMPTS, ANGLE_POINTS, EMBED_COLORS, games_settings
 
 if TYPE_CHECKING:
     from bot.core.bot import DiscordBot
@@ -18,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class GamesPlugin(DatabaseMixin, BasePlugin):
-    """Interactive games plugin with trivia, scoring, and achievements."""
+    """Interactive games plugin with trivia, angle game, RPS, scoring, and achievements."""
 
     def __init__(self, bot: DiscordBot) -> None:
         super().__init__(bot)
@@ -26,7 +30,8 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
         # Register database models
         from .models import CustomQuestion, GuildLeaderboard, TriviaAchievement, TriviaStats
-        self.register_models(TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard)
+        from .models.angle import AngleGame, AngleStats
+        self.register_models(TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard, AngleGame, AngleStats)
 
         # Register commands
         self._register_commands()
@@ -35,7 +40,6 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         """Initialize the plugin and start HTTP session."""
         await super().on_load()
 
-        # Create HTTP session for API calls
         timeout = aiohttp.ClientTimeout(total=games_settings.api_request_timeout_seconds)
         self.session = aiohttp.ClientSession(timeout=timeout)
 
@@ -52,10 +56,19 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
 
     def _register_commands(self) -> None:
         """Register all game commands."""
-        # Register trivia commands
+        from .commands.angle import setup_angle_commands
+        from .commands.rps import setup_rps_commands
+
         trivia_commands = setup_trivia_commands(self)
-        for command_func in trivia_commands:
+        angle_commands = setup_angle_commands(self)
+        rps_commands = setup_rps_commands(self)
+
+        for command_func in (*trivia_commands, *angle_commands, *rps_commands):
             setattr(self, command_func.__name__, command_func)
+
+    # -------------------------------------------------------------------------
+    # Trivia helpers
+    # -------------------------------------------------------------------------
 
     async def get_trivia_stats(self, user_id: int, guild_id: int):
         """Get trivia statistics for a user in a guild."""
@@ -70,6 +83,20 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 )
             )
             return result.scalars().first()
+
+    async def get_trivia_achievements(self, user_id: int, guild_id: int):
+        """Get all unlocked achievements for a user in a guild."""
+        from .models import TriviaAchievement
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(TriviaAchievement).where(
+                    TriviaAchievement.user_id == user_id,
+                    TriviaAchievement.guild_id == guild_id,
+                ).order_by(TriviaAchievement.unlocked_at)
+            )
+            return result.scalars().all()
 
     async def get_custom_questions(self, guild_id: int, category: str | None = None, difficulty: str | None = None):
         """Get custom questions for a guild with optional filters."""
@@ -105,7 +132,7 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
             elif leaderboard_type == "accuracy":
                 query = select(TriviaStats).where(
                     TriviaStats.guild_id == guild_id,
-                    TriviaStats.total_questions >= 5  # Minimum questions for accuracy ranking
+                    TriviaStats.total_questions >= 5
                 ).order_by(desc(TriviaStats.correct_answers / TriviaStats.total_questions)).limit(10)
             elif leaderboard_type == "streak":
                 query = select(TriviaStats).where(
@@ -118,28 +145,33 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
             result = await session.execute(query)
             stats_list = result.scalars().all()
 
-            leaderboard_data = []
-            for stats in stats_list:
-                entry = {
-                    "user_id": stats.user_id,
-                    "points": stats.total_points,
-                    "accuracy": stats.accuracy,
-                    "streak": stats.best_streak,
+            return [
+                {
+                    "user_id": s.user_id,
+                    "points": s.total_points,
+                    "accuracy": s.accuracy,
+                    "streak": s.best_streak,
                 }
-                leaderboard_data.append(entry)
-
-            return leaderboard_data
+                for s in stats_list
+            ]
 
     async def award_points(
-        self, user_id: int, guild_id: int, points: int, difficulty: str, used_hint: bool, response_time: float, is_correct: bool = True
-    ):
-        """Award points to a user and update their statistics."""
+        self,
+        user_id: int,
+        guild_id: int,
+        points: int,
+        difficulty: str,
+        used_hint: bool,
+        response_time: float,
+        is_correct: bool = True,
+        channel_id: int | None = None,
+    ) -> None:
+        """Award points to a user and update their trivia statistics."""
         from .models import TriviaStats
 
         async with self.db_session() as session:
             from sqlalchemy import select
 
-            # Get or create user stats
             result = await session.execute(
                 select(TriviaStats).where(
                     TriviaStats.user_id == user_id,
@@ -165,51 +197,53 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 )
                 session.add(stats)
 
-            # Update stats - always increment total questions
             stats.total_questions += 1
 
+            stats.record_result(is_correct)
+
             if is_correct:
-                # Correct answer
                 stats.correct_answers += 1
                 stats.total_points += points
                 stats.current_streak += 1
 
-                # Update difficulty stats
                 if difficulty == "easy":
                     stats.easy_correct += 1
                 elif difficulty == "medium":
                     stats.medium_correct += 1
                 elif difficulty == "hard":
                     stats.hard_correct += 1
+
+                # Apply streak bonus (bug fix: was never applied before)
+                streak_bonus = min(
+                    stats.current_streak * games_settings.trivia_streak_bonus,
+                    games_settings.trivia_max_streak_bonus,
+                )
+                stats.total_points += streak_bonus
             else:
-                # Wrong answer or no answer - reset streak
                 stats.current_streak = 0
 
-            # Update best streak
             if stats.current_streak > stats.best_streak:
                 stats.best_streak = stats.current_streak
 
-            # Track fast answers (under 5 seconds) - only for correct answers
             if is_correct and response_time <= 5.0:
                 stats.fast_answers += 1
 
-            # Track hints used - for all attempts
             if used_hint:
                 stats.hints_used += 1
 
             await session.commit()
 
-            # Check for new achievements
-            await self._check_achievements(user_id, guild_id, stats, session)
+            await self._check_achievements(user_id, guild_id, stats, session, channel_id=channel_id)
 
-    async def _check_achievements(self, user_id: int, guild_id: int, stats, session):
-        """Check and award any new achievements."""
+    async def _check_achievements(
+        self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None
+    ) -> None:
+        """Check and award any new achievements, notifying the channel if possible."""
         from sqlalchemy import select
 
         from .config import TRIVIA_ACHIEVEMENTS
         from .models import TriviaAchievement
 
-        # Get existing achievements
         result = await session.execute(
             select(TriviaAchievement).where(
                 TriviaAchievement.user_id == user_id,
@@ -218,7 +252,6 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
         )
         existing_achievements = {ach.achievement_id for ach in result.scalars().all()}
 
-        # Check each achievement
         for achievement_id, achievement_data in TRIVIA_ACHIEVEMENTS.items():
             if achievement_id in existing_achievements:
                 continue
@@ -228,7 +261,6 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
             req_value = requirement["value"]
 
             earned = False
-
             if req_type == "correct_answers" and stats.correct_answers >= req_value:
                 earned = True
             elif req_type == "streak" and stats.best_streak >= req_value:
@@ -239,10 +271,10 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                 earned = True
             elif req_type == "total_points" and stats.total_points >= req_value:
                 earned = True
-            # Add more achievement types as needed
+            elif req_type == "perfect_accuracy" and stats.recent_perfect:
+                earned = True
 
             if earned:
-                # Award achievement
                 achievement = TriviaAchievement(
                     user_id=user_id,
                     guild_id=guild_id,
@@ -252,4 +284,189 @@ class GamesPlugin(DatabaseMixin, BasePlugin):
                     emoji=achievement_data["emoji"],
                 )
                 session.add(achievement)
-                logger.info(f"Awarded achievement '{achievement_id}' to user {user_id} in guild {guild_id}")
+                await session.commit()
+                logger.info("Awarded achievement '%s' to user %s in guild %s", achievement_id, user_id, guild_id)
+
+                # Notify channel
+                if channel_id:
+                    try:
+                        embed = hikari.Embed(
+                            title=f"{achievement_data['emoji']} Achievement Unlocked!",
+                            description=(
+                                f"<@{user_id}> earned **{achievement_data['name']}**\n"
+                                f"{achievement_data['description']}"
+                            ),
+                            color=hikari.Color(EMBED_COLORS["achievement"]),
+                        )
+                        await self.bot.rest.create_message(channel_id, embed=embed)
+                    except Exception as exc:
+                        logger.warning("Failed to send achievement notification: %s", exc)
+
+    # -------------------------------------------------------------------------
+    # Angle game helpers
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def get_daily_angle(user_id: int) -> int:
+        """Return a deterministic daily angle (1-360) unique per user per UTC day."""
+        today = datetime.now(UTC).date().isoformat()
+        seed = f"{today}:{user_id}"
+        hash_bytes = hashlib.md5(seed.encode()).digest()  # noqa: S324
+        value = int.from_bytes(hash_bytes[:2], "big")
+        return (value % 360) + 1  # 1–360
+
+    @staticmethod
+    def angle_distance(guess: int, target: int) -> int:
+        """Shortest angular distance between guess and target (0–180)."""
+        diff = abs(guess - target)
+        return min(diff, 360 - diff)
+
+    @staticmethod
+    def angle_direction(guess: int, target: int) -> str:
+        """Return 'higher' or 'lower' for the shortest clockwise path to target."""
+        diff = (target - guess) % 360
+        return "higher" if diff <= 180 else "lower"
+
+    async def get_or_create_angle_game(self, user_id: int, guild_id: int) -> dict[str, Any]:
+        """Load today's angle game for the user, creating it if it doesn't exist."""
+        from .models.angle import AngleGame
+
+        today = datetime.now(UTC).date()
+        target = self.get_daily_angle(user_id)
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(AngleGame).where(
+                    AngleGame.user_id == user_id,
+                    AngleGame.guild_id == guild_id,
+                    AngleGame.game_date == today,
+                )
+            )
+            game = result.scalars().first()
+
+            if not game:
+                game = AngleGame(
+                    user_id=user_id,
+                    guild_id=guild_id,
+                    game_date=today,
+                    target_angle=target,
+                    guesses_json="[]",
+                    is_complete=False,
+                    won=False,
+                    points_awarded=0,
+                    points_eligible=True,
+                )
+                session.add(game)
+                await session.commit()
+                await session.refresh(game)
+
+            return self._angle_game_to_dict(game)
+
+    async def process_angle_guess(self, user_id: int, guild_id: int, guess: int) -> dict[str, Any]:
+        """Record a guess and return the updated game state dict."""
+        from .models.angle import AngleGame, AngleStats
+
+        today = datetime.now(UTC).date()
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+
+            result = await session.execute(
+                select(AngleGame).where(
+                    AngleGame.user_id == user_id,
+                    AngleGame.guild_id == guild_id,
+                    AngleGame.game_date == today,
+                )
+            )
+            game = result.scalars().first()
+
+            if not game or game.is_complete:
+                return self._angle_game_to_dict(game) if game else {}
+
+            guesses = game.guesses
+            guesses.append(guess)
+            game.guesses = guesses
+
+            target = game.target_angle
+            dist = self.angle_distance(guess, target)
+            won = dist == 0
+            out_of_attempts = len(guesses) >= ANGLE_MAX_ATTEMPTS
+
+            points = 0
+            if game.points_eligible:
+                if dist == 0:
+                    points = ANGLE_POINTS["exact"]
+                elif dist == 1:
+                    points = ANGLE_POINTS["close"]
+                elif dist == 2:
+                    points = ANGLE_POINTS["near"]
+
+            if won or out_of_attempts:
+                game.is_complete = True
+                game.won = won
+                game.points_awarded = points
+
+            await session.commit()
+
+            # Update persistent stats only for point-eligible games that just ended
+            if game.is_complete and game.points_eligible:
+                stats_result = await session.execute(
+                    select(AngleStats).where(
+                        AngleStats.user_id == user_id,
+                        AngleStats.guild_id == guild_id,
+                    )
+                )
+                stats = stats_result.scalars().first()
+                if not stats:
+                    stats = AngleStats(user_id=user_id, guild_id=guild_id)
+                    session.add(stats)
+
+                stats.total_games += 1
+                stats.total_points += points
+
+                if won:
+                    stats.wins += 1
+                    stats.current_win_streak += 1
+                    if stats.current_win_streak > stats.best_win_streak:
+                        stats.best_win_streak = stats.current_win_streak
+                    if dist == 0 and len(guesses) == 1:
+                        stats.exact_wins += 1
+                    elif dist <= 2:
+                        stats.close_wins += 1
+                else:
+                    stats.current_win_streak = 0
+
+                await session.commit()
+
+            await session.refresh(game)
+            return self._angle_game_to_dict(game)
+
+    @staticmethod
+    def _angle_game_to_dict(game: Any) -> dict[str, Any]:
+        if game is None:
+            return {}
+        return {
+            "target": game.target_angle,
+            "guesses": game.guesses,
+            "is_complete": game.is_complete,
+            "won": game.won,
+            "points_awarded": game.points_awarded,
+            "points_eligible": game.points_eligible,
+            "attempts_remaining": ANGLE_MAX_ATTEMPTS - len(game.guesses),
+        }
+
+    async def get_angle_stats(self, user_id: int, guild_id: int) -> Any:
+        """Return AngleStats for a user in a guild, or None."""
+        from .models.angle import AngleStats
+
+        async with self.db_session() as session:
+            from sqlalchemy import select
+            result = await session.execute(
+                select(AngleStats).where(
+                    AngleStats.user_id == user_id,
+                    AngleStats.guild_id == guild_id,
+                )
+            )
+            return result.scalars().first()

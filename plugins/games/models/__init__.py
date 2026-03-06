@@ -1,3 +1,7 @@
+from .angle import AngleGame, AngleStats
 from .trivia import CustomQuestion, GuildLeaderboard, TriviaAchievement, TriviaStats
 
-__all__ = ['TriviaStats', 'TriviaAchievement', 'CustomQuestion', 'GuildLeaderboard']
+__all__ = [
+    'TriviaStats', 'TriviaAchievement', 'CustomQuestion', 'GuildLeaderboard',
+    'AngleGame', 'AngleStats',
+]

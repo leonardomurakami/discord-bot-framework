@@ -89,3 +89,27 @@ See `TODO.md` for planned advanced features including:
 - Additional question sources and community features
 
 Follow these guidelines to maintain consistency with the existing architecture while extending game functionality.
+## Additional Games
+
+### Angle Game (`/angle`)
+Daily angle-guessing game inspired by [angle.wtf](https://angle.wtf).
+- Each day has one shared target angle (1–360°), seeded from the UTC date
+- Players get 4 attempts; after each guess they receive an ↑/↓ direction hint and the exact degree distance
+- Points awarded for close guesses: exact = 100, 1° off = 75, 2° off = 50
+- Points only awarded once per day per user; subsequent plays are for fun
+- Visual feedback rendered with matplotlib (dark Discord-themed protractor image)
+- Commands: `/angle`, `/angle-stats [user]`
+- Permission node: `basic.games.angle.play`
+
+### Rock Paper Scissors (`/rps`)
+Quick single-player game against the bot using Discord interactive buttons.
+- User picks Rock 🪨, Paper 📄, or Scissors ✂️
+- Bot picks randomly and result is shown by editing the original message
+- Stateless (no DB), replayable any time
+- Permission node: `basic.games.rps.play`
+
+### Trivia Enhancements
+- **Streak bonus now applied**: consecutive correct answers award +5 pts each (max +50) on top of base points
+- **Achievement notifications**: channel message sent when a user unlocks a new achievement
+- **`/trivia-achievements [user]`**: list all unlocked achievements with unlock dates
+- **Perfectionist achievement**: replaced the untrackable `category_master` with 100% accuracy over ≥20 questions
