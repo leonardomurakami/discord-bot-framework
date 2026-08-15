@@ -10,9 +10,11 @@ async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
     """Broadcast music update to WebSocket clients."""
     try:
         from ..web import broadcast_music_update
+
         await broadcast_music_update(guild_id, plugin, update_type)
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
 

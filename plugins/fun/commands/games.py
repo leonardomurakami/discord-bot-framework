@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import logging
 import random
 from collections.abc import Callable
@@ -12,7 +11,6 @@ import lightbulb
 from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
-    API_ENDPOINTS,
     DEFAULT_WYR_QUESTIONS,
     DICE_LIMITS,
     RANDOM_NUMBER_LIMIT,
@@ -184,6 +182,7 @@ def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
     @command(
         name="choose",
         description="Let the bot choose between options",
+        permission_node="basic.fun.games.play",
         arguments=[
             CommandArgument("option1", hikari.OptionType.STRING, "Option 1"),
             CommandArgument("option2", hikari.OptionType.STRING, "Option 2"),
@@ -192,15 +191,6 @@ def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
     async def choose_option(ctx: lightbulb.Context, option1: str, option2: str) -> None:
         try:
             choices = [option1, option2]
-
-            if len(choices) < 2:
-                embed = plugin.create_embed(
-                    title="❌ Not Enough Options",
-                    description="Please provide at least 2 options.",
-                    color=hikari.Color(0xFF0000),
-                )
-                await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-                return
 
             chosen = random.choice(choices)
 
@@ -291,7 +281,6 @@ def setup_game_commands(plugin: FunPlugin) -> list[Callable[..., Any]]:
             )
             await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
             await plugin.log_command_usage(ctx, "random", False, str(exc))
-
 
     @command(
         name="would-you-rather",

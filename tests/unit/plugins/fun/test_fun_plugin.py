@@ -317,3 +317,116 @@ class TestFunPlugin:
             await plugin.random_quote(mock_context)
 
             mock_context.respond.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_would_you_rather_command_with_miru(self, mock_bot, mock_context):
+        """Test would-you-rather command with a mocked Miru client."""
+        plugin = FunPlugin(mock_bot)
+
+        with patch("random.choice", return_value=("Fly", "Be invisible")):
+            await plugin.would_you_rather(mock_context)
+
+            mock_context.respond.assert_called_once()
+            mock_bot.miru_client.start_view.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_would_you_rather_command_without_miru(self, mock_bot, mock_context):
+        """Test would-you-rather command without a Miru client."""
+        plugin = FunPlugin(mock_bot)
+        mock_bot.miru_client = None
+
+        with patch("random.choice", return_value=("Fly", "Be invisible")):
+            await plugin.would_you_rather(mock_context)
+
+            mock_context.respond.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_meme_command_api_success(self, mock_bot, mock_context):
+        """Test meme command with primary API success (non-NSFW)."""
+        plugin = FunPlugin(mock_bot)
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json.return_value = {
+            "title": "Test Meme",
+            "url": "https://example.com/meme.png",
+            "subreddit": "memes",
+            "ups": 42,
+            "nsfw": False,
+            "postLink": "https://reddit.com/test",
+        }
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
+        plugin.session = mock_session
+
+        await plugin.random_meme(mock_context)
+
+        mock_context.respond.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_meme_command_nsfw_fallback(self, mock_bot, mock_context):
+        """Test meme command with NSFW primary falling back to Imgflip."""
+        plugin = FunPlugin(mock_bot)
+
+        nsfw_response = AsyncMock()
+        nsfw_response.status = 200
+        nsfw_response.json.return_value = {"nsfw": True, "url": "https://example.com/nsfw.png"}
+
+        imgflip_response = AsyncMock()
+        imgflip_response.status = 200
+        imgflip_response.json.return_value = {
+            "success": True,
+            "data": {"memes": [{"name": "Drake Meme", "url": "https://imgflip.com/drake.png"}]},
+        }
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=[AsyncContextManager(nsfw_response), AsyncContextManager(imgflip_response)])
+        plugin.session = mock_session
+
+        with patch("random.choice", return_value={"name": "Drake Meme", "url": "https://imgflip.com/drake.png"}):
+            await plugin.random_meme(mock_context)
+
+            mock_context.respond.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_meme_command_no_session(self, mock_bot, mock_context):
+        """Test meme command with no session available."""
+        plugin = FunPlugin(mock_bot)
+        plugin.session = None
+
+        await plugin.random_meme(mock_context)
+
+        # Should respond with service unavailable
+        assert mock_context.respond.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_fact_command_api_success(self, mock_bot, mock_context):
+        """Test fact command with successful API call."""
+        plugin = FunPlugin(mock_bot)
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json.return_value = {"text": "Test fact from API"}
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(return_value=AsyncContextManager(mock_response))
+        plugin.session = mock_session
+
+        await plugin.random_fact(mock_context)
+
+        mock_context.respond.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_fact_command_fallback(self, mock_bot, mock_context):
+        """Test fact command with API failure falling back to DEFAULT_FACTS."""
+        plugin = FunPlugin(mock_bot)
+
+        mock_session = AsyncMock()
+        mock_session.get = MagicMock(side_effect=Exception("API error"))
+        plugin.session = mock_session
+
+        with patch("random.choice", return_value="Fallback fact text"):
+            await plugin.random_fact(mock_context)
+
+            mock_context.respond.assert_called_once()

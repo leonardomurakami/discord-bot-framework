@@ -13,9 +13,7 @@ class AngleGame(Base):
     """Track a single daily angle game session per user per guild."""
 
     __tablename__ = "angle_games"
-    __table_args__ = (
-        UniqueConstraint("user_id", "guild_id", "game_date", name="uq_angle_game_user_guild_date"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "guild_id", "game_date", name="uq_angle_game_user_guild_date"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -30,9 +28,7 @@ class AngleGame(Base):
     points_awarded: Mapped[int] = mapped_column(Integer, default=0)
     points_eligible: Mapped[bool] = mapped_column(Boolean, default=True)  # False after first play of the day
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     @property
     def guesses(self) -> list[int]:
@@ -54,9 +50,7 @@ class AngleStats(Base):
     """Persistent angle game statistics per user per guild."""
 
     __tablename__ = "angle_stats"
-    __table_args__ = (
-        UniqueConstraint("user_id", "guild_id", name="uq_angle_stats_user_guild"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "guild_id", name="uq_angle_stats_user_guild"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -66,15 +60,13 @@ class AngleStats(Base):
     wins: Mapped[int] = mapped_column(Integer, default=0)
     total_points: Mapped[int] = mapped_column(Integer, default=0)
 
-    exact_wins: Mapped[int] = mapped_column(Integer, default=0)    # Guessed on first try exactly
-    close_wins: Mapped[int] = mapped_column(Integer, default=0)    # Won with 1-2° off
+    exact_wins: Mapped[int] = mapped_column(Integer, default=0)  # Guessed on first try exactly
+    close_wins: Mapped[int] = mapped_column(Integer, default=0)  # Won with 1-2° off
 
     current_win_streak: Mapped[int] = mapped_column(Integer, default=0)
     best_win_streak: Mapped[int] = mapped_column(Integer, default=0)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
@@ -93,9 +85,7 @@ class AngleAchievement(Base):
     """An unlocked angle-game achievement for a user in a guild."""
 
     __tablename__ = "angle_achievements"
-    __table_args__ = (
-        UniqueConstraint("user_id", "guild_id", "achievement_id", name="uq_angle_achievement_user_guild_id"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "guild_id", "achievement_id", name="uq_angle_achievement_user_guild_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -104,9 +94,7 @@ class AngleAchievement(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     emoji: Mapped[str] = mapped_column(String(16), nullable=False)
-    unlocked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:
         return f"<AngleAchievement(user={self.user_id}, id={self.achievement_id})>"

@@ -4,7 +4,6 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-import hikari
 import lightbulb
 
 from bot.plugins.commands import command

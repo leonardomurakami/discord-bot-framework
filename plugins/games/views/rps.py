@@ -1,8 +1,9 @@
 """Rock Paper Scissors interactive view."""
+
 from __future__ import annotations
 
-import random
 import logging
+import random
 from typing import TYPE_CHECKING
 
 import hikari
@@ -56,7 +57,7 @@ class RPSView(miru.View):
 
         if result == "win":
             title = "🎉 You win!"
-            color = hikari.Color(0x57F287)   # green
+            color = hikari.Color(0x57F287)  # green
             description = f"**{player_info['emoji']} {player_info['label']}** beats **{bot_info['emoji']} {bot_info['label']}**!"
         elif result == "lose":
             title = "💀 You lose!"
@@ -92,9 +93,7 @@ class RPSView(miru.View):
         if self.guild_id:
             try:
                 channel_id = int(ctx.channel_id) if ctx.channel_id else None
-                await self.plugin.record_rps_result(
-                    int(ctx.user.id), self.guild_id, player_choice, result, channel_id=channel_id
-                )
+                await self.plugin.record_rps_result(int(ctx.user.id), self.guild_id, player_choice, result, channel_id=channel_id)
             except Exception as exc:
                 logger.warning("Failed to record RPS result: %s", exc)
 

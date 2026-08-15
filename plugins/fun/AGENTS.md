@@ -7,7 +7,7 @@
 - Primary permission nodes:
   - `basic.fun.games.play` – shared by all game-oriented commands.
   - `basic.fun.images.view` – protects meme/image retrieval commands.
-- Optional web panel (`/plugin/fun`) can surface high scores or activity metrics via FastAPI routes.
+- Optional web panel (`/plugin/fun`) provides full command/panel parity with 11 interactive HTMX cards covering every Discord command, served via FastAPI routes.
 
 ## Architecture
 - `plugin.py` defines `FunPlugin` which inherits `BasePlugin` and `WebPanelMixin`. It initialises an `aiohttp` session in `on_load`
@@ -19,7 +19,7 @@
     public.
 - `config.py` supplies API endpoints, default fallback data, RNG limits, and emoji sets for embed decoration.
 - `views/` exposes `WouldYouRatherView` used by the interactive commands.
-- `web/` (optional) can register panel routes via `register_fun_routes`; currently a placeholder for future expansion.
+- `web/` registers panel routes via `register_fun_routes` in `web/routes.py`. The panel (`templates/panel.html`) renders 11 interactive HTMX cards — one per Discord command — covering dice, coinflip, 8-ball, random number, joke, quote, would-you-rather, meme, fact, and choose. Each card posts to a FastAPI endpoint that returns an HTML fragment swapped into a `.result` div. Routes: `GET /plugin/fun` (panel page), `POST /plugin/fun/api/roll`, `POST /plugin/fun/api/coinflip`, `POST /plugin/fun/api/8ball`, `POST /plugin/fun/api/random`, `POST /plugin/fun/api/joke`, `POST /plugin/fun/api/quote`, `GET /plugin/fun/api/wyr`, `POST /plugin/fun/api/meme`, `POST /plugin/fun/api/fact`, `POST /plugin/fun/api/choose`.
 - The plugin does not persist state beyond runtime counters (no custom models). Shared logging happens through `plugin.log_command_usage`.
 
 ## Commands

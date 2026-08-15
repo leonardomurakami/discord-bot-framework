@@ -1,4 +1,5 @@
 """Interactive views for the daily Angle guessing game."""
+
 from __future__ import annotations
 
 import logging
@@ -7,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import hikari
 import miru
 
-from ..config import ANGLE_MAX_ATTEMPTS, ANGLE_POINTS, EMBED_COLORS
+from ..config import EMBED_COLORS
 from ..utils.angle_image import generate_angle_image
 
 if TYPE_CHECKING:

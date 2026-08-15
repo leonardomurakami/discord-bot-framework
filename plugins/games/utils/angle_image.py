@@ -1,4 +1,5 @@
 """Generate angle game images using matplotlib."""
+
 from __future__ import annotations
 
 import io
@@ -11,8 +12,8 @@ import numpy as np
 matplotlib.use("Agg")  # non-interactive backend
 
 BG_COLOR = "#2b2d31"
-REF_COLOR = "#ffffff"       # reference arm — white
-MYSTERY_COLOR = "#faa61a"   # mystery arm — gold
+REF_COLOR = "#ffffff"  # reference arm — white
+MYSTERY_COLOR = "#faa61a"  # mystery arm — gold
 
 
 def generate_angle_image(target: int) -> bytes:
@@ -43,12 +44,12 @@ def generate_angle_image(target: int) -> bytes:
         "",
         xy=(arm_len, 0),
         xytext=(0, 0),
-        arrowprops=dict(
-            arrowstyle="-|>",
-            color=REF_COLOR,
-            lw=2.5,
-            mutation_scale=18,
-        ),
+        arrowprops={
+            "arrowstyle": "-|>",
+            "color": REF_COLOR,
+            "lw": 2.5,
+            "mutation_scale": 18,
+        },
         zorder=5,
     )
 
@@ -58,29 +59,38 @@ def generate_angle_image(target: int) -> bytes:
         "",
         xy=(tx, ty),
         xytext=(0, 0),
-        arrowprops=dict(
-            arrowstyle="-|>",
-            color=MYSTERY_COLOR,
-            lw=2.5,
-            mutation_scale=18,
-        ),
+        arrowprops={
+            "arrowstyle": "-|>",
+            "color": MYSTERY_COLOR,
+            "lw": 2.5,
+            "mutation_scale": 18,
+        },
         zorder=5,
     )
 
     # --- subtle filled wedge to indicate the angle ---
     wedge = mpatches.Wedge(
-        (0, 0), 0.35,
-        theta1=0, theta2=target,
-        color=MYSTERY_COLOR, alpha=0.18,
+        (0, 0),
+        0.35,
+        theta1=0,
+        theta2=target,
+        color=MYSTERY_COLOR,
+        alpha=0.18,
         zorder=3,
     )
     ax.add_patch(wedge)
 
     # --- arc edge of the wedge ---
     arc = mpatches.Arc(
-        (0, 0), 0.7, 0.7,
-        angle=0, theta1=0, theta2=target,
-        color=MYSTERY_COLOR, linewidth=1.5, alpha=0.6,
+        (0, 0),
+        0.7,
+        0.7,
+        angle=0,
+        theta1=0,
+        theta2=target,
+        color=MYSTERY_COLOR,
+        linewidth=1.5,
+        alpha=0.6,
         zorder=4,
     )
     ax.add_patch(arc)

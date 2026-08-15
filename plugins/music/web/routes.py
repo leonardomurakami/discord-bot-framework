@@ -1,24 +1,60 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, Form, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from bot.database.manager import db_manager
-from ..models import MusicQueue, MusicSession
+
+from ..config import music_settings
+from ..models import MusicSession
 
 if TYPE_CHECKING:  # pragma: no cover - typing helper
     from ..plugin import MusicPlugin
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_auth(plugin: "MusicPlugin"):
+    """Return the DiscordAuth instance or None."""
+    web_app = getattr(plugin.web_panel, "web_app", None)
+    return getattr(web_app, "auth", None)
+
+
+def _require_auth(request: Request, plugin: "MusicPlugin") -> dict[str, Any]:
+    """Raise 401 if the request is not authenticated, else return current_user dict."""
+    auth = _get_auth(plugin)
+    if not auth or not auth.is_authenticated(request):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return auth.get_current_user(request)
+
+
+def assert_guild_access(request: Request, plugin: "MusicPlugin", guild_id: int) -> dict[str, Any]:
+    """Validate that the authenticated user belongs to *guild_id*.
+
+    Returns the current_user dict on success.
+    Raises HTTPException(401) when unauthenticated or HTTPException(403)
+    when the guild is not in the user's session guild list.
+    """
+    current_user = _require_auth(request, plugin)
+    for guild in current_user.get("guilds", []):
+        if str(guild["id"]) == str(guild_id):
+            return current_user
+    raise HTTPException(status_code=403, detail="Access denied for this guild")
+
+
 # WebSocket connection manager
 class MusicWebSocketManager:
     def __init__(self):
         # guild_id -> set of websocket connections
-        self.connections: Dict[int, Set[WebSocket]] = {}
+        self.connections: dict[int, set[WebSocket]] = {}
         self.lock = asyncio.Lock()
 
     async def connect(self, websocket: WebSocket, guild_id: int):
@@ -61,6 +97,7 @@ class MusicWebSocketManager:
                     if not self.connections[guild_id]:
                         del self.connections[guild_id]
 
+
 # Global WebSocket manager instance
 music_ws_manager = MusicWebSocketManager()
 
@@ -81,7 +118,7 @@ async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
                 "current_track": None,
                 "queue": [],
                 "queue_duration": 0,
-                "error": "Lavalink client not connected"
+                "error": "Lavalink client not connected",
             }
 
         player = plugin.lavalink_client.player_manager.get(guild_id)
@@ -115,6 +152,7 @@ async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
         try:
             async with db_manager.session() as session:
                 from sqlalchemy import select
+
                 session_result = await session.execute(select(MusicSession).filter_by(guild_id=guild_id))
                 music_session = session_result.scalar_one_or_none()
                 if music_session:
@@ -146,7 +184,7 @@ async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
                 "duration": track.duration,
                 "position": player.position,
                 "uri": track.uri,
-                "requester_id": getattr(track, 'requester', 0),
+                "requester_id": getattr(track, "requester", 0),
             }
 
         # Get queue from Lavalink (this is the live, authoritative queue)
@@ -154,14 +192,16 @@ async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
         if player.queue:
             for i, queue_track in enumerate(player.queue):
                 queue_duration += queue_track.duration
-                status["queue"].append({
-                    "position": i,
-                    "title": queue_track.title,
-                    "author": queue_track.author,
-                    "duration": queue_track.duration,
-                    "uri": queue_track.uri,
-                    "requester_id": getattr(queue_track, 'requester', 0),
-                })
+                status["queue"].append(
+                    {
+                        "position": i,
+                        "title": queue_track.title,
+                        "author": queue_track.author,
+                        "duration": queue_track.duration,
+                        "uri": queue_track.uri,
+                        "requester_id": getattr(queue_track, "requester", 0),
+                    }
+                )
 
         status["queue_duration"] = queue_duration
         return status
@@ -179,7 +219,7 @@ async def get_music_status_data(guild_id: int, plugin: "MusicPlugin") -> dict:
             "current_track": None,
             "queue": [],
             "queue_duration": 0,
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -187,10 +227,7 @@ async def broadcast_music_update(guild_id: int, plugin: "MusicPlugin", update_ty
     """Broadcast music status update to all connected WebSocket clients for a guild."""
     try:
         status = await get_music_status_data(guild_id, plugin)
-        await music_ws_manager.broadcast_to_guild(guild_id, {
-            "type": update_type,
-            "data": status
-        })
+        await music_ws_manager.broadcast_to_guild(guild_id, {"type": update_type, "data": status})
     except Exception as e:
         logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
 
@@ -200,21 +237,30 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
 
     @app.get("/plugin/music", response_class=HTMLResponse)
     async def music_panel(request: Request):
-        """Main music panel interface."""
+        """Main music panel interface — requires authentication."""
+        _require_auth(request, plugin)
         return plugin.render_plugin_template(request, "panel.html")
 
     @app.websocket("/ws/music/{guild_id}")
     async def music_websocket(websocket: WebSocket, guild_id: int):
         """WebSocket endpoint for real-time music updates."""
+        # Authorize before accepting the connection
+        auth = _get_auth(plugin)
+        if not auth or not auth.is_authenticated(websocket):
+            await websocket.close(code=1008)
+            return
+        current_user = auth.get_current_user(websocket)
+        user_guilds = current_user.get("guilds", []) if current_user else []
+        if not any(str(g["id"]) == str(guild_id) for g in user_guilds):
+            await websocket.close(code=1008)
+            return
+
         await music_ws_manager.connect(websocket, guild_id)
         try:
             # Send initial status
             try:
                 status = await get_music_status_data(guild_id, plugin)
-                await websocket.send_text(json.dumps({
-                    "type": "status_update",
-                    "data": status
-                }))
+                await websocket.send_text(json.dumps({"type": "status_update", "data": status}))
             except Exception as e:
                 logger.error(f"Error sending initial status: {e}")
 
@@ -240,8 +286,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             await music_ws_manager.disconnect(websocket, guild_id)
 
     @app.get("/api/music/status/{guild_id}")
-    async def get_music_status(guild_id: int):
+    async def get_music_status(request: Request, guild_id: int):
         """Get current music status for a guild."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             status = await get_music_status_data(guild_id, plugin)
             if "error" in status:
@@ -259,6 +306,7 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
     @app.post("/api/music/play")
     async def add_track(request: Request, query: str = Form(...), guild_id: int = Form(...), source: str = Form(default="ytsearch")):
         """Add a track to the queue."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             # Check if lavalink client is available
             if not plugin.lavalink_client:
@@ -301,8 +349,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/controls/{action}")
-    async def playback_controls(action: str, guild_id: int = Form(...)):
+    async def playback_controls(request: Request, action: str, guild_id: int = Form(...)):
         """Handle playback control actions."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             # Check if lavalink client is available
             if not plugin.lavalink_client:
@@ -357,6 +406,7 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
 
                     # Small delay to ensure skip is processed
                     import asyncio
+
                     await asyncio.sleep(0.1)
 
                     # Ensure playback continues if we have tracks in queue
@@ -370,8 +420,38 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
                     response_html = "ℹ️ <strong>No track to skip</strong>"
 
             elif action == "previous":
-                # This would require implementing a history system
-                response_html = "ℹ️ <strong>Previous track not available</strong>"
+                # Play the most recent history entry that is not the current track
+                from sqlalchemy import select
+
+                from ..models import MusicQueue as HistoryQueue
+
+                async with db_manager.session() as session:
+                    result = await session.execute(
+                        select(HistoryQueue)
+                        .where(HistoryQueue.guild_id == guild_id, HistoryQueue.position < 0)
+                        .order_by(HistoryQueue.created_at.desc())
+                    )
+                    history_tracks = result.scalars().all()
+
+                    # Filter out the current track if possible
+                    current_uri = player.current.uri if player.current else None
+                    usable = [t for t in history_tracks if t.track_uri != current_uri] if current_uri else history_tracks
+
+                    if not usable:
+                        response_html = "ℹ️ <strong>No previous track available</strong>"
+                    else:
+                        entry = usable[0]
+                        search_result = await plugin.lavalink_client.get_tracks(entry.track_uri)
+                        if search_result.tracks:
+                            track = search_result.tracks[0]
+                            track.requester = entry.requester_id
+                            player.add(track=track, index=0)
+                            await player.skip()
+                            await plugin._save_queue_to_db(guild_id)
+                            response_html = f"⏮️ <strong>Playing previous track:</strong> {entry.track_title}"
+                            should_broadcast = True
+                        else:
+                            response_html = "ℹ️ <strong>No previous track available</strong>"
 
             else:
                 response_html = "❌ <strong>Unknown action</strong>"
@@ -387,11 +467,13 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/volume")
-    async def set_volume(guild_id: int = Form(...), volume: int = Form(...)):
+    async def set_volume(request: Request, guild_id: int = Form(...), volume: int = Form(...)):
         """Set player volume."""
+        assert_guild_access(request, plugin, guild_id)
         try:
-            if not 0 <= volume <= 150:
-                return HTMLResponse("❌ <strong>Volume must be between 0 and 150</strong>")
+            max_volume = music_settings.max_volume
+            if not 0 <= volume <= max_volume:
+                return HTMLResponse(f"❌ <strong>Volume must be between 0 and {max_volume}</strong>")
 
             # Check if lavalink client is available
             if not plugin.lavalink_client:
@@ -424,8 +506,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/repeat")
-    async def set_repeat_mode(guild_id: int = Form(...), mode: str = Form(...)):
+    async def set_repeat_mode(request: Request, guild_id: int = Form(...), mode: str = Form(...)):
         """Set repeat mode."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             if mode not in ["off", "track", "queue"]:
                 return HTMLResponse("❌ <strong>Invalid repeat mode</strong>")
@@ -469,8 +552,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/shuffle")
-    async def toggle_shuffle(guild_id: int = Form(...)):
+    async def toggle_shuffle(request: Request, guild_id: int = Form(...)):
         """Toggle shuffle mode."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             async with db_manager.session() as session:
                 from sqlalchemy import select
@@ -503,8 +587,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/queue/remove")
-    async def remove_from_queue(guild_id: int = Form(...), position: int = Form(...)):
+    async def remove_from_queue(request: Request, guild_id: int = Form(...), position: int = Form(...)):
         """Remove a track from the queue."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             # Check if lavalink client is available
             if not plugin.lavalink_client:
@@ -533,8 +618,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f"❌ <strong>Error:</strong> {str(e)}")
 
     @app.post("/api/music/queue/reorder")
-    async def reorder_queue(guild_id: int = Form(...), from_position: int = Form(...), to_position: int = Form(...)):
+    async def reorder_queue(request: Request, guild_id: int = Form(...), from_position: int = Form(...), to_position: int = Form(...)):
         """Reorder a track in the queue by moving it from one position to another."""
+        assert_guild_access(request, plugin, guild_id)
         try:
             # Check if lavalink client is available
             if not plugin.lavalink_client:
@@ -567,10 +653,9 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             # Broadcast update to WebSocket clients
             await broadcast_music_update(guild_id, plugin, "queue_reorder")
 
-            return JSONResponse({
-                "success": True,
-                "message": f"Moved '{track.title}' from position {from_position + 1} to {to_position + 1}"
-            })
+            return JSONResponse(
+                {"success": True, "message": f"Moved '{track.title}' from position {from_position + 1} to {to_position + 1}"}
+            )
 
         except Exception as e:
             logger.error(f"Error reordering queue: {e}")
@@ -631,22 +716,25 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return HTMLResponse(f'<div class="info-box error">Error loading queue: {str(e)}</div>')
 
     @app.get("/api/music/queue/{guild_id}")
-    async def get_queue_html_path(guild_id: str):
+    async def get_queue_html_path(request: Request, guild_id: str):
         raw_guild_id = guild_id.strip()
 
         if not raw_guild_id.isdigit():
             logger.debug("Ignoring queue request without concrete guild id: %s", guild_id)
             return HTMLResponse('<div class="empty-queue"><p>Select a server to view the queue.</p></div>')
 
+        assert_guild_access(request, plugin, int(raw_guild_id))
         return await _render_queue_html(int(raw_guild_id))
 
     @app.get("/api/music/queue")
-    async def get_queue_html_query(guild_id: int = Query(...)):
+    async def get_queue_html_query(request: Request, guild_id: int = Query(...)):
+        assert_guild_access(request, plugin, guild_id)
         return await _render_queue_html(guild_id)
 
     @app.get("/api/music/search/suggestions")
-    async def get_search_suggestions(query: str = Query(..., min_length=2), source: str = Query(default="ytsearch")):
+    async def get_search_suggestions(request: Request, query: str = Query(..., min_length=2), source: str = Query(default="ytsearch")):
         """Get search suggestions for track search."""
+        _require_auth(request, plugin)
         try:
             if len(query.strip()) < 2:
                 return JSONResponse([])
@@ -681,10 +769,10 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
                 thumbnail_url = None
                 if track.uri:
                     import re
+
                     if "youtube" in track.uri:
                         youtube_pattern = (
-                            "(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)"
-                            "([^\\\"&?\\/\\s]{11})"
+                            "(?:youtube\\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\\.be/)" '([^\\"&?\\/\\s]{11})'
                         )
                         youtube_id_match = re.search(youtube_pattern, track.uri)
                         if youtube_id_match:
@@ -692,18 +780,20 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
                             thumbnail_url = f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
                     elif "soundcloud" in track.uri:
                         # SoundCloud tracks might have artwork_url in track metadata
-                        thumbnail_url = getattr(track, 'artwork_url', None)
+                        thumbnail_url = getattr(track, "artwork_url", None)
                     # For other sources (Spotify, Apple Music, etc.), we'll use a default icon
 
-                suggestions.append({
-                    "title": track.title,
-                    "author": track.author,
-                    "duration": f"{duration_mins:02d}:{duration_secs:02d}",
-                    "uri": track.uri,
-                    "thumbnail": thumbnail_url,
-                    "source": source,
-                    "display": f"{track.title} - {track.author}"
-                })
+                suggestions.append(
+                    {
+                        "title": track.title,
+                        "author": track.author,
+                        "duration": f"{duration_mins:02d}:{duration_secs:02d}",
+                        "uri": track.uri,
+                        "thumbnail": thumbnail_url,
+                        "source": source,
+                        "display": f"{track.title} - {track.author}",
+                    }
+                )
 
             return JSONResponse(suggestions)
 
@@ -712,60 +802,26 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
             return JSONResponse([])
 
     @app.get("/api/music/sources")
-    async def get_available_sources():
+    async def get_available_sources(request: Request):
         """Get available music sources from Lavalink."""
+        _require_auth(request, plugin)
         try:
             # Check if lavalink client is available
             if not plugin.lavalink_client:
                 # Return default sources if Lavalink is not connected
-                return JSONResponse([{
-                    "id": "ytsearch",
-                    "name": "YouTube",
-                    "icon": "fab fa-youtube",
-                    "available": False
-                }])
+                return JSONResponse([{"id": "ytsearch", "name": "YouTube", "icon": "fab fa-youtube", "available": False}])
 
             # Get available sources from Lavalink client
             available_sources = []
 
             # Define all possible sources with their metadata
             source_definitions = [
-                {
-                    "id": "ytsearch",
-                    "name": "YouTube",
-                    "icon": "fab fa-youtube",
-                    "description": "YouTube videos"
-                },
-                {
-                    "id": "ytmsearch",
-                    "name": "YouTube Music",
-                    "icon": "fab fa-youtube",
-                    "description": "YouTube Music tracks"
-                },
-                {
-                    "id": "spsearch",
-                    "name": "Spotify",
-                    "icon": "fab fa-spotify",
-                    "description": "Spotify tracks"
-                },
-                {
-                    "id": "amsearch",
-                    "name": "Apple Music",
-                    "icon": "fab fa-apple",
-                    "description": "Apple Music tracks"
-                },
-                {
-                    "id": "scsearch",
-                    "name": "SoundCloud",
-                    "icon": "fab fa-soundcloud",
-                    "description": "SoundCloud tracks"
-                },
-                {
-                    "id": "dzsearch",
-                    "name": "Deezer",
-                    "icon": "fas fa-music",
-                    "description": "Deezer tracks"
-                }
+                {"id": "ytsearch", "name": "YouTube", "icon": "fab fa-youtube", "description": "YouTube videos"},
+                {"id": "ytmsearch", "name": "YouTube Music", "icon": "fab fa-youtube", "description": "YouTube Music tracks"},
+                {"id": "spsearch", "name": "Spotify", "icon": "fab fa-spotify", "description": "Spotify tracks"},
+                {"id": "amsearch", "name": "Apple Music", "icon": "fab fa-apple", "description": "Apple Music tracks"},
+                {"id": "scsearch", "name": "SoundCloud", "icon": "fab fa-soundcloud", "description": "SoundCloud tracks"},
+                {"id": "dzsearch", "name": "Deezer", "icon": "fas fa-music", "description": "Deezer tracks"},
             ]
 
             # Test each source with a simple query to check availability
@@ -773,7 +829,7 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
                 try:
                     # Test with a simple query to see if source responds
                     test_query = f"{source_def['id']}:test"
-                    test_result = await plugin.lavalink_client.get_tracks(test_query)
+                    await plugin.lavalink_client.get_tracks(test_query)
 
                     # If we get a result (even empty), the source is available
                     source_def["available"] = True
@@ -798,10 +854,6 @@ def register_music_routes(app: FastAPI, plugin: "MusicPlugin") -> None:
         except Exception as e:
             logger.error(f"Error getting available sources: {e}")
             # Return YouTube as fallback
-            return JSONResponse([{
-                "id": "ytsearch",
-                "name": "YouTube",
-                "icon": "fab fa-youtube",
-                "description": "YouTube videos",
-                "available": True
-            }])
+            return JSONResponse(
+                [{"id": "ytsearch", "name": "YouTube", "icon": "fab fa-youtube", "description": "YouTube videos", "available": True}]
+            )

@@ -13,11 +13,11 @@ from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
     ERROR_COLOR,
-    PREFIX_DISALLOWED_CHARS,
-    PREFIX_MAX_LENGTH,
     SERVER_INFO_COLOR,
     SUCCESS_COLOR,
     WARNING_COLOR,
+    check_autorole_hierarchy,
+    validate_prefix,
 )
 
 if TYPE_CHECKING:
@@ -146,7 +146,9 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
 
                             embed = plugin.create_embed(
                                 title="✅ Permissions Updated",
-                                description=f"**{len(processed_perms)}** permissions have been {action_text} @{role.name}:\n\n{perm_list}",
+                                description=(
+                                    f"**{len(processed_perms)}** permissions have been {action_text} " f"@{role.name}:\n\n{perm_list}"
+                                ),
                                 color=SUCCESS_COLOR,
                             )
 
@@ -222,28 +224,11 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
                     inline=False,
                 )
             else:
-                if len(new_prefix) > PREFIX_MAX_LENGTH:
+                is_valid, error_msg = validate_prefix(new_prefix)
+                if not is_valid:
                     embed = plugin.create_embed(
                         title="❌ Invalid Prefix",
-                        description=f"Prefix must be {PREFIX_MAX_LENGTH} characters or less.",
-                        color=ERROR_COLOR,
-                    )
-                    await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-                    return
-
-                if len(new_prefix.strip()) == 0:
-                    embed = plugin.create_embed(
-                        title="❌ Invalid Prefix",
-                        description="Prefix cannot be empty or only whitespace.",
-                        color=ERROR_COLOR,
-                    )
-                    await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-                    return
-
-                if any(char in new_prefix for char in PREFIX_DISALLOWED_CHARS):
-                    embed = plugin.create_embed(
-                        title="❌ Invalid Prefix",
-                        description="Prefix cannot contain quotes, backticks, or whitespace characters.",
+                        description=error_msg,
                         color=ERROR_COLOR,
                     )
                     await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
@@ -374,26 +359,16 @@ def setup_settings_commands(plugin: AdminPlugin) -> list[Callable[..., Any]]:
 
                 guild = ctx.get_guild()
                 bot_id = plugin.gateway.get_me().id
-                bot_member = guild.get_member(bot_id) if guild else None
 
-                if not bot_member:
-                    embed = plugin.create_embed(
-                        title="❌ Bot Permission Error",
-                        description="Cannot verify bot permissions.",
-                        color=ERROR_COLOR,
-                    )
-                    await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
-                    return
-
-                bot_role_ids = bot_member.role_ids or []
-                bot_roles = [guild.get_role(rid) for rid in bot_role_ids] if guild else []
-                bot_roles = [r for r in bot_roles if r is not None]
-                bot_top_role_position = max((r.position for r in bot_roles), default=-1)
-
-                if role.position >= bot_top_role_position and bot_roles:
+                hierarchy_ok, hierarchy_error = await check_autorole_hierarchy(guild, role, bot_id)
+                if not hierarchy_ok:
                     embed = plugin.create_embed(
                         title="❌ Role Hierarchy Error",
-                        description=f"I cannot assign {role.mention} because it's higher than or equal to my highest role.",
+                        description=(
+                            f"I cannot assign {role.mention} because it's higher than or equal to my highest role."
+                            if "hierarchy" in hierarchy_error.lower()
+                            else hierarchy_error
+                        ),
                         color=ERROR_COLOR,
                     )
                     await plugin.smart_respond(ctx, embed=embed, ephemeral=True)

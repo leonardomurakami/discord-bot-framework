@@ -248,10 +248,7 @@ class SourceSelectView(miru.View):
         self._setup_select_menu()
 
     def _setup_select_menu(self) -> None:
-        options = [
-            miru.SelectOption(label=label, value=prefix, emoji=emoji)
-            for prefix, label, emoji in self.SOURCES
-        ]
+        options = [miru.SelectOption(label=label, value=prefix, emoji=emoji) for prefix, label, emoji in self.SOURCES]
         select = miru.TextSelect(
             placeholder="Choose a source to retry...",
             options=options,
@@ -311,6 +308,7 @@ class SourceSelectView(miru.View):
                 await player.play()
 
             from ..utils import save_queue_to_db
+
             await save_queue_to_db(self.music_plugin, self.guild_id)
 
             duration_minutes = track.duration // 60000

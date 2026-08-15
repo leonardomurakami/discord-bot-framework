@@ -224,9 +224,9 @@ GAME_EMOJIS = ["🎮", "🎯", "🧠", "🎲", "🏆", "⭐", "🔥", "💎"]
 # Angle game settings
 ANGLE_MAX_ATTEMPTS = 4
 ANGLE_POINTS = {
-    "exact": 100,   # 0° off
-    "close": 75,    # 1° off
-    "near": 50,     # 2° off
+    "exact": 100,  # 0° off
+    "close": 75,  # 1° off
+    "near": 50,  # 2° off
 }
 
 # Angle achievement definitions

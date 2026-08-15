@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import logging
 import random
 import time
@@ -13,11 +12,9 @@ import lightbulb
 from bot.plugins.commands import CommandArgument, command
 
 from ..config import (
-    DEFAULT_TRIVIA_QUESTIONS,
     DIFFICULTY_EMOJIS,
     EMBED_COLORS,
     TRIVIA_CATEGORIES,
-    TRIVIA_DIFFICULTIES,
     games_settings,
 )
 from ..views import TriviaView
@@ -52,16 +49,13 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 hikari.OptionType.STRING,
                 "Question category",
                 required=False,
-                choices=[
-                    hikari.CommandChoice(name=name.title(), value=name)
-                    for name in sorted(TRIVIA_CATEGORIES.keys())
-                ][:25],  # Discord limit
+                choices=[hikari.CommandChoice(name=name.title(), value=name) for name in sorted(TRIVIA_CATEGORIES.keys())][
+                    :25
+                ],  # Discord limit
             ),
         ],
     )
-    async def trivia_question(
-        ctx: lightbulb.Context, difficulty: str | None = None, category: str | None = None
-    ) -> None:
+    async def trivia_question(ctx: lightbulb.Context, difficulty: str | None = None, category: str | None = None) -> None:
         try:
             # Check if we're in a guild (trivia doesn't work in DMs)
             if not ctx.guild_id:
@@ -73,50 +67,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            question_data: dict[str, Any] | None = None
-
-            # Try to get question from API first
-            if plugin.session:
-                try:
-                    # Build API URL with parameters
-                    api_url = games_settings.trivia_api_url
-                    params = []
-
-                    if difficulty and difficulty in TRIVIA_DIFFICULTIES:
-                        params.append(f"difficulty={difficulty}")
-
-                    if category and category in TRIVIA_CATEGORIES:
-                        params.append(f"category={TRIVIA_CATEGORIES[category]}")
-
-                    if params:
-                        api_url += "&" + "&".join(params)
-
-                    async with plugin.session.get(api_url) as resp:
-                        if resp.status == 200:
-                            data = await resp.json()
-                            if data["response_code"] == 0 and data["results"]:
-                                question_data = data["results"][0]
-                except Exception as exc:
-                    logger.debug("API request failed: %s", exc)
-
-            # Fallback to custom questions or defaults
-            if not question_data:
-                # Try custom questions for this guild first
-                custom_questions = await plugin.get_custom_questions(ctx.guild_id, category, difficulty)
-                if custom_questions:
-                    question_data = random.choice(custom_questions).to_dict()
-                else:
-                    # Use default questions
-                    available_questions = DEFAULT_TRIVIA_QUESTIONS
-                    if difficulty:
-                        available_questions = [q for q in available_questions if q.get("difficulty") == difficulty]
-                    if category:
-                        available_questions = [q for q in available_questions if q.get("category", "").lower() == category.lower()]
-
-                    if available_questions:
-                        question_data = random.choice(available_questions)
-                    else:
-                        question_data = random.choice(DEFAULT_TRIVIA_QUESTIONS)
+            question_data = await plugin.fetch_trivia_question(ctx.guild_id, difficulty, category)
 
             if not question_data:
                 embed = plugin.create_embed(
@@ -127,7 +78,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 await plugin.smart_respond(ctx, embed=embed, ephemeral=True)
                 return
 
-            question_text = html.unescape(question_data["question"])
+            question_text = question_data["question"]
             question_category = question_data.get("category", "General")
             question_difficulty = question_data.get("difficulty", "medium")
 
@@ -141,11 +92,14 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
 
             # Create description with Discord timestamp countdown
             import time as time_module
+
             end_time = int(time_module.time()) + games_settings.trivia_timeout_seconds
 
-            base_description = (f"**Category:** {question_category}\n"
-                               f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
-                               f"**Question:**\n{question_text}")
+            base_description = (
+                f"**Category:** {question_category}\n"
+                f"**Difficulty:** {difficulty_emoji} {question_difficulty.title()}\n\n"
+                f"**Question:**\n{question_text}"
+            )
 
             initial_timer = f"\n\n⏱️ **Ends <t:{end_time}:R>** • Click the correct answer!"
             if is_time_attack:
@@ -229,9 +183,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
 
                 embed.add_field(
                     "🎯 By Difficulty",
-                    f"🟢 Easy: {stats.easy_correct:,}\n"
-                    f"🟡 Medium: {stats.medium_correct:,}\n"
-                    f"🔴 Hard: {stats.hard_correct:,}",
+                    f"🟢 Easy: {stats.easy_correct:,}\n" f"🟡 Medium: {stats.medium_correct:,}\n" f"🔴 Hard: {stats.hard_correct:,}",
                     inline=True,
                 )
 
@@ -352,10 +304,7 @@ def setup_trivia_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 lines = []
                 for ach in achievements:
                     unlock_ts = int(ach.unlocked_at.timestamp())
-                    lines.append(
-                        f"{ach.emoji} **{ach.name}** — {ach.description}\n"
-                        f"  *Unlocked <t:{unlock_ts}:d>*"
-                    )
+                    lines.append(f"{ach.emoji} **{ach.name}** — {ach.description}\n" f"  *Unlocked <t:{unlock_ts}:d>*")
 
                 embed.description = "\n\n".join(lines)
                 embed.set_footer(f"{len(achievements)} achievement(s) unlocked")

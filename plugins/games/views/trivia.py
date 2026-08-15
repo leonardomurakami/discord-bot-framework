@@ -105,7 +105,6 @@ class TriviaView(miru.View):
         except Exception as exc:
             logger.error("Countdown task error: %s", exc)
 
-
     async def _end_trivia(self) -> None:
         """Manually end the trivia and show results."""
         if self.is_finished:
@@ -158,10 +157,7 @@ class TriviaView(miru.View):
         self.hints_given.add(user_id)
 
         # Remove one incorrect answer as a hint
-        available_incorrect = [
-            i for i, ans in enumerate(self.all_answers)
-            if i != self.correct_position
-        ]
+        available_incorrect = [i for i, ans in enumerate(self.all_answers) if i != self.correct_position]
 
         if not available_incorrect:
             await ctx.respond("No hints available for this question!", flags=hikari.MessageFlag.EPHEMERAL)
@@ -214,13 +210,15 @@ class TriviaView(miru.View):
             # Award points to correct participants
             channel_id = self.message.channel_id if self.message else None
             for _username, timestamp, user_id in correct_participants:
-                await self._award_points(user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, channel_id=channel_id)
+                used_hint = user_id in self.hints_given
+                await self._award_points(user_id, self.guild_id, difficulty, timestamp, used_hint, channel_id=channel_id)
 
             # Award failures to incorrect participants
             for user_id, (_username, answer_index, timestamp) in self.participants.items():
                 if answer_index != self.correct_position:
+                    used_hint = user_id in self.hints_given
                     await self._award_points(
-                        user_id, self.guild_id, difficulty, timestamp, user_id in self.hints_given, is_failure=True, channel_id=channel_id
+                        user_id, self.guild_id, difficulty, timestamp, used_hint, is_failure=True, channel_id=channel_id
                     )
 
             # Display results by answer
@@ -265,9 +263,7 @@ class TriviaView(miru.View):
                 )
             else:
                 summary_value = (
-                    f"**Total Participants:** {total_participants}\n"
-                    "**Correct Answers:** 0\n"
-                    "Everyone got it wrong! 😅"
+                    f"**Total Participants:** {total_participants}\n" "**Correct Answers:** 0\n" "Everyone got it wrong! 😅"
                 )
 
             if self.is_time_attack:
@@ -321,8 +317,13 @@ class TriviaView(miru.View):
 
             if is_failure:
                 await self.plugin.award_points(
-                    user_id, guild_id, 0, difficulty, used_hint,
-                    answer_time - (self.start_time or 0), is_correct=False,
+                    user_id,
+                    guild_id,
+                    0,
+                    difficulty,
+                    used_hint,
+                    answer_time - (self.start_time or 0),
+                    is_correct=False,
                     channel_id=channel_id,
                 )
             else:
@@ -337,8 +338,13 @@ class TriviaView(miru.View):
                         base_points = int(base_points * games_settings.trivia_time_bonus_multiplier)
 
                 await self.plugin.award_points(
-                    user_id, guild_id, base_points, difficulty, used_hint,
-                    answer_time - (self.start_time or 0), is_correct=True,
+                    user_id,
+                    guild_id,
+                    base_points,
+                    difficulty,
+                    used_hint,
+                    answer_time - (self.start_time or 0),
+                    is_correct=True,
                     channel_id=channel_id,
                 )
 

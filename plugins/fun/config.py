@@ -123,17 +123,22 @@ DEFAULT_QUOTES = [
 ]
 
 DEFAULT_FACTS = [
-    "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still perfectly edible.",
-    "A single cloud can weigh more than a million pounds. Despite floating in the sky, clouds are made of water droplets that collectively have significant mass.",
+    "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old"
+    " and still perfectly edible.",
+    "A single cloud can weigh more than a million pounds. Despite floating in the sky, clouds are made of water droplets"
+    " that collectively have significant mass.",
     "Bananas are berries, but strawberries aren't. Botanically speaking, berries must have seeds inside their flesh.",
     "The shortest war in history lasted only 38-45 minutes. It was between Britain and Zanzibar in 1896.",
     "Octopuses have three hearts and blue blood. Two hearts pump blood to the gills, while the third pumps to the rest of the body.",
     "A group of flamingos is called a 'flamboyance.' Other collective nouns include a 'murder' of crows and a 'wisdom' of wombats.",
     "The human brain contains approximately 86 billion neurons, roughly the same number of stars in the Milky Way galaxy.",
-    "Butterflies taste with their feet. They have chemoreceptors on their feet that help them identify suitable plants for laying eggs.",
+    "Butterflies taste with their feet. They have chemoreceptors on their feet that help them identify suitable plants"
+    " for laying eggs.",
     "The Great Wall of China isn't visible from space with the naked eye, contrary to popular belief.",
-    "A day on Venus is longer than its year. Venus rotates so slowly that it takes longer to complete one rotation than to orbit the Sun.",
-    "Sharks have been around longer than trees. Sharks appeared about 400 million years ago, while trees appeared around 350 million years ago.",
+    "A day on Venus is longer than its year. Venus rotates so slowly that it takes longer to complete one rotation"
+    " than to orbit the Sun.",
+    "Sharks have been around longer than trees. Sharks appeared about 400 million years ago, while trees appeared"
+    " around 350 million years ago.",
     "The dot over a lowercase 'i' or 'j' is called a tittle.",
     "Wombat poop is cube-shaped. This helps prevent it from rolling away and marks their territory more effectively.",
     "There are more possible games of chess than atoms in the observable universe.",
