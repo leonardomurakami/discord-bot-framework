@@ -11,9 +11,11 @@ async def _broadcast_music_update(plugin, guild_id: int, update_type: str):
     """Broadcast music update to WebSocket clients."""
     try:
         from ..web import broadcast_music_update
+
         await broadcast_music_update(guild_id, plugin, update_type)
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")
 
@@ -267,6 +269,7 @@ def setup_playback_commands(plugin):
 
         # Small delay to ensure skip is processed
         import asyncio
+
         await asyncio.sleep(0.1)
 
         # Ensure playback continues if we have tracks in queue
@@ -355,6 +358,9 @@ def setup_playback_commands(plugin):
 
         await player.seek(seek_position)
 
+        # Broadcast update to WebSocket clients so the panel position stays in sync
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
+
         seek_minutes = seek_position // 60000
         seek_seconds = (seek_position % 60000) // 1000
 
@@ -402,5 +408,8 @@ def setup_playback_commands(plugin):
             color=hikari.Color(0x0099FF),
         )
         await plugin.smart_respond(ctx, embed=embed)
+
+        # Broadcast update so the web panel position stays in sync
+        await _broadcast_music_update(plugin, ctx.guild_id, "playback_update")
 
     return [play, pause, resume, stop, skip, seek, position]

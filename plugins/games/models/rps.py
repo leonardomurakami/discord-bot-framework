@@ -12,9 +12,7 @@ class RPSStats(Base):
     """Persistent Rock-Paper-Scissors statistics per user per guild."""
 
     __tablename__ = "rps_stats"
-    __table_args__ = (
-        UniqueConstraint("user_id", "guild_id", name="uq_rps_stats_user_guild"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "guild_id", name="uq_rps_stats_user_guild"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -33,9 +31,7 @@ class RPSStats(Base):
     current_win_streak: Mapped[int] = mapped_column(Integer, default=0)
     best_win_streak: Mapped[int] = mapped_column(Integer, default=0)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
@@ -54,9 +50,7 @@ class RPSAchievement(Base):
     """An unlocked RPS achievement for a user in a guild."""
 
     __tablename__ = "rps_achievements"
-    __table_args__ = (
-        UniqueConstraint("user_id", "guild_id", "achievement_id", name="uq_rps_achievement_user_guild_id"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "guild_id", "achievement_id", name="uq_rps_achievement_user_guild_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
@@ -65,9 +59,7 @@ class RPSAchievement(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     emoji: Mapped[str] = mapped_column(String(16), nullable=False)
-    unlocked_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:
         return f"<RPSAchievement(user={self.user_id}, id={self.achievement_id})>"

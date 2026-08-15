@@ -252,9 +252,6 @@ async def start_disconnect_timer(music_plugin: "MusicPlugin", guild_id: int) -> 
     """Start auto-disconnect timer for a guild."""
     await cancel_disconnect_timer(music_plugin, guild_id)
 
-    disconnect_minutes = await music_plugin.get_setting(guild_id, "auto_disconnect_timer", 5)
-    disconnect_seconds = disconnect_minutes * 60
-
     async def disconnect_after_delay():
         await asyncio.sleep(music_settings.disconnect_timeout_seconds)
         try:

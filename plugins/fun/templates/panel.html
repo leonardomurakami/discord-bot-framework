@@ -75,6 +75,88 @@
         transform: translateY(0);
     }
 }
+
+/* Would-you-rather card styling */
+.wyr-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.wyr-option {
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: calc(var(--card-radius) - 6px);
+    text-align: left;
+}
+
+.wyr-vote-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.btn-wyr-a {
+    background: var(--primary-color, #5865F2);
+}
+
+.btn-wyr-b {
+    background: var(--secondary-color, #4752C4);
+}
+
+.wyr-results {
+    margin-bottom: 0.75rem;
+}
+
+.wyr-bar-container {
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.wyr-bar-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-secondary);
+}
+
+.wyr-bar {
+    width: 100%;
+    height: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.wyr-bar-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.wyr-bar-a {
+    background: var(--primary-color, #5865F2);
+}
+
+.wyr-bar-b {
+    background: var(--secondary-color, #4752C4);
+}
+
+.wyr-total {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 0.25rem;
+}
+
+/* Meme card image styling */
+.meme-img {
+    max-width: 100%;
+    height: auto;
+    border-radius: calc(var(--card-radius) - 6px);
+    margin: 0.5rem 0;
+}
 {% endblock %}
 
 {% block content %}
@@ -196,6 +278,80 @@
         </div>
         <div id="quote-result" class="result"></div>
     </div>
+
+    <div class="game-card">
+        <div class="game-title">
+            <i class="fa-solid fa-circle-question icon icon-md" aria-hidden="true"></i>
+            <span>Would You Rather</span>
+        </div>
+        <p>Get a random would-you-rather question and vote for your choice</p>
+        <div class="card-actions">
+            <button class="btn" hx-get="/plugin/fun/api/wyr" hx-target="#wyr-result" hx-indicator="#wyr-loading">
+                <i class="fa-solid fa-circle-question icon icon-sm" aria-hidden="true"></i>
+                <span>Get a question</span>
+            </button>
+            <span id="wyr-loading" class="htmx-indicator">Loading...</span>
+        </div>
+        <div id="wyr-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">
+            <i class="fa-solid fa-image icon icon-md" aria-hidden="true"></i>
+            <span>Random Meme</span>
+        </div>
+        <p>Get a random meme image from the web</p>
+        <div class="card-actions">
+            <button class="btn" hx-post="/plugin/fun/api/meme" hx-target="#meme-result" hx-indicator="#meme-loading">
+                <i class="fa-solid fa-image icon icon-sm" aria-hidden="true"></i>
+                <span>Get new meme</span>
+            </button>
+            <span id="meme-loading" class="htmx-indicator">Fetching meme...</span>
+        </div>
+        <div id="meme-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">
+            <i class="fa-solid fa-lightbulb icon icon-md" aria-hidden="true"></i>
+            <span>Random Fact</span>
+        </div>
+        <p>Learn something new with a random fact</p>
+        <div class="card-actions">
+            <button class="btn" hx-post="/plugin/fun/api/fact" hx-target="#fact-result" hx-indicator="#fact-loading">
+                <i class="fa-solid fa-lightbulb icon icon-sm" aria-hidden="true"></i>
+                <span>Get a fact</span>
+            </button>
+            <span id="fact-loading" class="htmx-indicator">Finding a fact...</span>
+        </div>
+        <div id="fact-result" class="result"></div>
+    </div>
+
+    <div class="game-card">
+        <div class="game-title">
+            <i class="fa-solid fa-list-check icon icon-md" aria-hidden="true"></i>
+            <span>Choose For Me</span>
+        </div>
+        <p>Can't decide? Let the bot choose between two options</p>
+        <form hx-post="/plugin/fun/api/choose" hx-target="#choose-result" hx-indicator="#choose-loading">
+            <div class="input-group">
+                <label for="choose-option1">Option 1:</label>
+                <input type="text" id="choose-option1" name="option1" placeholder="First option">
+            </div>
+            <div class="input-group">
+                <label for="choose-option2">Option 2:</label>
+                <input type="text" id="choose-option2" name="option2" placeholder="Second option">
+            </div>
+            <div class="card-actions">
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-list-check icon icon-sm" aria-hidden="true"></i>
+                    <span>Choose for me</span>
+                </button>
+                <span id="choose-loading" class="htmx-indicator">Deciding...</span>
+            </div>
+        </form>
+        <div id="choose-result" class="result"></div>
+    </div>
 </div>
 {% endblock %}
 
@@ -223,5 +379,49 @@ document.body.addEventListener('htmx:beforeRequest', function(event) {
 });
 
 console.log('Fun & Games panel loaded with plugin-local templates!');
+
+// Would-you-rather client-side vote tracking (ephemeral, no server callback)
+let wyrVotesA = 0;
+let wyrVotesB = 0;
+
+function wyrVote(option) {
+    if (option === 'a') {
+        wyrVotesA++;
+    } else if (option === 'b') {
+        wyrVotesB++;
+    }
+    wyrUpdateResults();
+}
+
+function wyrUpdateResults() {
+    var total = wyrVotesA + wyrVotesB;
+    var pctA = total === 0 ? 0.0 : (wyrVotesA / total) * 100;
+    var pctB = total === 0 ? 0.0 : (wyrVotesB / total) * 100;
+
+    var countAEl = document.getElementById('wyr-count-a');
+    var countBEl = document.getElementById('wyr-count-b');
+    var pctAEl = document.getElementById('wyr-pct-a');
+    var pctBEl = document.getElementById('wyr-pct-b');
+    var barAEl = document.getElementById('wyr-bar-a');
+    var barBEl = document.getElementById('wyr-bar-b');
+    var totalEl = document.getElementById('wyr-total');
+
+    if (countAEl) countAEl.textContent = wyrVotesA;
+    if (countBEl) countBEl.textContent = wyrVotesB;
+    if (pctAEl) pctAEl.textContent = pctA.toFixed(1);
+    if (pctBEl) pctBEl.textContent = pctB.toFixed(1);
+    if (barAEl) barAEl.style.width = pctA + '%';
+    if (barBEl) barBEl.style.width = pctB + '%';
+    if (totalEl) totalEl.textContent = total;
+}
+
+// Reset vote counts when a new question loads
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'wyr-result') {
+        wyrVotesA = 0;
+        wyrVotesB = 0;
+        wyrUpdateResults();
+    }
+});
 </script>
 {% endblock %}

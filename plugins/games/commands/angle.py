@@ -1,4 +1,5 @@
 """Angle guessing game command — daily challenge inspired by angle.wtf."""
+
 from __future__ import annotations
 
 import logging
@@ -10,7 +11,7 @@ import lightbulb
 
 from bot.plugins.commands import CommandArgument, command
 
-from ..config import ANGLE_MAX_ATTEMPTS, EMBED_COLORS
+from ..config import EMBED_COLORS
 from ..utils.angle_image import generate_angle_image
 from ..views.angle import AngleView, _build_angle_embed
 
@@ -113,14 +114,12 @@ def setup_angle_commands(plugin: GamesPlugin) -> list[Callable[..., Any]]:
                 )
                 embed.add_field(
                     "🎯 Precision",
-                    f"**Perfect guesses:** {stats.exact_wins:,}\n"
-                    f"**Close wins (≤2°):** {stats.close_wins:,}",
+                    f"**Perfect guesses:** {stats.exact_wins:,}\n" f"**Close wins (≤2°):** {stats.close_wins:,}",
                     inline=True,
                 )
                 embed.add_field(
                     "🔥 Streaks",
-                    f"**Current streak:** {stats.current_win_streak}\n"
-                    f"**Best streak:** {stats.best_win_streak}",
+                    f"**Current streak:** {stats.current_win_streak}\n" f"**Best streak:** {stats.best_win_streak}",
                     inline=True,
                 )
 

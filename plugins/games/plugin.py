@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import aiohttp
@@ -35,15 +34,27 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         # Register database models
         from .models import (
-            AngleAchievement, AngleGame, AngleStats,
-            CustomQuestion, GuildLeaderboard,
-            RPSAchievement, RPSStats,
-            TriviaAchievement, TriviaStats,
+            AngleAchievement,
+            AngleGame,
+            AngleStats,
+            CustomQuestion,
+            GuildLeaderboard,
+            RPSAchievement,
+            RPSStats,
+            TriviaAchievement,
+            TriviaStats,
         )
+
         self.register_models(
-            TriviaStats, TriviaAchievement, CustomQuestion, GuildLeaderboard,
-            AngleGame, AngleStats, AngleAchievement,
-            RPSStats, RPSAchievement,
+            TriviaStats,
+            TriviaAchievement,
+            CustomQuestion,
+            GuildLeaderboard,
+            AngleGame,
+            AngleStats,
+            AngleAchievement,
+            RPSStats,
+            RPSAchievement,
         )
 
         # Register commands
@@ -100,18 +111,96 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
     # Trivia helpers
     # -------------------------------------------------------------------------
 
+    async def fetch_trivia_question(
+        self,
+        guild_id: int,
+        difficulty: str | None = None,
+        category: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Fetch a trivia question using the same fallback chain as the Discord command.
+
+        Priority: Open Trivia API → custom guild questions → built-in defaults.
+        Returns a normalized question dict with HTML-unescaped text and shuffled
+        answer choices, or ``None`` if no question could be obtained.
+        """
+        import html
+        import random
+
+        from .config import (
+            DEFAULT_TRIVIA_QUESTIONS,
+            TRIVIA_CATEGORIES,
+            TRIVIA_DIFFICULTIES,
+            games_settings,
+        )
+
+        question_data: dict[str, Any] | None = None
+
+        # Try to get question from API first
+        if self.session:
+            try:
+                api_url = games_settings.trivia_api_url
+                params: list[str] = []
+
+                if difficulty and difficulty in TRIVIA_DIFFICULTIES:
+                    params.append(f"difficulty={difficulty}")
+
+                if category and category in TRIVIA_CATEGORIES:
+                    params.append(f"category={TRIVIA_CATEGORIES[category]}")
+
+                if params:
+                    api_url += "&" + "&".join(params)
+
+                async with self.session.get(api_url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if data["response_code"] == 0 and data["results"]:
+                            question_data = data["results"][0]
+            except Exception as exc:
+                logger.debug("API request failed: %s", exc)
+
+        # Fallback to custom questions or defaults
+        if not question_data:
+            custom_questions = await self.get_custom_questions(guild_id, category, difficulty)
+            if custom_questions:
+                question_data = random.choice(custom_questions).to_dict()
+            else:
+                available_questions = DEFAULT_TRIVIA_QUESTIONS
+                if difficulty:
+                    available_questions = [q for q in available_questions if q.get("difficulty") == difficulty]
+                if category:
+                    available_questions = [q for q in available_questions if q.get("category", "").lower() == category.lower()]
+
+                if available_questions:
+                    question_data = random.choice(available_questions)
+                else:
+                    question_data = random.choice(DEFAULT_TRIVIA_QUESTIONS)
+
+        if not question_data:
+            return None
+
+        # Normalize: unescape text and shuffle answer choices
+        correct_answer = html.unescape(question_data["correct_answer"])
+        incorrect_answers = [html.unescape(a) for a in question_data["incorrect_answers"]]
+        all_answers = [correct_answer, *incorrect_answers]
+        random.shuffle(all_answers)
+
+        return {
+            "question": html.unescape(question_data["question"]),
+            "correct_answer": correct_answer,
+            "incorrect_answers": incorrect_answers,
+            "all_answers": all_answers,
+            "category": question_data.get("category", "General"),
+            "difficulty": question_data.get("difficulty", "medium"),
+        }
+
     async def get_trivia_stats(self, user_id: int, guild_id: int):
         """Get trivia statistics for a user in a guild."""
         from .models import TriviaStats
 
         async with self.db_session() as session:
             from sqlalchemy import select
-            result = await session.execute(
-                select(TriviaStats).where(
-                    TriviaStats.user_id == user_id,
-                    TriviaStats.guild_id == guild_id
-                )
-            )
+
+            result = await session.execute(select(TriviaStats).where(TriviaStats.user_id == user_id, TriviaStats.guild_id == guild_id))
             return result.scalars().first()
 
     async def get_trivia_achievements(self, user_id: int, guild_id: int):
@@ -120,11 +209,14 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
+
             result = await session.execute(
-                select(TriviaAchievement).where(
+                select(TriviaAchievement)
+                .where(
                     TriviaAchievement.user_id == user_id,
                     TriviaAchievement.guild_id == guild_id,
-                ).order_by(TriviaAchievement.unlocked_at)
+                )
+                .order_by(TriviaAchievement.unlocked_at)
             )
             return result.scalars().all()
 
@@ -134,10 +226,8 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
-            query = select(CustomQuestion).where(
-                CustomQuestion.guild_id == guild_id,
-                CustomQuestion.is_active
-            )
+
+            query = select(CustomQuestion).where(CustomQuestion.guild_id == guild_id, CustomQuestion.is_active)
 
             if category:
                 query = query.where(CustomQuestion.category.ilike(f"%{category}%"))
@@ -155,20 +245,26 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
             from sqlalchemy import desc, select
 
             if leaderboard_type == "points":
-                query = select(TriviaStats).where(
-                    TriviaStats.guild_id == guild_id,
-                    TriviaStats.total_points > 0
-                ).order_by(desc(TriviaStats.total_points)).limit(10)
+                query = (
+                    select(TriviaStats)
+                    .where(TriviaStats.guild_id == guild_id, TriviaStats.total_points > 0)
+                    .order_by(desc(TriviaStats.total_points))
+                    .limit(10)
+                )
             elif leaderboard_type == "accuracy":
-                query = select(TriviaStats).where(
-                    TriviaStats.guild_id == guild_id,
-                    TriviaStats.total_questions >= 5
-                ).order_by(desc(TriviaStats.correct_answers / TriviaStats.total_questions)).limit(10)
+                query = (
+                    select(TriviaStats)
+                    .where(TriviaStats.guild_id == guild_id, TriviaStats.total_questions >= 5)
+                    .order_by(desc(TriviaStats.correct_answers / TriviaStats.total_questions))
+                    .limit(10)
+                )
             elif leaderboard_type == "streak":
-                query = select(TriviaStats).where(
-                    TriviaStats.guild_id == guild_id,
-                    TriviaStats.best_streak > 0
-                ).order_by(desc(TriviaStats.best_streak)).limit(10)
+                query = (
+                    select(TriviaStats)
+                    .where(TriviaStats.guild_id == guild_id, TriviaStats.best_streak > 0)
+                    .order_by(desc(TriviaStats.best_streak))
+                    .limit(10)
+                )
             else:
                 return []
 
@@ -202,12 +298,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
         async with self.db_session() as session:
             from sqlalchemy import select
 
-            result = await session.execute(
-                select(TriviaStats).where(
-                    TriviaStats.user_id == user_id,
-                    TriviaStats.guild_id == guild_id
-                )
-            )
+            result = await session.execute(select(TriviaStats).where(TriviaStats.user_id == user_id, TriviaStats.guild_id == guild_id))
             stats = result.scalars().first()
 
             if not stats:
@@ -267,9 +358,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
             if not used_hint:
                 await self._check_achievements(user_id, guild_id, stats, session, channel_id=channel_id)
 
-    async def _check_achievements(
-        self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None
-    ) -> None:
+    async def _check_achievements(self, user_id: int, guild_id: int, stats: Any, session: Any, channel_id: int | None = None) -> None:
         """Check and award any new achievements, notifying the channel if possible."""
         from sqlalchemy import select
 
@@ -277,10 +366,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
         from .models import TriviaAchievement
 
         result = await session.execute(
-            select(TriviaAchievement).where(
-                TriviaAchievement.user_id == user_id,
-                TriviaAchievement.guild_id == guild_id
-            )
+            select(TriviaAchievement).where(TriviaAchievement.user_id == user_id, TriviaAchievement.guild_id == guild_id)
         )
         existing_achievements = {ach.achievement_id for ach in result.scalars().all()}
 
@@ -324,10 +410,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
                     try:
                         embed = hikari.Embed(
                             title=f"{achievement_data['emoji']} Achievement Unlocked!",
-                            description=(
-                                f"<@{user_id}> earned **{achievement_data['name']}**\n"
-                                f"{achievement_data['description']}"
-                            ),
+                            description=(f"<@{user_id}> earned **{achievement_data['name']}**\n" f"{achievement_data['description']}"),
                             color=hikari.Color(EMBED_COLORS["achievement"]),
                         )
                         await self.bot.rest.create_message(channel_id, embed=embed)
@@ -547,6 +630,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
+
             result = await session.execute(
                 select(AngleStats).where(
                     AngleStats.user_id == user_id,
@@ -561,11 +645,14 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
+
             result = await session.execute(
-                select(AngleAchievement).where(
+                select(AngleAchievement)
+                .where(
                     AngleAchievement.user_id == user_id,
                     AngleAchievement.guild_id == guild_id,
-                ).order_by(AngleAchievement.unlocked_at)
+                )
+                .order_by(AngleAchievement.unlocked_at)
             )
             return list(result.scalars().all())
 
@@ -624,9 +711,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
                     try:
                         embed = hikari.Embed(
                             title=f"{data['emoji']} Achievement Unlocked!",
-                            description=(
-                                f"<@{user_id}> earned **{data['name']}**\n{data['description']}"
-                            ),
+                            description=(f"<@{user_id}> earned **{data['name']}**\n{data['description']}"),
                             color=hikari.Color(EMBED_COLORS["achievement"]),
                         )
                         await self.bot.rest.create_message(channel_id, embed=embed)
@@ -646,7 +731,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
         channel_id: int | None = None,
     ) -> None:
         """Update RPSStats and check for new achievements after a game."""
-        from .models.rps import RPSAchievement, RPSStats
+        from .models.rps import RPSStats
 
         async with self.db_session() as session:
             from sqlalchemy import select
@@ -662,9 +747,15 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
                 stats = RPSStats(
                     user_id=user_id,
                     guild_id=guild_id,
-                    total_games=0, wins=0, losses=0, draws=0,
-                    rock_wins=0, paper_wins=0, scissors_wins=0,
-                    current_win_streak=0, best_win_streak=0,
+                    total_games=0,
+                    wins=0,
+                    losses=0,
+                    draws=0,
+                    rock_wins=0,
+                    paper_wins=0,
+                    scissors_wins=0,
+                    current_win_streak=0,
+                    best_win_streak=0,
                 )
                 session.add(stats)
 
@@ -747,9 +838,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
                     try:
                         embed = hikari.Embed(
                             title=f"{data['emoji']} Achievement Unlocked!",
-                            description=(
-                                f"<@{user_id}> earned **{data['name']}**\n{data['description']}"
-                            ),
+                            description=(f"<@{user_id}> earned **{data['name']}**\n{data['description']}"),
                             color=hikari.Color(EMBED_COLORS["achievement"]),
                         )
                         await self.bot.rest.create_message(channel_id, embed=embed)
@@ -762,6 +851,7 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
+
             result = await session.execute(
                 select(RPSStats).where(
                     RPSStats.user_id == user_id,
@@ -776,11 +866,14 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
         async with self.db_session() as session:
             from sqlalchemy import select
+
             result = await session.execute(
-                select(RPSAchievement).where(
+                select(RPSAchievement)
+                .where(
                     RPSAchievement.user_id == user_id,
                     RPSAchievement.guild_id == guild_id,
-                ).order_by(RPSAchievement.unlocked_at)
+                )
+                .order_by(RPSAchievement.unlocked_at)
             )
             return list(result.scalars().all())
 
@@ -800,4 +893,5 @@ class GamesPlugin(DatabaseMixin, WebPanelMixin, BasePlugin):
 
     def register_web_routes(self, app: FastAPI) -> None:
         from .web import register_games_routes
+
         register_games_routes(app, self)

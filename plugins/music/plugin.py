@@ -18,8 +18,8 @@ from .commands.search import setup_search_commands
 from .commands.settings import setup_settings_commands
 from .commands.voice import setup_voice_commands
 from .events import MusicEventHandler
-from .utils import add_to_history, check_voice_channel_empty, restore_all_queues, save_queue_to_db
 from .models import MusicQueue, MusicSession
+from .utils import add_to_history, check_voice_channel_empty, restore_all_queues, save_queue_to_db
 
 logger = logging.getLogger(__name__)
 

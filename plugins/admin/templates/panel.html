@@ -580,6 +580,21 @@
     <button class="admin-tab-btn" onclick="switchTab('users', this)">
         <i class="fa-solid fa-user-shield"></i> User Permissions
     </button>
+    <button class="admin-tab-btn" onclick="switchTab('prefix', this)">
+        <i class="fa-solid fa-terminal"></i> Prefix
+    </button>
+    <button class="admin-tab-btn" onclick="switchTab('autoroles', this)">
+        <i class="fa-solid fa-user-plus"></i> Auto Roles
+    </button>
+    <button class="admin-tab-btn" onclick="switchTab('botinfo', this)">
+        <i class="fa-solid fa-robot"></i> Bot Info
+    </button>
+    <button class="admin-tab-btn" onclick="switchTab('serverinfo', this)">
+        <i class="fa-solid fa-server"></i> Server Info
+    </button>
+    <button class="admin-tab-btn" onclick="switchTab('status', this)">
+        <i class="fa-solid fa-chart-line"></i> Status
+    </button>
 </div>
 
 <!-- ============================================================
@@ -645,6 +660,70 @@
                     <p>Choose a server and a member to manage their direct permissions.</p>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     TAB: Prefix
+     ============================================================ -->
+<div id="tab-prefix" class="admin-tab-content">
+    <div class="admin-main-col" style="max-width:600px;margin:0 auto;">
+        <div id="prefix-content">
+            <div class="empty-state">
+                <h3><i class="fa-solid fa-terminal"></i> Prefix Management</h3>
+                <p>Select a server from the sidebar to manage its command prefix.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     TAB: Auto Roles
+     ============================================================ -->
+<div id="tab-autoroles" class="admin-tab-content">
+    <div class="admin-main-col" style="max-width:700px;margin:0 auto;">
+        <div id="autoroles-content">
+            <div class="empty-state">
+                <h3><i class="fa-solid fa-user-plus"></i> Auto Roles</h3>
+                <p>Select a server from the sidebar to manage auto roles.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     TAB: Bot Info
+     ============================================================ -->
+<div id="tab-botinfo" class="admin-tab-content">
+    <div class="admin-main-col" style="max-width:600px;margin:0 auto;">
+        <div id="botinfo-content">
+            <div class="loading">Loading bot info…</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     TAB: Server Info
+     ============================================================ -->
+<div id="tab-serverinfo" class="admin-tab-content">
+    <div class="admin-main-col" style="max-width:700px;margin:0 auto;">
+        <div id="serverinfo-content">
+            <div class="empty-state">
+                <h3><i class="fa-solid fa-server"></i> Server Info</h3>
+                <p>Select a server from the sidebar to view its information.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     TAB: Status
+     ============================================================ -->
+<div id="tab-status" class="admin-tab-content">
+    <div class="admin-main-col" style="max-width:600px;margin:0 auto;">
+        <div id="status-content">
+            <div class="loading">Loading status…</div>
         </div>
     </div>
 </div>
@@ -741,13 +820,21 @@ function switchTab(tab, btn) {
     document.getElementById('tab-' + tab).classList.add('active');
     activeTab = tab;
 
-    // If we already have a guild, reload the tab's content
-    if (currentGuildId) {
-        if (tab === 'roles') {
-            loadRoleTabGuild(currentGuildId);
-        } else {
-            loadUserTabGuild(currentGuildId);
-        }
+    // Load content for the active tab
+    if (tab === 'roles') {
+        if (currentGuildId) loadRoleTabGuild(currentGuildId);
+    } else if (tab === 'users') {
+        if (currentGuildId) loadUserTabGuild(currentGuildId);
+    } else if (tab === 'prefix') {
+        if (currentGuildId) loadPrefixTab(currentGuildId);
+    } else if (tab === 'autoroles') {
+        if (currentGuildId) loadAutorolesTab(currentGuildId);
+    } else if (tab === 'botinfo') {
+        loadBotInfoTab();
+    } else if (tab === 'serverinfo') {
+        if (currentGuildId) loadServerInfoTab(currentGuildId);
+    } else if (tab === 'status') {
+        loadStatusTab();
     }
 }
 
@@ -765,9 +852,16 @@ document.body.addEventListener('guild-changed', (event) => {
     if (guildId) {
         loadRoleTabGuild(guildId);
         loadUserTabGuild(guildId);
+        // Load new tabs if they are active
+        if (activeTab === 'prefix') loadPrefixTab(guildId);
+        if (activeTab === 'autoroles') loadAutorolesTab(guildId);
+        if (activeTab === 'serverinfo') loadServerInfoTab(guildId);
     } else {
         resetRoleTab();
         resetUserTab();
+        resetPrefixTab();
+        resetAutorolesTab();
+        resetServerInfoTab();
     }
 });
 
@@ -1171,6 +1265,374 @@ function dismissToast(btn) {
     if (!toast) return;
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 320);
+}
+
+// ============================================================
+// Prefix tab
+// ============================================================
+async function loadPrefixTab(guildId) {
+    const el = document.getElementById('prefix-content');
+    el.innerHTML = '<div class="loading">Loading prefix…</div>';
+    try {
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/prefix`);
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            el.innerHTML = `<div class="error-message">${escHtml(data.detail || 'Failed to load prefix.')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        const prefix = escHtml(data.prefix || '!');
+        el.innerHTML = `
+            <div class="perm-manager-header">
+                <div class="perm-manager-title">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>Command Prefix</span>
+                </div>
+            </div>
+            <div class="guild-status has-guild" style="margin-bottom:1rem;">
+                <h3><i class="fa-solid fa-terminal"></i> Current Prefix</h3>
+                <p style="font-size:1.2rem;font-weight:600;color:var(--accent-color);">${prefix}</p>
+            </div>
+            <form id="prefix-form" onsubmit="return submitPrefix(event, ${guildId})">
+                <div class="member-search-wrap">
+                    <label style="display:block;margin-bottom:0.5rem;font-size:0.8rem;font-weight:600;color:var(--text-secondary);">New Prefix (max 5 chars, no quotes/backticks/whitespace)</label>
+                    <input type="text" id="prefix-input" maxlength="10" placeholder="Enter new prefix…" style="width:100%;padding:0.6rem 0.85rem;border:1px solid var(--border-color);border-radius:var(--input-radius);background:var(--bg-primary);color:var(--text-primary);font-size:0.875rem;box-sizing:border-box;" />
+                </div>
+                <button type="submit" class="bulk-btn" style="background:var(--accent-color);color:white;border-color:var(--accent-color);">
+                    <i class="fa-solid fa-check"></i> Update Prefix
+                </button>
+            </form>`;
+    } catch(e) {
+        el.innerHTML = '<div class="error-message">Failed to load prefix.</div>';
+    }
+}
+
+async function submitPrefix(event, guildId) {
+    event.preventDefault();
+    const newPrefix = document.getElementById('prefix-input').value;
+    if (!newPrefix) {
+        showToast('Please enter a prefix.', 'error', 'Error');
+        return false;
+    }
+    try {
+        const form = new FormData();
+        form.append('new_prefix', newPrefix);
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/prefix`, { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || 'Prefix updated.', 'success', 'Success');
+            loadPrefixTab(guildId);
+        } else {
+            showToast(data.message || 'Failed to update prefix.', 'error', 'Error');
+        }
+    } catch(e) {
+        showToast('Network error.', 'error', 'Error');
+    }
+    return false;
+}
+
+function resetPrefixTab() {
+    document.getElementById('prefix-content').innerHTML = `
+        <div class="empty-state">
+            <h3><i class="fa-solid fa-terminal"></i> Prefix Management</h3>
+            <p>Select a server from the sidebar to manage its command prefix.</p>
+        </div>`;
+}
+
+// ============================================================
+// Auto Roles tab
+// ============================================================
+async function loadAutorolesTab(guildId) {
+    const el = document.getElementById('autoroles-content');
+    el.innerHTML = '<div class="loading">Loading auto roles…</div>';
+    try {
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/autoroles`);
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            el.innerHTML = `<div class="error-message">${escHtml(data.detail || 'Failed to load auto roles.')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        const roles = data.autoroles || [];
+        let html = `
+            <div class="perm-manager-header">
+                <div class="perm-manager-title">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Auto Roles</span>
+                </div>
+            </div>
+            <div class="member-search-wrap" style="margin-bottom:1rem;">
+                <label style="display:block;margin-bottom:0.5rem;font-size:0.8rem;font-weight:600;color:var(--text-secondary);">Add Role by ID</label>
+                <div style="display:flex;gap:0.5rem;">
+                    <input type="text" id="autorole-role-input" placeholder="Role ID…" style="flex:1;padding:0.6rem 0.85rem;border:1px solid var(--border-color);border-radius:var(--input-radius);background:var(--bg-primary);color:var(--text-primary);font-size:0.875rem;box-sizing:border-box;" />
+                    <button class="bulk-btn" style="background:var(--accent-color);color:white;border-color:var(--accent-color);" onclick="addAutorole(${guildId})">
+                        <i class="fa-solid fa-plus"></i> Add
+                    </button>
+                </div>
+            </div>`;
+
+        if (roles.length === 0) {
+            html += `<div class="empty-state"><h3><i class="fa-solid fa-user-plus"></i> No Auto Roles</h3><p>No auto roles are currently configured for this server.</p></div>`;
+        } else {
+            html += '<div class="roles-list">';
+            for (const role of roles) {
+                const name = escHtml(role.name);
+                const color = escHtml(role.color || '#99aab5');
+                html += `
+                    <div class="role-item" style="cursor:default;">
+                        <div class="role-color" style="background-color:${color};"></div>
+                        <div class="role-name">${name}</div>
+                        <button class="bulk-btn danger" onclick="removeAutorole(${guildId}, ${role.id})" style="padding:0.3rem 0.6rem;">
+                            <i class="fa-solid fa-trash"></i> Remove
+                        </button>
+                    </div>`;
+            }
+            html += '</div>';
+        }
+        el.innerHTML = html;
+    } catch(e) {
+        el.innerHTML = '<div class="error-message">Failed to load auto roles.</div>';
+    }
+}
+
+async function addAutorole(guildId) {
+    const roleId = document.getElementById('autorole-role-input').value.trim();
+    if (!roleId) {
+        showToast('Please enter a role ID.', 'error', 'Error');
+        return;
+    }
+    try {
+        const form = new FormData();
+        form.append('role_id', roleId);
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/autoroles`, { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || 'Auto role added.', 'success', 'Success');
+            loadAutorolesTab(guildId);
+        } else {
+            showToast(data.message || 'Failed to add auto role.', 'error', 'Error');
+        }
+    } catch(e) {
+        showToast('Network error.', 'error', 'Error');
+    }
+}
+
+async function removeAutorole(guildId, roleId) {
+    try {
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/autoroles/${roleId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || 'Auto role removed.', 'success', 'Success');
+            loadAutorolesTab(guildId);
+        } else {
+            showToast(data.message || 'Failed to remove auto role.', 'error', 'Error');
+        }
+    } catch(e) {
+        showToast('Network error.', 'error', 'Error');
+    }
+}
+
+function resetAutorolesTab() {
+    document.getElementById('autoroles-content').innerHTML = `
+        <div class="empty-state">
+            <h3><i class="fa-solid fa-user-plus"></i> Auto Roles</h3>
+            <p>Select a server from the sidebar to manage auto roles.</p>
+        </div>`;
+}
+
+// ============================================================
+// Bot Info tab
+// ============================================================
+async function loadBotInfoTab() {
+    const el = document.getElementById('botinfo-content');
+    el.innerHTML = '<div class="loading">Loading bot info…</div>';
+    try {
+        const res = await fetch('/plugin/admin/api/bot-info');
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            el.innerHTML = `<div class="error-message">${escHtml(data.detail || 'Failed to load bot info.')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        const dbStatus = data.database_connected ? '✅ Connected' : '❌ Disconnected';
+        const created = data.created_at ? new Date(data.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown';
+        el.innerHTML = `
+            <div class="perm-manager-header">
+                <div class="perm-manager-title">
+                    <i class="fa-solid fa-robot"></i>
+                    <span>${escHtml(data.username || 'Bot')} Information</span>
+                </div>
+            </div>
+            ${data.avatar_url ? `<div style="text-align:center;margin-bottom:1rem;"><img src="${escHtml(data.avatar_url)}" style="width:64px;height:64px;border-radius:50%;" alt="" /></div>` : ''}
+            <div class="permission-categories">
+                <div class="permission-category">
+                    <div class="category-header"><span>Statistics</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Guilds</div></div><div class="permission-toggle">${escHtml(String(data.guild_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Plugins Loaded</div></div><div class="permission-toggle">${escHtml(String(data.plugin_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Database</div></div><div class="permission-toggle">${dbStatus}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Created</div></div><div class="permission-toggle">${escHtml(created)}</div></div>
+                    </div>
+                </div>
+            </div>`;
+    } catch(e) {
+        el.innerHTML = '<div class="error-message">Failed to load bot info.</div>';
+    }
+}
+
+// ============================================================
+// Server Info tab
+// ============================================================
+async function loadServerInfoTab(guildId) {
+    const el = document.getElementById('serverinfo-content');
+    el.innerHTML = '<div class="loading">Loading server info…</div>';
+    try {
+        const res = await fetch(`/plugin/admin/api/guild/${guildId}/server-info`);
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            el.innerHTML = `<div class="error-message">${escHtml(data.detail || 'Failed to load server info.')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        if (!data.available) {
+            el.innerHTML = `
+                <div class="empty-state">
+                    <h3><i class="fa-solid fa-server"></i> Guild Not Found</h3>
+                    <p>This guild is not in the bot's cache. The bot may not be in this server.</p>
+                </div>`;
+            return;
+        }
+        const created = data.created_at ? new Date(data.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown';
+        const featuresHtml = (data.features && data.features.length > 0)
+            ? data.features.map(f => `• ${escHtml(f)}`).join('<br>')
+            : 'None';
+        el.innerHTML = `
+            <div class="perm-manager-header">
+                <div class="perm-manager-title">
+                    <i class="fa-solid fa-server"></i>
+                    <span>${escHtml(data.name || 'Server')} Info</span>
+                </div>
+            </div>
+            ${data.icon_url ? `<div style="text-align:center;margin-bottom:1rem;"><img src="${escHtml(data.icon_url)}" style="width:64px;height:64px;border-radius:50%;" alt="" /></div>` : ''}
+            ${data.banner_url ? `<div style="text-align:center;margin-bottom:1rem;"><img src="${escHtml(data.banner_url)}" style="max-width:100%;border-radius:var(--card-radius);" alt="" /></div>` : ''}
+            <div class="permission-categories">
+                <div class="permission-category">
+                    <div class="category-header"><span>General</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Server ID</div></div><div class="permission-toggle">${escHtml(data.id || '')}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Owner</div></div><div class="permission-toggle">&lt;@${escHtml(data.owner_id || '')}&gt;</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Created</div></div><div class="permission-toggle">${escHtml(created)}</div></div>
+                    </div>
+                </div>
+                <div class="permission-category">
+                    <div class="category-header"><span>Counts</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Members</div></div><div class="permission-toggle">${escHtml(String(data.member_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Channels</div></div><div class="permission-toggle">${escHtml(String(data.channel_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Text Channels</div></div><div class="permission-toggle">${escHtml(String(data.text_channels))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Voice Channels</div></div><div class="permission-toggle">${escHtml(String(data.voice_channels))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Categories</div></div><div class="permission-toggle">${escHtml(String(data.category_channels))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Roles</div></div><div class="permission-toggle">${escHtml(String(data.role_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Emojis</div></div><div class="permission-toggle">${escHtml(String(data.emoji_count))}</div></div>
+                    </div>
+                </div>
+                <div class="permission-category">
+                    <div class="category-header"><span>Features</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-description">${featuresHtml}</div></div></div>
+                    </div>
+                </div>
+            </div>`;
+    } catch(e) {
+        el.innerHTML = '<div class="error-message">Failed to load server info.</div>';
+    }
+}
+
+function resetServerInfoTab() {
+    document.getElementById('serverinfo-content').innerHTML = `
+        <div class="empty-state">
+            <h3><i class="fa-solid fa-server"></i> Server Info</h3>
+            <p>Select a server from the sidebar to view its information.</p>
+        </div>`;
+}
+
+// ============================================================
+// Status tab
+// ============================================================
+async function loadStatusTab() {
+    const el = document.getElementById('status-content');
+    el.innerHTML = '<div class="loading">Loading status…</div>';
+    try {
+        const res = await fetch('/plugin/admin/api/status');
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            el.innerHTML = `<div class="error-message">${escHtml(data.detail || 'Failed to load status.')}</div>`;
+            return;
+        }
+        const data = await res.json();
+        let html = `
+            <div class="perm-manager-header">
+                <div class="perm-manager-title">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Bot Status &amp; Uptime</span>
+                </div>
+            </div>
+            <div class="permission-categories">
+                <div class="permission-category">
+                    <div class="category-header"><span>Overview</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Servers</div></div><div class="permission-toggle">${escHtml(String(data.guild_count))}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Latency</div></div><div class="permission-toggle">${data.latency_ms != null ? escHtml(data.latency_ms + 'ms') : 'N/A'}</div></div>
+                    </div>
+                </div>`;
+        if (data.psutil_available) {
+            const uptimeStr = data.uptime_seconds != null ? formatUptime(data.uptime_seconds) : 'N/A';
+            const systemUptimeStr = data.system_uptime_seconds != null ? formatUptime(data.system_uptime_seconds) : 'N/A';
+            html += `
+                <div class="permission-category">
+                    <div class="category-header"><span>Process</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Uptime</div></div><div class="permission-toggle">${escHtml(uptimeStr)}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Start Time</div></div><div class="permission-toggle">${escHtml(data.start_time || 'N/A')}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Current Time</div></div><div class="permission-toggle">${escHtml(data.current_time || 'N/A')}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">PID</div></div><div class="permission-toggle">${escHtml(String(data.pid || 'N/A'))}</div></div>
+                    </div>
+                </div>
+                <div class="permission-category">
+                    <div class="category-header"><span>System</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">Memory Usage</div></div><div class="permission-toggle">${data.memory_mb != null ? escHtml(data.memory_mb + ' MB') : 'N/A'}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">CPU Usage</div></div><div class="permission-toggle">${data.cpu_percent != null ? escHtml(data.cpu_percent + '%') : 'N/A'}</div></div>
+                        <div class="permission-item"><div class="permission-info"><div class="permission-node">System Uptime</div></div><div class="permission-toggle">${escHtml(systemUptimeStr)}</div></div>
+                    </div>
+                </div>`;
+        } else {
+            html += `
+                <div class="permission-category">
+                    <div class="category-header"><span>Note</span></div>
+                    <div class="permission-list">
+                        <div class="permission-item"><div class="permission-info"><div class="permission-description">${escHtml(data.note || "Install 'psutil' for detailed system information.")}</div></div></div>
+                    </div>
+                </div>`;
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    } catch(e) {
+        el.innerHTML = '<div class="error-message">Failed to load status.</div>';
+    }
+}
+
+function formatUptime(seconds) {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const parts = [];
+    if (days > 0) parts.push(days + 'd');
+    if (hours > 0) parts.push(hours + 'h');
+    if (minutes > 0) parts.push(minutes + 'm');
+    if (secs > 0 || parts.length === 0) parts.push(secs + 's');
+    return parts.join(' ');
 }
 
 // ============================================================

@@ -67,6 +67,20 @@
 - When adding new settings, update `settings.py` and persist through the plugin setting helpers.
 - Run targeted tests: `uv run pytest tests/unit/plugins/music` (add coverage as features expand).
 
+## Web Panel Authorization Pattern
+The music web panel is the reference implementation for per-guild authorization in `WebPanelMixin` plugins.
+- **`assert_guild_access(request, plugin, guild_id)`** in `web/routes.py` validates the authenticated user's Discord guild
+  membership from the session (`request.session["guilds"]`). It raises `HTTPException(401)` when unauthenticated or
+  `HTTPException(403)` when `guild_id` is not in the user's guild list.
+- Every REST route calls `assert_guild_access` (or `_require_auth` for guild-agnostic routes) before returning guild data or
+  applying a control. The `guild_id` is treated as untrusted input on every endpoint.
+- The WebSocket endpoint (`/ws/music/{guild_id}`) performs the same check **before** `websocket.accept()`; unauthorized
+  connections are closed with policy-violation code 1008 without sending music state.
+- Volume bounds are sourced from the plugin's `max_volume` config (default 100) so the web panel and the `/volume` Discord
+  command cannot drift.
+- When adding new web routes, always call `assert_guild_access` at the top of the handler if the route accepts a `guild_id`,
+  or `_require_auth` if it is guild-agnostic.
+
 ## Troubleshooting
 - **Lavalink connection fails**: verify host/port/password match the Lavalink server configuration. The plugin logs connection
   errors to aid diagnosis.

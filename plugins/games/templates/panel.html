@@ -1,24 +1,66 @@
 {% extends "plugin_base.html" %}
 
-{% block title %}Games Achievements — {{ bot_name }}{% endblock %}
+{% block title %}Games — {{ bot_name }}{% endblock %}
 
 {% block extra_styles %}
-/* ── Achievement panel styles ── */
-.ach-toolbar {
+/* ── Games panel styles ── */
+.games-section-nav {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.games-section-nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.games-section-nav button:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.games-section-nav button.games-nav-active {
+  background: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+
+/* Toolbar (shared by leaderboards and achievements) */
+.games-toolbar {
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+  padding: 1.2rem 1.6rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.25rem;
 }
 
-.ach-toolbar label {
+.games-toolbar label {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.9rem;
   white-space: nowrap;
 }
 
-.ach-toolbar select {
+.games-toolbar select {
   padding: 0.6rem 0.85rem;
   border: 1px solid var(--input-border);
   border-radius: 10px;
@@ -30,29 +72,360 @@
   cursor: pointer;
 }
 
-.ach-toolbar select:focus {
+.games-toolbar select:focus {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-/* Results area */
-#ach-results {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.ach-msg {
+/* Messages */
+.games-msg {
   color: var(--text-secondary);
   text-align: center;
   padding: 2.5rem 1rem;
   font-size: 1rem;
 }
 
-.ach-error { color: var(--danger-color); }
+.games-error { color: var(--danger-color); }
 
-/* Overall progress summary */
+/* Play section grid */
+.games-play-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+
+.games-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.4rem 1.6rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.games-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.games-card-desc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.games-card-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.games-card-filters select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.games-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.games-rps-buttons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Result area */
+.games-result {
+  min-height: 2rem;
+}
+
+/* Trivia question */
+.games-trivia-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.games-question-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.games-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-secondary);
+}
+
+.games-badge-time {
+  background: rgba(250, 166, 26, 0.2);
+  color: #faa61a;
+}
+
+.games-timer {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.games-timer-expired { color: var(--danger-color); }
+
+.games-question-text {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.games-answer-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.games-answer-btn {
+  text-align: left;
+  width: 100%;
+}
+
+/* Trivia result */
+.games-trivia-result {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.games-trivia-result.games-correct {
+  background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.06));
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.games-trivia-result.games-incorrect {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.games-result-icon { font-size: 2rem; margin-bottom: 0.3rem; }
+.games-result-title { font-weight: 700; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.3rem; }
+.games-result-details { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.75rem; }
+.games-result-actions { display: flex; justify-content: center; }
+
+/* Angle game */
+.games-angle-game {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.games-angle-image img {
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.games-angle-history {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.games-angle-guess {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 0.3rem 0.5rem;
+  background: rgba(148, 163, 184, 0.07);
+  border-radius: 6px;
+}
+
+.games-angle-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.games-angle-result {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 100%;
+  text-align: center;
+}
+
+.games-angle-result.games-correct {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.3);
+}
+
+.games-angle-result.games-incorrect {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+}
+
+.games-angle-form {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.games-angle-form input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.games-angle-replay {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* RPS result */
+.games-rps-result {
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.games-rps-result.games-correct {
+  background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(5,150,105,0.06));
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.games-rps-result.games-incorrect {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.games-rps-result.games-draw {
+  background: rgba(255, 215, 0, 0.08);
+  border-color: rgba(255, 215, 0, 0.25);
+}
+
+.games-rps-play-again {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+/* Leaderboard */
+.games-leaderboard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: 1.4rem 1.6rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.games-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.games-lb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.games-lb-table th {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.games-lb-table td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.games-lb-rank { font-weight: 700; white-space: nowrap; }
+.games-lb-value { text-align: right; font-weight: 600; color: var(--accent-color); }
+
+/* Stats */
+.games-stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.games-stats-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--card-radius);
+  padding: 1.4rem 1.6rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.games-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.games-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(148, 163, 184, 0.07);
+  border-radius: 8px;
+}
+
+.games-stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.games-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Achievement panel styles (preserved from original) */
 .ach-summary {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -79,7 +452,6 @@
   color: var(--accent-color);
 }
 
-/* Progress bars */
 .ach-progress-bar-bg {
   background: rgba(148, 163, 184, 0.22);
   border-radius: 999px;
@@ -97,7 +469,6 @@
 .ach-progress-bar-sm { height: 6px; margin-top: 0.35rem; }
 .ach-progress-bar-locked { background: linear-gradient(90deg, #64748b, #94a3b8); }
 
-/* Sections */
 .ach-section {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -126,14 +497,12 @@
   border-radius: 999px;
 }
 
-/* Achievement grid */
 .ach-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
   gap: 0.9rem;
 }
 
-/* Achievement card */
 .ach-card {
   display: flex;
   align-items: flex-start;
@@ -198,7 +567,10 @@
 
 /* Dark mode tweaks */
 [data-theme="dark"] .ach-summary,
-[data-theme="dark"] .ach-section { background: rgba(15,23,42,0.92); }
+[data-theme="dark"] .ach-section,
+[data-theme="dark"] .games-card,
+[data-theme="dark"] .games-leaderboard,
+[data-theme="dark"] .games-stats-card { background: rgba(15,23,42,0.92); }
 
 [data-theme="dark"] .ach-unlocked {
   background: linear-gradient(135deg, rgba(16,185,129,0.13), rgba(5,150,105,0.08));
@@ -213,34 +585,66 @@
 {% endblock %}
 
 {% block content %}
-<!-- Toolbar: game filter only -->
-<div class="feature-card" style="padding:1.2rem 1.6rem;">
-  <div class="ach-toolbar">
-    <i class="fa-solid fa-trophy" style="color:var(--accent-color);font-size:1.15rem;"></i>
-    <label for="ach-filter">Show:</label>
-    <select id="ach-filter" name="game_filter"
-      hx-get="/plugin/games/api/achievements"
-      hx-trigger="change, guild-changed from:body"
-      hx-target="#ach-results"
-      hx-swap="innerHTML"
-      hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
-    >
-      <option value="all">All games</option>
-      <option value="trivia">Trivia</option>
-      <option value="angle">Angle</option>
-      <option value="rps">Rock Paper Scissors</option>
-    </select>
-    <span class="htmx-indicator" style="color:var(--text-secondary);font-style:italic;">Loading…</span>
-  </div>
+<!-- Section navigation -->
+<div class="games-section-nav">
+  <button class="games-nav-active" id="nav-play"
+    hx-get="/plugin/games/api/section/play"
+    hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
+    hx-target="#games-content" hx-swap="innerHTML"
+    onclick="gamesSwitchSection('play')">
+    <i class="fa-solid fa-gamepad"></i> Play
+  </button>
+  <button id="nav-leaderboards"
+    hx-get="/plugin/games/api/section/leaderboards"
+    hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
+    hx-target="#games-content" hx-swap="innerHTML"
+    onclick="gamesSwitchSection('leaderboards')">
+    <i class="fa-solid fa-trophy"></i> Leaderboards
+  </button>
+  <button id="nav-stats"
+    hx-get="/plugin/games/api/section/stats"
+    hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
+    hx-target="#games-content" hx-swap="innerHTML"
+    onclick="gamesSwitchSection('stats')">
+    <i class="fa-solid fa-chart-bar"></i> Stats
+  </button>
+  <button id="nav-achievements"
+    hx-get="/plugin/games/api/section/achievements"
+    hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
+    hx-target="#games-content" hx-swap="innerHTML"
+    onclick="gamesSwitchSection('achievements')">
+    <i class="fa-solid fa-medal"></i> Achievements
+  </button>
 </div>
 
-<!-- Results (auto-loaded on page load and on guild/filter change) -->
-<div id="ach-results"
-  hx-get="/plugin/games/api/achievements"
+<!-- Content area (Play section loads by default) -->
+<div id="games-content"
+  hx-get="/plugin/games/api/section/play"
   hx-trigger="load"
-  hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || '', game_filter: document.getElementById('ach-filter')?.value || 'all'}"
+  hx-vals="js:{guild_id: localStorage.getItem('selectedGuildId') || ''}"
   hx-swap="innerHTML"
 >
-  <p class="ach-msg">Loading…</p>
+  <p class="games-msg">Loading…</p>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Section switching — toggle active class on nav buttons
+function gamesSwitchSection(section) {
+  document.querySelectorAll('.games-section-nav button').forEach(function(btn) {
+    btn.classList.remove('games-nav-active');
+  });
+  var navBtn = document.getElementById('nav-' + section);
+  if (navBtn) navBtn.classList.add('games-nav-active');
+}
+
+// Reload content when guild changes
+document.body.addEventListener('guild-changed', function() {
+  var content = document.getElementById('games-content');
+  if (content) {
+    htmx.trigger(content, 'htmx:load');
+  }
+});
+</script>
 {% endblock %}

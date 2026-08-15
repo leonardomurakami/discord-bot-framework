@@ -54,6 +54,7 @@ class MusicEventHandler:
         """Broadcast music update to WebSocket clients."""
         try:
             from .web import broadcast_music_update
+
             await broadcast_music_update(guild_id, self.music_plugin, update_type)
         except Exception as e:
             logger.error(f"Error broadcasting music update for guild {guild_id}: {e}")

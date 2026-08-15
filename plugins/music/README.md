@@ -169,6 +169,31 @@ The plugin expects a Lavalink server configuration file at `lavalink/application
 - **Reaction Controls:** Emoji-based playback controls
 - **Status Updates:** Bot status reflects current playback
 
+## Web Panel Authorization
+
+The music web panel (`/plugin/music`) uses per-guild authorization to ensure
+users can only control guilds they belong to. This pattern serves as the
+reference for all `WebPanelMixin` plugins:
+
+1. **`assert_guild_access(request, plugin, guild_id)`** — a shared helper in
+   `web/routes.py` that validates the authenticated user's Discord guild
+   membership from the session (`request.session["guilds"]`). It raises
+   `HTTPException(401)` when unauthenticated or `HTTPException(403)` when the
+   supplied `guild_id` is not in the user's guild list.
+
+2. **Every REST route** calls `assert_guild_access` (or `_require_auth` for
+   guild-agnostic routes like `/api/music/search/suggestions`) before returning
+   guild data or applying a control action. The `guild_id` is treated as
+   untrusted input on every endpoint.
+
+3. **The WebSocket endpoint** (`/ws/music/{guild_id}`) performs the same check
+   *before* calling `websocket.accept()`. Unauthorized connections are closed
+   with policy-violation code 1008 without sending any music state.
+
+4. **Volume bounds** are sourced from the plugin's `max_volume` config
+   (default 100) so the web panel and the `/volume` Discord command cannot
+   drift.
+
 ## Development Notes
 
 ### Plugin Architecture
