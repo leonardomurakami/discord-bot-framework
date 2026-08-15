@@ -12,13 +12,26 @@ class BotSettings(BaseSettings):
 
     # Plugin configuration
     enabled_plugins: list[str] = Field(
-        default=["admin", "fun", "games", "moderation", "help", "utility", "music", "links"],
+        default=["admin", "fun", "games", "moderation", "help", "utility", "music", "links", "ai"],
         description="List of enabled plugins",
     )
     plugin_directories: list[str] = Field(
         default=["plugins", "bot/plugins"],
         description="Directories to scan for plugins",
     )
+
+    # AI plugin settings (acpbox OpenAI-compatible endpoint)
+    acpbox_url: str | None = Field(default=None, description="Base URL of the deployed acpbox OpenAI-compatible endpoint")
+    ai_model: str = Field(default="glm-5-2", description="Model name to send to the acpbox Chat Completions endpoint")
+    ai_api_key: str | None = Field(default=None, description="Optional bearer token sent to the acpbox endpoint")
+    ai_system_prompt: str = Field(
+        default="You are a helpful, friendly assistant inside a Discord bot. Keep answers concise and useful.",
+        description="System prompt prepended to every AI chat request",
+    )
+    ai_max_tokens: int = Field(default=1000, description="Maximum tokens requested in Chat Completions responses")
+    ai_temperature: float = Field(default=0.7, description="Sampling temperature for Chat Completions requests")
+    ai_memory_turns: int = Field(default=10, description="Number of prior user+assistant turns retained per channel")
+    ai_request_timeout: int = Field(default=30, description="HTTP request timeout in seconds for acpbox calls")
 
     # Development settings
     debug: bool = Field(default=False, description="Enable debug mode")

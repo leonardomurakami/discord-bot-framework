@@ -136,6 +136,22 @@ async def ping(ctx: lightbulb.Context) -> None:
 
 Each plugin ships an `AGENTS.md` guide tailored for LLM contributors (see `plugins/<name>/AGENTS.md`).
 
+### First-party plugins
+
+| Plugin | Description | Key commands | Permission nodes |
+| --- | --- | --- | --- |
+| `admin` | Guild administration, permissions, plugin management. | `/permission`, `/plugin` | `admin.*` |
+| `fun` | Jokes, memes, quotes, dice, would-you-rather. | `/joke`, `/meme`, `/roll` | `basic.fun.*` |
+| `games` | Trivia, angle game, rock-paper-scissors with scoring. | `/trivia`, `/angle`, `/rps` | `basic.games.*`, `games.trivia.*` |
+| `help` | Paginated command help and plugin info. | `/help` | `basic.help.view` |
+| `moderation` | Kick, ban, mute, purge, warnings. | `/kick`, `/ban`, `/purge` | `moderation.*` |
+| `utility` | User/guild info, avatars, polls, reminders. | `/userinfo`, `/poll` | `basic.utility.*` |
+| `music` | Lavalink-backed playback, queue, search. | `/play`, `/queue`, `/skip` | `basic.music.*`, `music.queue.*` |
+| `links` | Configurable quick-links (GitHub, panel, docs). | `/links` | `basic.links.view`, `links.manage` |
+| `ai` | Chat with an AI model via the acpbox OpenAI-compatible endpoint. | `/chat`, `/clearai` (`!clearchat`) | `basic.ai.chat`, `basic.ai.clear` |
+
+The `ai` plugin requires `ACPBOX_URL` and `AI_MODEL` env vars (see `.env.example`); it soft-fails when unset so the bot still starts.
+
 ## Permissions
 - Public commands should use the `basic.<plugin>.<feature>.<action>` prefix. Nodes starting with `basic.` are granted to everyone
   by default.

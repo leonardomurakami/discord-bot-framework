@@ -17,7 +17,7 @@ Welcome! This repository houses a modular Discord bot built on top of Hikari (ga
 - `bot/database/` – Async SQLAlchemy manager plus ORM models for guilds, users, permission grants, command analytics, and the music queue/session tables.
 - `bot/permissions/` – Role-based permission manager and decorators (`requires_permission`, `requires_role`, `requires_guild_owner`, `requires_bot_permissions`).
 - `bot/middleware/` – Optional event middleware for logging, analytics, and error collection (attach via `EventSystem.add_middleware`).
-- `plugins/` – First-party plugin packages (`admin`, `fun`, `help`, `moderation`, `utility`, `music`) plus authoring guide in `plugins/README.md`.
+- `plugins/` – First-party plugin packages (`admin`, `fun`, `games`, `help`, `moderation`, `utility`, `music`, `links`, `ai`) plus authoring guide in `plugins/README.md`.
 - `config/settings.py` – Pydantic settings model; exposes a singleton `settings` used across the app. Environment variables live in `.env`.
 - `tests/` – Pytest suite organised by domain (`tests/unit/bot/...` for framework, `tests/unit/plugins/<name>/...` for plugin coverage). Fixtures reside in `tests/conftest.py`.
 
