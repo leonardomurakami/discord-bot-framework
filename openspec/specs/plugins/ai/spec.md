@@ -1,5 +1,5 @@
 ## Purpose
-Provides an AI chat plugin that lets Discord members converse with an OpenAI-compatible model (acpbox) via slash and prefix commands, with per-channel conversation memory, history clearing, configurable model and generation parameters, and graceful error handling.
+Provides an AI chat plugin that lets Discord members converse with an OpenAI-compatible model (e.g. OpenRouter, OpenAI, or a local server) via slash and prefix commands, with per-channel conversation memory, history clearing, configurable model and generation parameters, and graceful error handling.
 
 ## Requirements
 
@@ -8,33 +8,33 @@ The plugin SHALL provide a unified `chat` command invocable as both `/chat` (sla
 
 #### Scenario: Invoke chat via slash
 - **WHEN** a user with the `basic.ai.chat` permission invokes `/chat message: "What is Hikari?"`
-- **THEN** the plugin SHALL send the prompt to the acpbox OpenAI-compatible Chat Completions endpoint and reply in the same channel with the assistant's response text
+- **THEN** the plugin SHALL send the prompt to the OpenAI-compatible Chat Completions endpoint and reply in the same channel with the assistant's response text
 
 #### Scenario: Invoke chat via prefix
 - **WHEN** a user with the `basic.ai.chat` permission invokes `!chat What is Hikari?`
-- **THEN** the plugin SHALL parse the entire trailing text as the `message` argument, send the prompt to the acpbox endpoint, and reply in the same channel with the assistant's response text
+- **THEN** the plugin SHALL parse the entire trailing text as the `message` argument, send the prompt to the endpoint, and reply in the same channel with the assistant's response text
 
 #### Scenario: Missing message argument
 - **WHEN** a user invokes `/chat` or `!chat` without providing a message
-- **THEN** the plugin SHALL respond with an error indicating a message is required and not call the acpbox endpoint
+- **THEN** the plugin SHALL respond with an error indicating a message is required and not call the endpoint
 
 #### Scenario: Permission denied
 - **WHEN** a user lacking the `basic.ai.chat` permission invokes `chat`
-- **THEN** the plugin SHALL deny access with an ephemeral error message and not call the acpbox endpoint
+- **THEN** the plugin SHALL deny access with an ephemeral error message and not call the endpoint
 
 ### Requirement: OpenAI-Compatible API Integration
-The plugin SHALL call the acpbox endpoint at `{acpbox_url}/v1/chat/completions` using an HTTP client, sending a Chat Completions request with the configured model, message history, and generation parameters, and SHALL parse the assistant message from the first choice in the response.
+The plugin SHALL call the OpenAI-compatible endpoint at `{ai_base_url}/v1/chat/completions` using an HTTP client, sending a Chat Completions request with the configured model, message history, and generation parameters, and SHALL parse the assistant message from the first choice in the response.
 
 #### Scenario: Successful API call
 - **WHEN** the plugin sends a well-formed Chat Completions request and the endpoint returns a 2xx response with at least one choice
 - **THEN** the plugin SHALL extract the assistant message content from `choices[0].message.content` and reply with it
 
 #### Scenario: API key sent when configured
-- **WHEN** `ai_api_key` is set in configuration and the plugin makes a request to the acpbox endpoint
+- **WHEN** `ai_api_key` is set in configuration and the plugin makes a request to the endpoint
 - **THEN** the plugin SHALL include an `Authorization: Bearer <ai_api_key>` header in the request
 
 #### Scenario: No API key header when unconfigured
-- **WHEN** `ai_api_key` is not set in configuration and the plugin makes a request to the acpbox endpoint
+- **WHEN** `ai_api_key` is not set in configuration and the plugin makes a request to the endpoint
 - **THEN** the plugin SHALL omit the `Authorization` header
 
 #### Scenario: Request body shape
@@ -91,10 +91,10 @@ The plugin SHALL maintain a single HTTP client session created during plugin loa
 - **THEN** the plugin SHALL respond with a service-unavailable error and not attempt the request
 
 ### Requirement: Error Handling
-The plugin SHALL catch and surface errors from the acpbox endpoint and the HTTP client without crashing, returning a user-facing error embed describing the failure category.
+The plugin SHALL catch and surface errors from the OpenAI-compatible endpoint and the HTTP client without crashing, returning a user-facing error embed describing the failure category.
 
 #### Scenario: Endpoint unreachable
-- **WHEN** the acpbox endpoint cannot be reached (connection error or timeout)
+- **WHEN** the endpoint cannot be reached (connection error or timeout)
 - **THEN** the plugin SHALL respond with an error embed indicating the AI service is unreachable and log the exception
 
 #### Scenario: Non-success HTTP status

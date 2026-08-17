@@ -148,9 +148,9 @@ Each plugin ships an `AGENTS.md` guide tailored for LLM contributors (see `plugi
 | `utility` | User/guild info, avatars, polls, reminders. | `/userinfo`, `/poll` | `basic.utility.*` |
 | `music` | Lavalink-backed playback, queue, search. | `/play`, `/queue`, `/skip` | `basic.music.*`, `music.queue.*` |
 | `links` | Configurable quick-links (GitHub, panel, docs). | `/links` | `basic.links.view`, `links.manage` |
-| `ai` | Chat with an AI model via the acpbox OpenAI-compatible endpoint. | `/chat`, `/clearai` (`!clearchat`) | `basic.ai.chat`, `basic.ai.clear` |
+| `ai` | Chat with an AI model via an OpenAI-compatible API (e.g. OpenRouter). | `/chat`, `/clearai` (`!clearchat`) | `basic.ai.chat`, `basic.ai.clear` |
 
-The `ai` plugin requires `ACPBOX_URL` and `AI_MODEL` env vars (see `.env.example`); it soft-fails when unset so the bot still starts.
+The `ai` plugin requires `AI_BASE_URL` and `AI_MODEL` env vars (see `.env.example`); it soft-fails when unset so the bot still starts. Set `AI_API_KEY` for authenticated providers (e.g. OpenRouter, OpenAI).
 
 ## Permissions
 - Public commands should use the `basic.<plugin>.<feature>.<action>` prefix. Nodes starting with `basic.` are granted to everyone

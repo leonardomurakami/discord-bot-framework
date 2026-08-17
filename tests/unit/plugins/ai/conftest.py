@@ -47,7 +47,7 @@ def ai_settings():
     """Return a lightweight settings stub with the AI-related fields."""
 
     class _AISettings:
-        acpbox_url = "http://acpbox.local:8080"
+        ai_base_url = "https://openrouter.ai/api"
         ai_model = "gpt-test"
         ai_api_key = None
         ai_system_prompt = "You are a helpful assistant."

@@ -20,10 +20,16 @@ class BotSettings(BaseSettings):
         description="Directories to scan for plugins",
     )
 
-    # AI plugin settings (acpbox OpenAI-compatible endpoint)
-    acpbox_url: str | None = Field(default=None, description="Base URL of the deployed acpbox OpenAI-compatible endpoint")
-    ai_model: str = Field(default="glm-5-2", description="Model name to send to the acpbox Chat Completions endpoint")
-    ai_api_key: str | None = Field(default=None, description="Optional bearer token sent to the acpbox endpoint")
+    # AI plugin settings (OpenAI-compatible Chat Completions endpoint, e.g. OpenRouter)
+    ai_base_url: str | None = Field(
+        default=None,
+        description="Base URL of OpenAI-compatible API (e.g. https://openrouter.ai/api); /v1/chat/completions is appended",
+    )
+    ai_model: str = Field(
+        default="openai/gpt-4o-mini",
+        description="Model name sent to the Chat Completions endpoint (e.g. openai/gpt-4o-mini for OpenRouter)",
+    )
+    ai_api_key: str | None = Field(default=None, description="Bearer token sent as Authorization: Bearer <key> to the API endpoint")
     ai_system_prompt: str = Field(
         default="You are a helpful, friendly assistant inside a Discord bot. Keep answers concise and useful.",
         description="System prompt prepended to every AI chat request",
@@ -31,7 +37,7 @@ class BotSettings(BaseSettings):
     ai_max_tokens: int = Field(default=1000, description="Maximum tokens requested in Chat Completions responses")
     ai_temperature: float = Field(default=0.7, description="Sampling temperature for Chat Completions requests")
     ai_memory_turns: int = Field(default=10, description="Number of prior user+assistant turns retained per channel")
-    ai_request_timeout: int = Field(default=30, description="HTTP request timeout in seconds for acpbox calls")
+    ai_request_timeout: int = Field(default=30, description="HTTP request timeout in seconds for AI API calls")
 
     # Development settings
     debug: bool = Field(default=False, description="Enable debug mode")

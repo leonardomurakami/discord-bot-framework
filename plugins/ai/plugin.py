@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIPlugin(DatabaseMixin, BasePlugin):
-    """AI chat plugin backed by the acpbox OpenAI-compatible endpoint."""
+    """AI chat plugin backed by an OpenAI-compatible Chat Completions endpoint (e.g. OpenRouter)."""
 
     def __init__(self, bot: DiscordBot) -> None:
         super().__init__(bot)
@@ -28,16 +28,16 @@ class AIPlugin(DatabaseMixin, BasePlugin):
         self._register_commands()
 
     async def on_load(self) -> None:
-        # Soft-fail when acpbox is not configured: skip session creation so the
+        # Soft-fail when the AI API is not configured: skip session creation so the
         # bot still starts. Commands will surface a configuration error instead.
-        if not settings.acpbox_url:
-            logger.warning("AI plugin loaded without ACPBOX_URL; chat commands will return a configuration error until it is set.")
+        if not settings.ai_base_url:
+            logger.warning("AI plugin loaded without AI_BASE_URL; chat commands will return a configuration error until it is set.")
             await super().on_load()
             return
 
         timeout = aiohttp.ClientTimeout(total=settings.ai_request_timeout)
         self.session = aiohttp.ClientSession(timeout=timeout)
-        logger.info("AI plugin loaded successfully (acpbox=%s, model=%s)", settings.acpbox_url, settings.ai_model)
+        logger.info("AI plugin loaded successfully (base_url=%s, model=%s)", settings.ai_base_url, settings.ai_model)
         await super().on_load()
 
     async def on_unload(self) -> None:

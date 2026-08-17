@@ -4,7 +4,7 @@ PLUGIN_METADATA = {
     "name": "AI",
     "version": "1.0.0",
     "author": "Discord Bot Framework",
-    "description": "Chat with an AI model via the acpbox OpenAI-compatible endpoint",
+    "description": "Chat with an AI model via an OpenAI-compatible API (e.g. OpenRouter)",
     "dependencies": [],
     "permissions": ["basic.ai.chat", "basic.ai.clear"],
 }

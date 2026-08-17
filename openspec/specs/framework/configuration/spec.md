@@ -108,19 +108,19 @@ The framework SHALL provide a debug mode flag for development.
 - **THEN** the `debug` field is set to True, enabling verbose logging and SQL echo
 
 ### Requirement: AI service configuration
-The framework SHALL provide configurable settings for the AI chat plugin covering the acpbox endpoint, model selection, authentication, generation parameters, and memory limits.
+The framework SHALL provide configurable settings for the AI chat plugin covering the OpenAI-compatible API endpoint, model selection, authentication, generation parameters, and memory limits.
 
-#### Scenario: Configure acpbox endpoint and model
-- **WHEN** ACPBOX_URL and AI_MODEL environment variables are set
-- **THEN** the `acpbox_url` and `ai_model` fields use the provided values for AI chat requests
+#### Scenario: Configure AI API endpoint and model
+- **WHEN** AI_BASE_URL and AI_MODEL environment variables are set
+- **THEN** the `ai_base_url` and `ai_model` fields use the provided values for AI chat requests
 
-#### Scenario: Use default acpbox settings
-- **WHEN** no ACPBOX_URL or AI_MODEL environment variables are set
-- **THEN** `acpbox_url` defaults to `None` and `ai_model` defaults to `glm-5-2`, and the AI plugin SHALL refuse to load or SHALL respond with a configuration error when `acpbox_url` is unset
+#### Scenario: Use default AI settings
+- **WHEN** no AI_BASE_URL or AI_MODEL environment variables are set
+- **THEN** `ai_base_url` defaults to `None` and `ai_model` defaults to `openai/gpt-4o-mini`, and the AI plugin SHALL refuse to load or SHALL respond with a configuration error when `ai_base_url` is unset
 
 #### Scenario: Configure optional API key
 - **WHEN** AI_API_KEY is set
-- **THEN** the `ai_api_key` field uses the provided value and the AI plugin SHALL send it as a bearer token to the acpbox endpoint
+- **THEN** the `ai_api_key` field uses the provided value and the AI plugin SHALL send it as a bearer token to the API endpoint
 - **WHEN** AI_API_KEY is not set
 - **THEN** `ai_api_key` defaults to `None` and the AI plugin SHALL omit the authorization header
 

@@ -22,7 +22,7 @@ class TestAIPluginLifecycle:
             patch("plugins.ai.plugin.settings") as mock_settings,
             patch("plugins.ai.plugin.aiohttp.ClientSession") as mock_session_cls,
         ):
-            mock_settings.acpbox_url = "http://acpbox.local:8080"
+            mock_settings.ai_base_url = "https://openrouter.ai/api"
             mock_settings.ai_model = "gpt-test"
             mock_settings.ai_request_timeout = 30
             await plugin.on_load()
@@ -30,13 +30,13 @@ class TestAIPluginLifecycle:
             assert plugin.session is not None
 
     @pytest.mark.asyncio
-    async def test_on_load_soft_fails_when_acpbox_url_unset(self, mock_bot):
+    async def test_on_load_soft_fails_when_ai_base_url_unset(self, mock_bot):
         plugin = AIPlugin(mock_bot)
         with (
             patch("plugins.ai.plugin.settings") as mock_settings,
             patch("plugins.ai.plugin.aiohttp.ClientSession") as mock_session_cls,
         ):
-            mock_settings.acpbox_url = None
+            mock_settings.ai_base_url = None
             mock_settings.ai_model = "gpt-test"
             await plugin.on_load()
             mock_session_cls.assert_not_called()
@@ -44,14 +44,14 @@ class TestAIPluginLifecycle:
 
     @pytest.mark.asyncio
     async def test_on_load_creates_session_with_default_model(self, mock_bot):
-        """Session is created when acpbox_url is set, even if ai_model uses its default."""
+        """Session is created when ai_base_url is set, even if ai_model uses its default."""
         plugin = AIPlugin(mock_bot)
         with (
             patch("plugins.ai.plugin.settings") as mock_settings,
             patch("plugins.ai.plugin.aiohttp.ClientSession") as mock_session_cls,
         ):
-            mock_settings.acpbox_url = "http://acpbox.local:8080"
-            mock_settings.ai_model = "glm-5-2"
+            mock_settings.ai_base_url = "https://openrouter.ai/api"
+            mock_settings.ai_model = "openai/gpt-4o-mini"
             mock_settings.ai_request_timeout = 30
             await plugin.on_load()
             mock_session_cls.assert_called_once()

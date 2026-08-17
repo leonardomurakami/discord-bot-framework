@@ -12,13 +12,13 @@ from config.settings import settings
 
 from ..config import MAX_PROMPT_LENGTH
 from ..utils import (
-    AcpboxEmptyChoicesError,
-    AcpboxHTTPError,
-    AcpboxRateLimitError,
-    AcpboxUnreachableError,
+    AIClientEmptyChoicesError,
+    AIClientHTTPError,
+    AIClientRateLimitError,
+    AIClientUnreachableError,
     append_turn,
     build_reply_text,
-    call_acpbox,
+    call_ai,
     load_history,
 )
 
@@ -68,7 +68,7 @@ async def _handle_chat(plugin: AIPlugin, ctx: lightbulb.Context, message: str) -
         if plugin.session is None:
             await plugin.respond_error(
                 ctx,
-                "The AI service is not configured. An admin must set ACPBOX_URL and AI_MODEL.",
+                "The AI service is not configured. An admin must set AI_BASE_URL and AI_MODEL.",
                 command_name=command_name,
             )
             return
@@ -84,8 +84,8 @@ async def _handle_chat(plugin: AIPlugin, ctx: lightbulb.Context, message: str) -
         messages.extend(history)
         messages.append({"role": "user", "content": message})
 
-        # Call the acpbox endpoint.
-        reply = await call_acpbox(plugin.session, settings, messages)
+        # Call the OpenAI-compatible endpoint.
+        reply = await call_ai(plugin.session, settings, messages)
 
         # Persist the user and assistant turns.
         async with plugin.db_session() as session:
@@ -95,21 +95,21 @@ async def _handle_chat(plugin: AIPlugin, ctx: lightbulb.Context, message: str) -
         text = build_reply_text(reply, settings.ai_model)
         await plugin.smart_respond(ctx, content=text)
         await plugin.log_command_usage(ctx, command_name, True)
-    except AcpboxUnreachableError as exc:
-        logger.error("chat command acpbox unreachable: %s", exc)
+    except AIClientUnreachableError as exc:
+        logger.error("chat command AI API unreachable: %s", exc)
         await plugin.respond_error(ctx, "The AI service is unreachable. Please try again later.", command_name=command_name)
-    except AcpboxRateLimitError as exc:
-        logger.warning("chat command acpbox rate limited: %s", exc)
+    except AIClientRateLimitError as exc:
+        logger.warning("chat command AI API rate limited: %s", exc)
         await plugin.respond_error(ctx, "The AI service is rate-limited. Please try again shortly.", command_name=command_name)
-    except AcpboxEmptyChoicesError as exc:
+    except AIClientEmptyChoicesError as exc:
         logger.warning("chat command empty choices: %s", exc)
         await plugin.respond_error(
             ctx,
             "The AI returned no response. Please try rephrasing your message.",
             command_name=command_name,
         )
-    except AcpboxHTTPError as exc:
-        logger.error("chat command acpbox http %s: %s", exc.status, exc.body[:500])
+    except AIClientHTTPError as exc:
+        logger.error("chat command AI API http %s: %s", exc.status, exc.body[:500])
         body_preview = (exc.body or "")[:200]
         await plugin.respond_error(
             ctx,

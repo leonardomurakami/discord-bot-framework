@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# acpbox OpenAI-compatible Chat Completions path (appended to settings.acpbox_url).
+# OpenAI-compatible Chat Completions path (appended to settings.ai_base_url).
 CHAT_COMPLETIONS_PATH = "/v1/chat/completions"
 
 # Discord message length limit. We reserve room for a footer crediting the model.

@@ -10,10 +10,10 @@ import pytest
 from plugins.ai.commands.chat import _handle_chat
 from plugins.ai.config import MAX_PROMPT_LENGTH
 from plugins.ai.utils import (
-    AcpboxEmptyChoicesError,
-    AcpboxHTTPError,
-    AcpboxRateLimitError,
-    AcpboxUnreachableError,
+    AIClientEmptyChoicesError,
+    AIClientHTTPError,
+    AIClientRateLimitError,
+    AIClientUnreachableError,
 )
 from tests.conftest import AsyncContextManager
 
@@ -54,8 +54,8 @@ def patched_append_turn():
 
 
 @pytest.fixture
-def patched_call_acpbox():
-    with patch("plugins.ai.commands.chat.call_acpbox", new_callable=AsyncMock) as mock:
+def patched_call_ai():
+    with patch("plugins.ai.commands.chat.call_ai", new_callable=AsyncMock) as mock:
         mock.return_value = "Sure! Here is the answer."
         yield mock
 
@@ -74,59 +74,59 @@ class TestChatCommand:
         patched_settings,
         patched_load_history,
         patched_append_turn,
-        patched_call_acpbox,
+        patched_call_ai,
         patched_build_reply,
     ):
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "What is Hikari?")
 
-        patched_call_acpbox.assert_awaited_once()
+        patched_call_ai.assert_awaited_once()
         plugin.smart_respond.assert_awaited_once()
         plugin.log_command_usage.assert_awaited_once()
         # Both user and assistant turns are appended.
         assert patched_append_turn.await_count == 2
 
     @pytest.mark.asyncio
-    async def test_missing_message_responds_error(self, mock_context, patched_settings, patched_call_acpbox):
+    async def test_missing_message_responds_error(self, mock_context, patched_settings, patched_call_ai):
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "")
 
         plugin.respond_error.assert_awaited_once()
-        patched_call_acpbox.assert_not_awaited()
+        patched_call_ai.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_whitespace_only_message_responds_error(self, mock_context, patched_settings, patched_call_acpbox):
+    async def test_whitespace_only_message_responds_error(self, mock_context, patched_settings, patched_call_ai):
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "   ")
 
         plugin.respond_error.assert_awaited_once()
-        patched_call_acpbox.assert_not_awaited()
+        patched_call_ai.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_over_length_prompt_responds_error(self, mock_context, patched_settings, patched_call_acpbox):
+    async def test_over_length_prompt_responds_error(self, mock_context, patched_settings, patched_call_ai):
         plugin = _build_plugin(mock_bot=MagicMock())
         long_msg = "x" * (MAX_PROMPT_LENGTH + 1)
         await _handle_chat(plugin, mock_context, long_msg)
 
         plugin.respond_error.assert_awaited_once()
-        patched_call_acpbox.assert_not_awaited()
+        patched_call_ai.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_session_unavailable_responds_error(self, mock_context, patched_settings, patched_call_acpbox):
+    async def test_session_unavailable_responds_error(self, mock_context, patched_settings, patched_call_ai):
         plugin = _build_plugin(mock_bot=MagicMock(), session_set=False)
         await _handle_chat(plugin, mock_context, "hi")
 
         plugin.respond_error.assert_awaited_once()
         # The error message references configuration.
         args, _ = plugin.respond_error.call_args
-        assert "not configured" in args[1].lower() or "ACPBOX_URL" in args[1]
-        patched_call_acpbox.assert_not_awaited()
+        assert "not configured" in args[1].lower() or "AI_BASE_URL" in args[1]
+        patched_call_ai.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_endpoint_unreachable_responds_error(
-        self, mock_context, patched_settings, patched_load_history, patched_call_acpbox
+        self, mock_context, patched_settings, patched_load_history, patched_call_ai
     ):
-        patched_call_acpbox.side_effect = AcpboxUnreachableError("down")
+        patched_call_ai.side_effect = AIClientUnreachableError("down")
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "hi")
 
@@ -135,8 +135,8 @@ class TestChatCommand:
         assert "unreachable" in args[1].lower()
 
     @pytest.mark.asyncio
-    async def test_rate_limited_responds_error(self, mock_context, patched_settings, patched_load_history, patched_call_acpbox):
-        patched_call_acpbox.side_effect = AcpboxRateLimitError("limited")
+    async def test_rate_limited_responds_error(self, mock_context, patched_settings, patched_load_history, patched_call_ai):
+        patched_call_ai.side_effect = AIClientRateLimitError("limited")
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "hi")
 
@@ -145,8 +145,8 @@ class TestChatCommand:
         assert "rate-limited" in args[1].lower()
 
     @pytest.mark.asyncio
-    async def test_empty_choices_responds_error(self, mock_context, patched_settings, patched_load_history, patched_call_acpbox):
-        patched_call_acpbox.side_effect = AcpboxEmptyChoicesError("no response")
+    async def test_empty_choices_responds_error(self, mock_context, patched_settings, patched_load_history, patched_call_ai):
+        patched_call_ai.side_effect = AIClientEmptyChoicesError("no response")
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "hi")
 
@@ -156,9 +156,9 @@ class TestChatCommand:
 
     @pytest.mark.asyncio
     async def test_http_error_responds_error_with_status(
-        self, mock_context, patched_settings, patched_load_history, patched_call_acpbox
+        self, mock_context, patched_settings, patched_load_history, patched_call_ai
     ):
-        patched_call_acpbox.side_effect = AcpboxHTTPError(503, "service unavailable")
+        patched_call_ai.side_effect = AIClientHTTPError(503, "service unavailable")
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "hi")
 
@@ -173,7 +173,7 @@ class TestChatCommand:
         patched_settings,
         patched_load_history,
         patched_append_turn,
-        patched_call_acpbox,
+        patched_call_ai,
         patched_build_reply,
     ):
         patched_load_history.return_value = [
@@ -183,8 +183,8 @@ class TestChatCommand:
         plugin = _build_plugin(mock_bot=MagicMock())
         await _handle_chat(plugin, mock_context, "follow up")
 
-        # Inspect the messages list passed to call_acpbox.
-        args, kwargs = patched_call_acpbox.call_args
+        # Inspect the messages list passed to call_ai.
+        args, kwargs = patched_call_ai.call_args
         messages = args[2] if len(args) > 2 else kwargs["messages"]
         roles = [m["role"] for m in messages]
         assert roles == ["system", "user", "assistant", "user"]
@@ -198,7 +198,7 @@ class TestChatCommand:
         patched_settings,
         patched_load_history,
         patched_append_turn,
-        patched_call_acpbox,
+        patched_call_ai,
         patched_build_reply,
     ):
         # load_history is responsible for truncating; the handler just passes whatever it returns.

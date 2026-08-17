@@ -9,20 +9,20 @@ import pytest
 
 from plugins.ai.config import DISCORD_MESSAGE_LIMIT
 from plugins.ai.utils import (
-    AcpboxEmptyChoicesError,
-    AcpboxHTTPError,
-    AcpboxRateLimitError,
-    AcpboxUnreachableError,
+    AIClientEmptyChoicesError,
+    AIClientHTTPError,
+    AIClientRateLimitError,
+    AIClientUnreachableError,
     append_turn,
     build_reply_text,
-    call_acpbox,
+    call_ai,
     clear_history,
     load_history,
 )
 from tests.unit.plugins.ai.conftest import make_turn
 
 # ---------------------------------------------------------------------------
-# call_acpbox
+# call_ai
 # ---------------------------------------------------------------------------
 
 
@@ -45,13 +45,13 @@ def _mock_session(resp: MagicMock) -> MagicMock:
     return session
 
 
-class TestCallAcpbox:
+class TestCallAi:
     @pytest.mark.asyncio
     async def test_success_returns_assistant_content(self, ai_settings):
         resp = _mock_response(200, {"choices": [{"message": {"content": "Hello there!"}}]})
         session = _mock_session(resp)
 
-        result = await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        result = await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
         assert result == "Hello there!"
 
@@ -61,11 +61,11 @@ class TestCallAcpbox:
         session = _mock_session(resp)
 
         messages = [{"role": "system", "content": "sys"}, {"role": "user", "content": "hi"}]
-        await call_acpbox(session, ai_settings, messages)
+        await call_ai(session, ai_settings, messages)
 
         args, kwargs = session.post.call_args
-        # URL is acpbox_url + /v1/chat/completions
-        assert args[0] == "http://acpbox.local:8080/v1/chat/completions"
+        # URL is ai_base_url + /v1/chat/completions
+        assert args[0] == "https://openrouter.ai/api/v1/chat/completions"
         body = kwargs["json"]
         assert body["model"] == "gpt-test"
         assert body["messages"] == messages
@@ -77,7 +77,7 @@ class TestCallAcpbox:
         resp = _mock_response(200, {"choices": [{"message": {"content": "ok"}}]})
         session = _mock_session(resp)
 
-        await call_acpbox(session, ai_settings_with_key, [{"role": "user", "content": "hi"}])
+        await call_ai(session, ai_settings_with_key, [{"role": "user", "content": "hi"}])
 
         _, kwargs = session.post.call_args
         assert kwargs["headers"]["Authorization"] == "Bearer secret-key"
@@ -87,7 +87,7 @@ class TestCallAcpbox:
         resp = _mock_response(200, {"choices": [{"message": {"content": "ok"}}]})
         session = _mock_session(resp)
 
-        await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
         _, kwargs = session.post.call_args
         assert "Authorization" not in kwargs["headers"]
@@ -97,16 +97,16 @@ class TestCallAcpbox:
         resp = _mock_response(429, text="rate limited")
         session = _mock_session(resp)
 
-        with pytest.raises(AcpboxRateLimitError):
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientRateLimitError):
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
     @pytest.mark.asyncio
     async def test_non_2xx_raises_http_error(self, ai_settings):
         resp = _mock_response(500, text="internal error")
         session = _mock_session(resp)
 
-        with pytest.raises(AcpboxHTTPError) as exc_info:
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientHTTPError) as exc_info:
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
         assert exc_info.value.status == 500
         assert "internal error" in exc_info.value.body
@@ -116,16 +116,16 @@ class TestCallAcpbox:
         resp = _mock_response(200, {"choices": []})
         session = _mock_session(resp)
 
-        with pytest.raises(AcpboxEmptyChoicesError):
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientEmptyChoicesError):
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
     @pytest.mark.asyncio
     async def test_empty_content_raises(self, ai_settings):
         resp = _mock_response(200, {"choices": [{"message": {"content": ""}}]})
         session = _mock_session(resp)
 
-        with pytest.raises(AcpboxEmptyChoicesError):
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientEmptyChoicesError):
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
     @pytest.mark.asyncio
     async def test_connection_error_raises_unreachable(self, ai_settings):
@@ -135,8 +135,8 @@ class TestCallAcpbox:
         post_cm.__aexit__ = AsyncMock(return_value=None)
         session.post = MagicMock(return_value=post_cm)
 
-        with pytest.raises(AcpboxUnreachableError):
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientUnreachableError):
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
     @pytest.mark.asyncio
     async def test_timeout_raises_unreachable(self, ai_settings):
@@ -146,8 +146,8 @@ class TestCallAcpbox:
         post_cm.__aexit__ = AsyncMock(return_value=None)
         session.post = MagicMock(return_value=post_cm)
 
-        with pytest.raises(AcpboxUnreachableError):
-            await call_acpbox(session, ai_settings, [{"role": "user", "content": "hi"}])
+        with pytest.raises(AIClientUnreachableError):
+            await call_ai(session, ai_settings, [{"role": "user", "content": "hi"}])
 
 
 # ---------------------------------------------------------------------------

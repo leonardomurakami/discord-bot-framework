@@ -1,4 +1,4 @@
-"""AI client and conversation-history helpers for the acpbox OpenAI-compatible endpoint."""
+"""AI client and conversation-history helpers for an OpenAI-compatible Chat Completions endpoint."""
 
 from __future__ import annotations
 
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class AcpboxError(Exception):
-    """Base error for acpbox failures surfaced to the user as an error embed."""
+class AIClientError(Exception):
+    """Base error for AI API failures surfaced to the user as an error embed."""
 
 
-class AcpboxUnreachableError(AcpboxError):
+class AIClientUnreachableError(AIClientError):
     """Endpoint could not be reached (connection error or timeout)."""
 
 
-class AcpboxHTTPError(AcpboxError):
+class AIClientHTTPError(AIClientError):
     """Endpoint returned a non-2xx status code."""
 
     def __init__(self, status: int, body: str) -> None:
@@ -37,11 +37,11 @@ class AcpboxHTTPError(AcpboxError):
         self.body = body
 
 
-class AcpboxRateLimitError(AcpboxError):
+class AIClientRateLimitError(AIClientError):
     """Endpoint returned HTTP 429."""
 
 
-class AcpboxEmptyChoicesError(AcpboxError):
+class AIClientEmptyChoicesError(AIClientError):
     """Endpoint returned a 2xx response with an empty choices array."""
 
 
@@ -50,16 +50,16 @@ class AcpboxEmptyChoicesError(AcpboxError):
 # ---------------------------------------------------------------------------
 
 
-async def call_acpbox(
+async def call_ai(
     session: aiohttp.ClientSession,
     settings_obj: Any,
     messages: list[dict[str, str]],
 ) -> str:
-    """Send a Chat Completions request to the acpbox endpoint and return the assistant text.
+    """Send a Chat Completions request to the OpenAI-compatible endpoint and return the assistant text.
 
     Args:
         session: aiohttp ClientSession managed by the plugin lifecycle.
-        settings_obj: Settings object exposing acpbox_url, ai_model, ai_api_key,
+        settings_obj: Settings object exposing ai_base_url, ai_model, ai_api_key,
             ai_max_tokens, and ai_temperature.
         messages: OpenAI-style messages list (system/user/assistant dicts).
 
@@ -67,12 +67,12 @@ async def call_acpbox(
         The assistant message content from choices[0].
 
     Raises:
-        AcpboxUnreachableError: connection error or timeout.
-        AcpboxRateLimitError: HTTP 429.
-        AcpboxHTTPError: any other non-2xx status.
-        AcpboxEmptyChoicesError: 2xx with no choices.
+        AIClientUnreachableError: connection error or timeout.
+        AIClientRateLimitError: HTTP 429.
+        AIClientHTTPError: any other non-2xx status.
+        AIClientEmptyChoicesError: 2xx with no choices.
     """
-    url = f"{settings_obj.acpbox_url.rstrip('/')}{CHAT_COMPLETIONS_PATH}"
+    url = f"{settings_obj.ai_base_url.rstrip('/')}{CHAT_COMPLETIONS_PATH}"
     headers = {"Content-Type": "application/json"}
     if settings_obj.ai_api_key:
         headers["Authorization"] = f"Bearer {settings_obj.ai_api_key}"
@@ -88,30 +88,30 @@ async def call_acpbox(
         async with session.post(url, json=payload, headers=headers) as resp:
             if resp.status == 429:
                 body = await _safe_text(resp)
-                logger.warning("acpbox rate limited (429): %s", body[:500])
-                raise AcpboxRateLimitError("AI service is rate-limited; try again shortly.")
+                logger.warning("AI API rate limited (429): %s", body[:500])
+                raise AIClientRateLimitError("AI service is rate-limited; try again shortly.")
             if resp.status < 200 or resp.status >= 300:
                 body = await _safe_text(resp)
-                logger.error("acpbox non-2xx %s: %s", resp.status, body[:1000])
-                raise AcpboxHTTPError(resp.status, body)
+                logger.error("AI API non-2xx %s: %s", resp.status, body[:1000])
+                raise AIClientHTTPError(resp.status, body)
 
             data = await resp.json()
     except aiohttp.ClientError as exc:
-        logger.error("acpbox unreachable: %s", exc)
-        raise AcpboxUnreachableError("AI service is unreachable.") from exc
+        logger.error("AI API unreachable: %s", exc)
+        raise AIClientUnreachableError("AI service is unreachable.") from exc
     except TimeoutError as exc:  # aiohttp raises asyncio.TimeoutError on total timeout
-        logger.error("acpbox timeout: %s", exc)
-        raise AcpboxUnreachableError("AI service timed out.") from exc
+        logger.error("AI API timeout: %s", exc)
+        raise AIClientUnreachableError("AI service timed out.") from exc
 
     choices = data.get("choices") or []
     if not choices:
-        logger.warning("acpbox returned 2xx with empty choices: %s", str(data)[:500])
-        raise AcpboxEmptyChoicesError("AI returned no response.")
+        logger.warning("AI API returned 2xx with empty choices: %s", str(data)[:500])
+        raise AIClientEmptyChoicesError("AI returned no response.")
 
     message = choices[0].get("message") or {}
     content = message.get("content") or ""
     if not content:
-        raise AcpboxEmptyChoicesError("AI returned an empty response.")
+        raise AIClientEmptyChoicesError("AI returned an empty response.")
     return content
 
 

@@ -10,7 +10,7 @@ class TestAISettings:
         """AI fields default correctly when no env vars are set."""
         # Ensure no AI env vars leak in from the host.
         for var in (
-            "ACPBOX_URL",
+            "AI_BASE_URL",
             "AI_MODEL",
             "AI_API_KEY",
             "AI_SYSTEM_PROMPT",
@@ -27,8 +27,8 @@ class TestAISettings:
             _env_file=None,
         )
 
-        assert settings.acpbox_url is None
-        assert settings.ai_model == "glm-5-2"
+        assert settings.ai_base_url is None
+        assert settings.ai_model == "openai/gpt-4o-mini"
         assert settings.ai_api_key is None
         assert "helpful" in settings.ai_system_prompt.lower()
         assert settings.ai_max_tokens == 1000
@@ -38,7 +38,7 @@ class TestAISettings:
 
     def test_loads_from_env(self, monkeypatch):
         """AI fields load from their environment variables."""
-        monkeypatch.setenv("ACPBOX_URL", "http://acpbox.local:8080")
+        monkeypatch.setenv("AI_BASE_URL", "https://openrouter.ai/api")
         monkeypatch.setenv("AI_MODEL", "gpt-test")
         monkeypatch.setenv("AI_API_KEY", "secret-key")
         monkeypatch.setenv("AI_SYSTEM_PROMPT", "You are a pirate.")
@@ -53,7 +53,7 @@ class TestAISettings:
             _env_file=None,
         )
 
-        assert settings.acpbox_url == "http://acpbox.local:8080"
+        assert settings.ai_base_url == "https://openrouter.ai/api"
         assert settings.ai_model == "gpt-test"
         assert settings.ai_api_key == "secret-key"
         assert settings.ai_system_prompt == "You are a pirate."
